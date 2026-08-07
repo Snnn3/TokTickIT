@@ -25,3 +25,6 @@ Thumbs.db
 
 # Prisma
 server/prisma/*.db
+
+# Course reference PDFs
+*.pdf
