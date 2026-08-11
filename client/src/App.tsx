@@ -1,19 +1,27 @@
 import { useState } from 'react'
 
+type Category = { id: number; name: string }
 type SystemState = 'idle' | 'loading' | 'online' | 'offline'
 
 function App() {
   const [systemState, setSystemState] = useState<SystemState>('idle')
+  const [categories, setCategories] = useState<Category[]>([])
   const [error, setError] = useState<string | null>(null)
 
   async function checkSystem() {
     setSystemState('loading')
     setError(null)
+    setCategories([])
     try {
-      const res = await fetch('/api/health')
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setSystemState(data.status === 'ok' ? 'online' : 'offline')
+      const [healthRes, categoriesRes] = await Promise.all([
+        fetch('/api/health'),
+        fetch('/api/categories'),
+      ])
+      if (!healthRes.ok || !categoriesRes.ok) throw new Error(`HTTP error`)
+      const health = await healthRes.json()
+      if (health.status !== 'ok') throw new Error('API not ok')
+      setCategories(await categoriesRes.json())
+      setSystemState('online')
     } catch {
       setSystemState('offline')
       setError('Unable to connect to TokTickIT API')
@@ -38,9 +46,17 @@ function App() {
         )}
 
         {systemState === 'online' && (
-          <p className="mt-3">
-            System Status: <span className="badge text-bg-success">Online</span>
-          </p>
+          <div className="mt-3">
+            <p>
+              System Status: <span className="badge text-bg-success">Online</span>
+            </p>
+            <p className="mb-1">Supported Request Categories</p>
+            <ol className="mb-0">
+              {categories.map((category) => (
+                <li key={category.id}>{category.name}</li>
+              ))}
+            </ol>
+          </div>
         )}
 
         {systemState === 'offline' && (
