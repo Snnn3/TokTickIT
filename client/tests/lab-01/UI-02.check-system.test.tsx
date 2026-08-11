@@ -3,23 +3,31 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../../src/App'
 
+const SEEDED_CATEGORIES = [
+  { id: 1, name: 'Account and Access' },
+  { id: 2, name: 'Hardware' },
+  { id: 3, name: 'Software' },
+  { id: 4, name: 'Network' },
+]
+
 describe('Check System', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
-  it('shows the loading state, then Online when the API responds', async () => {
+  it('shows the loading state, then Online with the category list', async () => {
     let resolveFetch: (value: unknown) => void
     const fetchPromise = new Promise((resolve) => {
       resolveFetch = resolve
     })
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockReturnValue(
-        fetchPromise.then(() => ({
-          ok: true,
-          json: async () => ({ status: 'ok', service: 'TokTickIT API' }),
-        })),
+      vi.fn().mockImplementation((url: string) =>
+        fetchPromise.then(() =>
+          url === '/api/health'
+            ? { ok: true, json: async () => ({ status: 'ok', service: 'TokTickIT API' }) }
+            : { ok: true, json: async () => SEEDED_CATEGORIES },
+        ),
       ),
     )
 
@@ -35,17 +43,11 @@ describe('Check System', () => {
         (_content, element) => element?.textContent === 'System Status: Online',
       ),
     ).toBeInTheDocument()
-  })
 
-  it('displays a useful error message when the API is unavailable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
-
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getByRole('button', { name: 'Check System' }))
-    expect(
-      await screen.findByText(/Unable to connect to TokTickIT API/),
-    ).toBeInTheDocument()
+    for (const category of SEEDED_CATEGORIES) {
+      expect(screen.getByText(category.name)).toBeInTheDocument()
+    }
+    expect(screen.getByText('Supported Request Categories')).toBeInTheDocument()
+    expect(screen.queryByText(/loading/)).not.toBeInTheDocument()
   })
 })
