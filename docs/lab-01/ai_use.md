@@ -16,7 +16,7 @@ submission. The prompts below are the actual prompts I gave the agent during thi
 | Fix Initial Commit & Ignore PDFs | "i want you to fix the first commit i think it might no commit anything first and add git ignore of pdf file" | |
 | Restructure History & Dockerize DB | "can you delete the first commit because gitinorge and readme should init in issue 1 and can we use docker. i want you to save my prompt to md too i need it to complete ai_use.md" | |
 | Implement Health Check (Issue 2) | "let move to Issue 2. I already merge pr to lab1-staging." | |
-| Implement Category Feature (Issue 3) | _(to be filled in during Issue 3)_ | |
+| Implement Category Feature (Issue 3) | "my friend already approve issue 2" | |
 | Build and Test Check System UI (Issue 4) | _(to be filled in during Issue 4)_ | |
 | Review Final Lab 1 Work | _(to be filled in during final review)_ | |
 
