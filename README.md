@@ -44,6 +44,7 @@ toktickit/
 │       ├── reviewer.md
 │       └── tests.md
 ├── docker-compose.yml
+├── package.json
 ├── .gitignore
 └── README.md
 ```
