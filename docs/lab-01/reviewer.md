@@ -1,24 +1,19 @@
-# Peer Review — Lab 1
+# Lab 1 — Peer Review Record
 
-## My Reviewer (reviewed my Pull Requests)
+**Author:** Chanon — <student id> — GitHub: @Snnn3
+**Peer reviewer:** <partner name> — <student id> — GitHub: @YummieGG
 
-- Name: _(to be filled in)_
-- Student ID: _(to be filled in)_
-- GitHub username: _(to be filled in)_
+## Pull Requests I authored (reviewed by my partner)
+| PR | Branch | Reviewer verdict |
+|----|--------|------------------|
+| https://github.com/Snnn3/TokTickIT/pull/7 | feature/1-project-foundation | |
+| https://github.com/Snnn3/TokTickIT/pull/8 | feature/2-health-check | |
+| https://github.com/Snnn3/TokTickIT/pull/9 | feature/3-category-seed | |
+| https://github.com/Snnn3/TokTickIT/pull/10 | feature/4-category-list | |
 
-### Reviews of my PRs
+Reviewer comment I received: <...>
+How I responded: <...>
 
-| My PR | Reviewer Comment | My Response |
-| ----- | ---------------- | ----------- |
-| Issue 1 PR link | | |
-| Issue 2 PR link | | |
-| Issue 3 PR link | | |
-| Issue 4 PR link | | |
-
-## My Reviews (of my partner's Pull Requests)
-
-- Partner's repository: _(to be filled in)_
-
-| Partner PR | My Comment | Partner's Response |
-| ---------- | ---------- | ------------------ |
-| | | |
+## Pull Requests I reviewed for my partner
+My comment: <...>
+Partner's response: <...>
