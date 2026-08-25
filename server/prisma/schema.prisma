@@ -7,8 +7,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketStatus {
+  NEW
+}
+
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  tickets   Ticket[]
+}
+
+model RequesterUser {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(120)
+  email     String   @unique @db.VarChar(255)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tickets   Ticket[]
+}
+
+model RelatedSystem {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(120)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
+}
+
+model Ticket {
+  id                Int            @id @default(autoincrement())
+  number            String         @unique @db.VarChar(20)
+  requesterId       Int
+  categoryId        Int
+  systemId          Int
+  summary           String         @db.VarChar(150)
+  description       String         @db.Text
+  requestedPriority TicketPriority
+  status            TicketStatus   @default(NEW)
+  ticketDate        DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  requester         RequesterUser  @relation(fields: [requesterId], references: [id])
+  category          Category       @relation(fields: [categoryId], references: [id])
+  system            RelatedSystem  @relation(fields: [systemId], references: [id])
+  attachments       Attachment[]
+
+  @@index([requesterId, updatedAt(sort: Desc)])
+}
+
+model Attachment {
+  id            Int       @id @default(autoincrement())
+  ticketId      Int
+  filename      String    @db.VarChar(255)
+  mimeType      String    @db.VarChar(100)
+  sizeBytes     Int
+  data          Bytes
+  uploadedAt    DateTime  @default(now())
+  removedAt     DateTime?
+  removedReason String?   @db.VarChar(300)
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
 }
