@@ -42,6 +42,44 @@ describe("GET /api/requesters (API-REQ-01)", () => {
   });
 });
 
+describe("GET /api/reference/categories and systems (FR-04)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns active reference categories ordered by name asc", async () => {
+    vi.spyOn(prisma.category, "findMany").mockResolvedValueOnce([
+      { id: 1, name: "Account and Access" } as any,
+      { id: 2, name: "Hardware" } as any,
+    ]);
+
+    const res = await request(app).get("/api/reference/categories");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      categories: [
+        { id: 1, name: "Account and Access" },
+        { id: 2, name: "Hardware" },
+      ],
+    });
+  });
+
+  it("returns active reference systems ordered by name asc", async () => {
+    vi.spyOn(prisma.relatedSystem, "findMany").mockResolvedValueOnce([
+      { id: 1, name: "Campus Wi-Fi" } as any,
+      { id: 2, name: "Email" } as any,
+    ]);
+
+    const res = await request(app).get("/api/reference/systems");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      systems: [
+        { id: 1, name: "Campus Wi-Fi" },
+        { id: 2, name: "Email" },
+      ],
+    });
+  });
+});
+
 describe("requireRequester middleware (BR-03, BR-22)", () => {
   const testApp = express();
   testApp.use(express.json());
