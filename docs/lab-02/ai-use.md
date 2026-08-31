@@ -119,7 +119,19 @@ let do issue 16
 
 ---
 
-<!-- Prompts 10..n appended during the sprint -->
+## Prompt 10 - PR 25 merged; push .gitignore; start Issue 17 (2026-08-24)
+
+**Outcome:** Synced lab2-staging; opened `feature/lab2-2-data` carrying the student's .gitignore edit into the next PR; implementing Prisma models, migration, and idempotent seed per specification.md section 7.
+
+**Prompt (verbatim):**
+
+```text
+pr#25 already merge dont forget to push .gitignore. let move to issue#17
+```
+
+---
+
+<!-- Prompts 11..n appended during the sprint -->
 
 ## My Reflection
 

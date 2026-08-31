@@ -28,3 +28,6 @@ server/prisma/*.db
 
 # Course reference PDFs
 *.pdf
+/material
+
+plan.md 
