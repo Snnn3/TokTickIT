@@ -131,7 +131,55 @@ pr#25 already merge dont forget to push .gitignore. let move to issue#17
 
 ---
 
-<!-- Prompts 11..n appended during the sprint -->
+## Prompt 11 - How to test the schema (2026-08-25)
+
+**Outcome:** Provided manual verification steps: docker compose up, prisma migrate status/studio, idempotent seed rerun, count-check script.
+
+**Prompt (verbatim):**
+
+```text
+how can i test the schema
+```
+
+---
+
+## Prompt 12 — Execution plan presentation & Issue #17 status check (2026-08-29)
+
+**Outcome:** Presented the execution plan artifact in the side panel and checked the current status of Issue #17 (Data increment: Prisma schema, migration, seed script) against specification.md.
+
+**Prompt (verbatim):**
+
+```text
+@docs\lab-02\plan.md use this plan to impelement this project. now we in issue#17 if you need some thing to know more you find in @[docs/lab-02] and @[material] we in lab2. Can you show the plan this left side. save the prompt in @[docs/lab-02/ai-use.md]
+```
+
+---
+
+## Prompt 13 — Issue #17 Implementation Readiness & PR Review Check (2026-08-29)
+
+**Outcome:** Confirmed that all Issue #17 requirements (Prisma models, database migration, sequence, and idempotent seed) are fully implemented on `feature/lab2-2-data` and PR #26 is open and ready for peer review and merge into `lab2-staging`.
+
+**Prompt (verbatim):**
+
+```text
+before moveing to next issue my friend should review the pr and merge for me. have you need something to impletement this issue
+```
+
+---
+
+## Prompt 14 — Start Issue #24 on feature/lab2-3-requester-context (2026-08-31)
+
+**Outcome:** Synced `lab2-staging` following PR #26 merge, branched `feature/lab2-3-requester-context`, and implementing `GET /api/requesters`, `X-Requester-Id` header validation middleware, Development Requester selection UI, and session context management per specification.md.
+
+**Prompt (verbatim):**
+
+```text
+my friend already merge PR#26 let do issue#24 in the following plan
+```
+
+---
+
+<!-- Prompts 15..n appended during the sprint -->
 
 ## My Reflection
 
