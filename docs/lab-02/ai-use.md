@@ -239,7 +239,31 @@ fix while create show the ticket number and date must be in box
 
 ---
 
-<!-- Prompts 20..n appended during the sprint -->
+## Prompt 20 — Display actual ticket number and date in boxes on success state (2026-09-01)
+
+**Outcome:** Updated the Create Ticket component so that once a ticket is created, the official generated Ticket Number and timestamp are populated into the System Metadata boxes on the working screen.
+
+**Prompt (verbatim):**
+
+```text
+fix while create show the ticket number and date must be in box Generated after submission show the number
+```
+
+---
+
+## Prompt 21 — Show preview ticket number and date in creation mode (2026-09-01)
+
+**Outcome:** Updated creation mode to render the official ticket number format preview `TKT-YYYY-##### (Generated on submission)` and current date preview `Today (Auto-generated on submission)` inside the System Metadata boxes.
+
+**Prompt (verbatim):**
+
+```text
+in creation mode Generated after submission this must show the preview number
+```
+
+---
+
+<!-- Prompts 22..n appended during the sprint -->
 
 ## My Reflection
 

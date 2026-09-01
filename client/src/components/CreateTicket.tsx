@@ -312,7 +312,11 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   id="sys-ticket-number"
                   type="text"
                   className="form-control form-control-sm zg-readonly-field"
-                  value={successResult ? successResult.number : "Generated after submission"}
+                  value={
+                    successResult
+                      ? successResult.number
+                      : `TKT-${new Date().getFullYear()}-##### (Preview)`
+                  }
                   readOnly
                 />
               </div>
@@ -325,7 +329,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={
                     successResult
                       ? new Date(successResult.ticketDate).toLocaleString()
-                      : "Generated after submission"
+                      : `Today (${new Date().toLocaleDateString()})`
                   }
                   readOnly
                 />
