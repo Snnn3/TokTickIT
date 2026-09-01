@@ -36,7 +36,7 @@ describe("App Root & Route Guard (Issue #24, AC-02, C-09)", () => {
 
     // Now renders App shell
     expect(screen.getByTestId("requester-chip")).toHaveTextContent("Signed in as Anucha Wongchai (dev)");
-    expect(screen.getByRole("button", { name: /My Tickets/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Create Ticket/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "My Tickets" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Ticket" })).toBeInTheDocument();
   });
 });
