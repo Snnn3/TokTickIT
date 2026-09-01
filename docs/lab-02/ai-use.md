@@ -472,7 +472,19 @@ make it bottom right of list delete the number showing per page keep defualt at 
 
 ---
 
-<!-- Prompts 31..n appended during the sprint -->
+## Prompt 31 — Generate realistic, spec-compliant mock data in seed script (2026-09-01)
+
+**Outcome:** Analyzed spec compliance for mock data (confirmed full alignment with BR-01, BR-02, BR-06, BR-09..11, BR-24) and implemented 16 realistic, multi-category, multi-requester mock tickets in `server/prisma/seed.ts`.
+
+**Prompt (verbatim):**
+
+```text
+can you create the mockup data for me. does it conflict thge spec
+```
+
+---
+
+<!-- Prompts 32..n appended during the sprint -->
 
 ## My Reflection
 
