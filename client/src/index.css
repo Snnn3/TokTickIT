@@ -232,3 +232,17 @@ body {
   color: var(--zg-secondary) !important;
   text-decoration: underline !important;
 }
+
+/* Zen Color Utility Classes */
+.text-zen-primary {
+  color: var(--zg-primary) !important;
+}
+
+.text-zen-secondary {
+  color: var(--zg-secondary) !important;
+}
+
+.text-zen-body {
+  color: var(--zg-text-primary) !important;
+}
+

@@ -644,7 +644,79 @@ npm error A complete log of this run can be found in: C:\Users\lchan\AppData\Loc
 
 ---
 
-<!-- Prompts 35..n appended during the sprint -->
+## Prompt 35 — Polish codebase design: remove proxy files, add .text-zen-primary utility class, and finalize standards compliance (2026-09-01)
+
+**Outcome:** Confirmed 0 hard standards violations and 0 spec defects. Polished code smells by eliminating proxy re-export file `useCategories.ts` in favor of direct `useReferenceData.ts` imports, adding `.text-zen-primary` utility class in `index.css`, and replacing inline style tokens.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### (a) Documented Standards Compliance
+
+  Hard Violations: 0
+
+  The diff adheres to all documented repo standards across ui-spec.md, README.md, and README.md:
+  • Design Tokens & Button Hierarchy (ui-spec.md:15-46): Implements Zen Green CSS tokens (--zg-primary, --zg-secondary, --zg-pale, --zg-surface, --zg-text-primary), accessible focus rings, and
+  explicit button variants (.btn-zen-primary, .btn-zen-secondary, .btn-zen-tertiary, .zg-action-link).
+  • Badges (ui-spec.md:49-59): ZenBadge.tsx matches token fills/borders (badge-zen-new, badge-zen-low, badge-zen-medium, badge-zen-high) with visible text labels and aria-label attributes.
+  • My Tickets Layout & Behaviors (ui-spec.md:103-117, ui-spec.md:141-148):
+      • Debounced search input (300ms) with exact placeholder "Search number or summary".
+      • Responsive layout: multi-column table on desktop, tablet category column suppression (d-none d-lg-table-cell), and full clickable mobile cards (<768px).
+      • Shimmer skeletons for both table and card views during data load.
+      • Distinct empty ("No tickets yet - Create your first ticket") and no-results ("No tickets match your filters") states.
+      • Full pagination controls ("Page X of Y (N tickets)", Prev/Next navigation, and {5, 10, 20} page size selector).
+
+
+  ### (b) Baseline Smells (Judgement Calls)
+
+  1. Middle Man (Minor): useCategories.ts:1
+    export { useCategories, useReferenceData } from "./useReferenceData";
+  Judgement: Standalone useCategories.ts exists as a re-export proxy after consolidating reference data hooks into useReferenceData.ts. Safe to keep for backward compatibility or simplify by
+  importing directly from useReferenceData.
+  2. Duplicated Logic Shape (Minor): useReferenceData.ts
+  Judgement: useCategories() and useReferenceData() share similar fetch lifecycle structure (isMounted, loading/error handling). Acceptable separation since MyTickets.tsx only needs categories and
+  avoids over-fetching system reference data.
+  3. Inline Styles vs Utility Classes (Minor): MyTickets.tsx:438
+    <button ... style={{ color: "var(--zg-primary)" }}>{ticket.number}</button>
+  Judgement: Ad-hoc inline style consumption could optionally be unified under a utility class (e.g. .text-zen-primary), though it cleanly consumes the canonical CSS variable.
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  • None: All functional requirements and acceptance criteria scoped for My Tickets are fully implemented:
+      • FR-08 / BR-19 / AC-13: Debounced 300ms search matching Ticket Number or Summary case-insensitively (specification.md:63-64, ui-spec.md:105).
+      • BR-20 / AC-14 / AC-15: Category, Priority, Status (NEW), and sort controls (updatedAt, createdAt, number with descending number tiebreak) (specification.md:110-111).
+      • BR-21 / AC-16 / api-spec §2: Validated pagination returning {page, pageSize, total, totalPages}, with invalid query params returning HTTP 400 INVALID_QUERY (api-spec.md:80-98).
+      • BR-24 / AC-17 / ui-spec §8: Clear visual distinction between empty state ("No tickets yet - Create your first ticket") and no-results state ("No tickets match your filters")
+      (ui-spec.md:115-117).
+      • AC-22 / ui-spec §8, §11: Responsive table (>=992px full columns, tablet minus Category) and mobile cards (<768px with full-card clickability) (ui-spec.md:109-111).
+
+
+  ### (b) Behaviour in Diff Not Asked For (Scope Creep)
+
+  • Convenience Package Scripts (package.json, package.json):
+      • Added root and server shortcut scripts "db:seed" / "seed". While convenient for development and local testing, these convenience aliases are extra additions.
+
+
+  ### (c) Requirements Implemented Incorrectly
+
+  • None: The implementation adheres strictly to the contract:
+      • Status Filter (ui-spec.md:106): Status select provides All Statuses and fixed NEW option without unsupported status choices.
+      • Pagination Strip (ui-spec.md:113): Formatted as "Page X of Y (N tickets)" with previous/next controls and {5, 10, 20} page size selector.
+      • Clear Filters (ui-spec.md:107): Rendered using tertiary styling (btn-zen-tertiary) and properly disabled when default query parameters are active.
+      • Seed Baseline (specification.md:168-172): Seed strictly matches the idempotent 4 categories, 7 systems, 4 active requesters, and 1 inactive requester baseline.
+
+  ──────
+  Summary: 0 hard Standards violations (3 minor judgement calls on re-export proxy and inline styling); 0 hard Spec defects (1 minor convenience script alias in package.json). All previously
+  identified issues are fully resolved. implement following this but keep the spec md in first piority
+```
+
+---
+
+<!-- Prompts 36..n appended during the sprint -->
 
 ## My Reflection
 

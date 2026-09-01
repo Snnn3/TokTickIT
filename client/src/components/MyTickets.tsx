@@ -144,7 +144,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       <div className="zg-card p-4 mb-4">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <div>
-            <h1 className="h4 fw-bold mb-1" style={{ color: "var(--zg-primary)" }}>
+            <h1 className="h4 fw-bold mb-1 text-zen-primary">
               My Tickets
             </h1>
             <p className="text-muted small mb-0">
@@ -394,7 +394,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
             </div>
           ) : (
             <div className="text-center py-5 border rounded bg-light" data-testid="empty-tickets-state">
-              <div className="h5 fw-semibold mb-2" style={{ color: "var(--zg-primary)" }}>
+              <div className="h5 fw-semibold mb-2 text-zen-primary">
                 No tickets yet
               </div>
               <p className="text-muted small mb-3">
@@ -434,8 +434,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       <td>
                         <button
                           type="button"
-                          className="btn btn-link p-0 fw-bold text-decoration-none"
-                          style={{ color: "var(--zg-primary)" }}
+                          className="btn btn-link p-0 fw-bold text-decoration-none text-zen-primary"
                           onClick={() => handleSelectTicket(ticket.id)}
                         >
                           {ticket.number}
@@ -494,7 +493,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                     }}
                   >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <span className="fw-bold" style={{ color: "var(--zg-primary)" }}>
+                      <span className="fw-bold text-zen-primary">
                         {ticket.number}
                       </span>
                       <div className="d-flex gap-1">
@@ -503,10 +502,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       </div>
                     </div>
 
-                    <div
-                      className="fw-medium small mb-2"
-                      style={{ color: "var(--zg-text-primary)" }}
-                    >
+                    <div className="fw-medium small mb-2 text-zen-body">
                       {ticket.summary}
                     </div>
 
