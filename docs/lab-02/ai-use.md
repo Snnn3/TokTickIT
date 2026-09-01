@@ -287,7 +287,21 @@ if i Attachment worng file and i dont want to Attachment anymore i cant sumbit t
 
 ---
 
-<!-- Prompts 24..n appended during the sprint -->
+## Prompt 24 — Restore legacy Lab 1 test compatibility (2026-09-01)
+
+**Outcome:** Extracted Lab 1's CheckSystem component into `CheckSystem.tsx` and updated `tests/lab-01/` UI test suite so that running full regression tests (`npm test`) passes 100% across all legacy Lab 1 and current Lab 2 suites.
+
+**Prompt (verbatim):**
+
+```text
+ FAIL  tests/lab-01/UI-03.error-state.test.tsx > Check System - API failure > displays a useful error message when the API is unavailable
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Check System"
+i ran test and it fail
+```
+
+---
+
+<!-- Prompts 25..n appended during the sprint -->
 
 ## My Reflection
 
