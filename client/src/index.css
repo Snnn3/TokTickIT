@@ -168,3 +168,67 @@ body {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* Skeletons */
+.zg-skeleton-line {
+  height: 1rem;
+  background: linear-gradient(90deg, #eef2ef 25%, #e0e8e3 50%, #eef2ef 75%);
+  background-size: 200% 100%;
+  animation: zg-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.zg-skeleton-badge {
+  height: 1.25rem;
+  width: 50px;
+  background: linear-gradient(90deg, #eef2ef 25%, #e0e8e3 50%, #eef2ef 75%);
+  background-size: 200% 100%;
+  animation: zg-shimmer 1.5s infinite;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+@keyframes zg-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Tertiary Action & Link Buttons */
+.btn-zen-tertiary {
+  color: var(--zg-primary) !important;
+  background: transparent !important;
+  border: none !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  padding: 0.25rem 0.5rem !important;
+}
+
+.btn-zen-tertiary:hover:not(:disabled) {
+  color: var(--zg-secondary) !important;
+  text-decoration: underline !important;
+}
+
+.btn-zen-tertiary:disabled {
+  color: var(--zg-text-muted) !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+.zg-action-link {
+  color: var(--zg-primary) !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  cursor: pointer;
+}
+
+.zg-action-link:hover {
+  color: var(--zg-secondary) !important;
+  text-decoration: underline !important;
+}

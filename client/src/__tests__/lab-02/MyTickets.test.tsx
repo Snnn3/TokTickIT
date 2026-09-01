@@ -273,10 +273,49 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     const clearBtn = screen.getByRole("button", { name: "Clear filters" });
     expect(clearBtn).not.toBeDisabled();
+    expect(clearBtn).toHaveClass("btn-zen-tertiary");
 
     fireEvent.click(clearBtn);
 
     expect(searchInput).toHaveValue("");
     expect(clearBtn).toBeDisabled();
+  });
+
+  it("C-13: renders table and card skeletons during loading state (ui-spec §8)", async () => {
+    let resolvePromise: (val: any) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/reference/categories")) {
+        return { ok: true, json: async () => ({ categories: mockCategories }) } as Response;
+      }
+      return pendingPromise as Promise<Response>;
+    });
+
+    render(
+      <AuthenticatedWrapper>
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    expect(screen.getByTestId("tickets-loading")).toBeInTheDocument();
+
+    resolvePromise!({
+      ok: true,
+      json: async () => ({
+        tickets: mockTickets,
+        page: 1,
+        pageSize: 10,
+        total: 2,
+        totalPages: 1,
+      }),
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("tickets-loading")).not.toBeInTheDocument();
+    });
   });
 });

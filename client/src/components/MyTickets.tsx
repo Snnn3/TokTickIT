@@ -1,25 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRequester } from "../context/RequesterContext";
+import type { Category, TicketSummaryItem, TicketPriority } from "../types/ticket";
+import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 
-export interface TicketSummaryItem {
-  id: number;
-  number: string;
-  summary: string;
-  categoryId: number;
-  categoryName: string;
-  systemId: number;
-  systemName: string;
-  requestedPriority: "LOW" | "MEDIUM" | "HIGH";
-  status: "NEW";
-  ticketDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+export type { TicketSummaryItem };
 
 interface MyTicketsProps {
   onCreateTicket?: () => void;
@@ -39,7 +23,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [priority, setPriority] = useState("");
+  const [priority, setPriority] = useState<TicketPriority | "">("");
   const [status, setStatus] = useState("");
   const [sort, setSort] = useState("updatedAt");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
@@ -50,6 +34,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
@@ -140,16 +125,8 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     setPage(1);
   };
 
-  const getPriorityBadgeClass = (p: string) => {
-    switch (p) {
-      case "HIGH":
-        return "badge badge-zen-high";
-      case "MEDIUM":
-        return "badge badge-zen-medium";
-      case "LOW":
-      default:
-        return "badge badge-zen-low";
-    }
+  const handleSelectTicket = (ticketId: number) => {
+    if (onSelectTicket) onSelectTicket(ticketId);
   };
 
   const startRecord = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -235,7 +212,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 className="form-select form-select-sm"
                 value={priority}
                 onChange={(e) => {
-                  setPriority(e.target.value);
+                  setPriority(e.target.value as TicketPriority | "");
                   setPage(1);
                 }}
               >
@@ -265,11 +242,11 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </select>
             </div>
 
-            {/* Clear Filters */}
+            {/* Clear Filters Tertiary Button [ui-spec §3, §8] */}
             <div className="col-6 col-md-3 col-lg-2 text-end">
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm w-100"
+                className="btn btn-zen-tertiary btn-sm w-100"
                 onClick={handleResetFilters}
                 disabled={!hasActiveFilters}
               >
@@ -345,17 +322,60 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Loading State - Table and Card Skeletons per ui-spec.md §8 */}
         {loading ? (
-          <div className="text-center py-5" data-testid="tickets-loading">
-            <div
-              className="spinner-border text-success mb-2"
-              role="status"
-              style={{ color: "var(--zg-primary)" }}
-            >
-              <span className="visually-hidden">Loading tickets...</span>
+          <div data-testid="tickets-loading" className="py-2">
+            {/* Desktop Table Skeletons (>= 768px) */}
+            <div className="table-responsive d-none d-md-block">
+              <table className="table align-middle mb-0">
+                <thead className="table-light small text-muted text-uppercase" style={{ fontSize: "0.75rem" }}>
+                  <tr>
+                    <th scope="col" style={{ width: "160px" }}>Ticket Number</th>
+                    <th scope="col">Summary</th>
+                    <th scope="col" className="d-none d-lg-table-cell" style={{ width: "160px" }}>Category</th>
+                    <th scope="col" style={{ width: "110px" }}>Priority</th>
+                    <th scope="col" style={{ width: "90px" }}>Status</th>
+                    <th scope="col" style={{ width: "170px" }}>Last Updated</th>
+                    <th scope="col" style={{ width: "90px" }} className="text-end">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5].map((idx) => (
+                    <tr key={idx}>
+                      <td><div className="zg-skeleton-line" style={{ width: "120px" }} /></td>
+                      <td><div className="zg-skeleton-line" style={{ width: "70%" }} /></td>
+                      <td className="d-none d-lg-table-cell"><div className="zg-skeleton-line" style={{ width: "90px" }} /></td>
+                      <td><div className="zg-skeleton-badge" /></td>
+                      <td><div className="zg-skeleton-badge" /></td>
+                      <td><div className="zg-skeleton-line" style={{ width: "130px" }} /></td>
+                      <td className="text-end"><div className="zg-skeleton-line ms-auto" style={{ width: "40px" }} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <p className="text-muted small mb-0">Loading your tickets...</p>
+
+            {/* Mobile Card Skeletons (< 768px) */}
+            <div className="d-md-none">
+              <div className="d-flex flex-column gap-3">
+                {[1, 2, 3].map((idx) => (
+                  <div key={idx} className="p-3 border rounded bg-white shadow-sm">
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <div className="zg-skeleton-line" style={{ width: "130px" }} />
+                      <div className="d-flex gap-1">
+                        <div className="zg-skeleton-badge" />
+                        <div className="zg-skeleton-badge" />
+                      </div>
+                    </div>
+                    <div className="zg-skeleton-line mb-3" style={{ width: "85%" }} />
+                    <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                      <div className="zg-skeleton-line" style={{ width: "110px" }} />
+                      <div className="zg-skeleton-line" style={{ width: "40px" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : tickets.length === 0 ? (
           /* Empty / No Results State */
@@ -417,9 +437,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                           type="button"
                           className="btn btn-link p-0 fw-bold text-decoration-none"
                           style={{ color: "var(--zg-primary)" }}
-                          onClick={() => {
-                            if (onSelectTicket) onSelectTicket(ticket.id);
-                          }}
+                          onClick={() => handleSelectTicket(ticket.id)}
                         >
                           {ticket.number}
                         </button>
@@ -433,12 +451,10 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                         <span className="small text-muted">{ticket.categoryName}</span>
                       </td>
                       <td>
-                        <span className={getPriorityBadgeClass(ticket.requestedPriority)}>
-                          {ticket.requestedPriority}
-                        </span>
+                        <ZenPriorityBadge priority={ticket.requestedPriority} />
                       </td>
                       <td>
-                        <span className="badge badge-zen-new">{ticket.status}</span>
+                        <ZenStatusBadge status={ticket.status} />
                       </td>
                       <td>
                         <span className="small text-muted">
@@ -448,10 +464,8 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       <td className="text-end">
                         <button
                           type="button"
-                          className="btn btn-zen-secondary btn-sm py-0 px-2"
-                          onClick={() => {
-                            if (onSelectTicket) onSelectTicket(ticket.id);
-                          }}
+                          className="zg-action-link"
+                          onClick={() => handleSelectTicket(ticket.id)}
                         >
                           View
                         </button>
@@ -472,13 +486,11 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                     role="button"
                     tabIndex={0}
                     style={{ cursor: "pointer" }}
-                    onClick={() => {
-                      if (onSelectTicket) onSelectTicket(ticket.id);
-                    }}
+                    onClick={() => handleSelectTicket(ticket.id)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        if (onSelectTicket) onSelectTicket(ticket.id);
+                        handleSelectTicket(ticket.id);
                       }
                     }}
                   >
@@ -487,10 +499,8 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                         {ticket.number}
                       </span>
                       <div className="d-flex gap-1">
-                        <span className={getPriorityBadgeClass(ticket.requestedPriority)}>
-                          {ticket.requestedPriority}
-                        </span>
-                        <span className="badge badge-zen-new">{ticket.status}</span>
+                        <ZenPriorityBadge priority={ticket.requestedPriority} />
+                        <ZenStatusBadge status={ticket.status} />
                       </div>
                     </div>
 
@@ -502,10 +512,10 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       </div>
                       <button
                         type="button"
-                        className="btn btn-zen-secondary btn-sm py-0 px-2"
+                        className="zg-action-link"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onSelectTicket) onSelectTicket(ticket.id);
+                          handleSelectTicket(ticket.id);
                         }}
                       >
                         View

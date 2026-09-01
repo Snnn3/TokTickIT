@@ -10,16 +10,7 @@ import {
   validateFile,
   MAX_ATTACHMENTS,
 } from "../utils/validation";
-
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface RelatedSystem {
-  id: number;
-  name: string;
-}
+import type { Category, RelatedSystem } from "../types/ticket";
 
 interface CreatedTicketResult {
   id: number;
@@ -226,6 +217,11 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
         ticketDate: data.ticket.ticketDate,
         summary: data.ticket.summary,
       });
+
+      // Scroll window to top so user clearly sees the confirmation banner
+      if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } catch {
       setApiError("Network error. Unable to connect to the server.");
     } finally {

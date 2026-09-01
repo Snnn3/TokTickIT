@@ -325,7 +325,46 @@ i ran test and it fail
 
 ---
 
-<!-- Prompts 27..n appended during the sprint -->
+## Prompt 27 — Implement review findings: table/card skeletons, tertiary clear filters, action-link styling, shared badge/types, and creation scroll-to-top (2026-09-01)
+
+**Outcome:** Implemented table and card skeleton loading placeholders per `ui-spec.md §8`, styled Clear Filters as a tertiary green link button, converted table row actions to action-links, extracted shared types & badge components, and added window scroll-to-top on successful ticket creation.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### (a) Documented Standards Violations (Hard Violations)
+  1. Loading State Presentation (ui-spec.md:115)
+      • Rule: ui-spec.md §8 specifies loading state as "loading (table skeletons / card skeletons)".
+      • Violation: MyTickets.tsx:350-359 renders a generic Bootstrap spinner (spinner-border) instead of table/card skeleton placeholders.
+  2. Clear Filters Button Styling (ui-spec.md:45, ui-spec.md:107)
+      • Rule: ui-spec.md §8 specifies "Clear filters tertiary", and §3 defines Tertiary as "green text link style".
+      • Violation: MyTickets.tsx:272 uses btn btn-outline-secondary btn-sm w-100 (gray Bootstrap outline button) instead of a tertiary green link button.
+  3. Table Row Action (ui-spec.md:109-110)
+      • Rule: ui-spec.md §8 table columns specify "View action-link".
+      • Violation: MyTickets.tsx:451 uses btn btn-zen-secondary btn-sm (pill button variant) rather than a green text action-link style.
+
+  ### (b) Baseline Smells (Judgement Calls)
+
+  1. Primitive Obsession / Data Clumps (MyTickets.tsx:39-47)
+      • Heuristic: Eight individual filter/query state primitives (search, debouncedSearch, categoryId, priority, status, sort, order, page, pageSize) travel together across query fetching and
+      resets. Packaging them into a single filter state object or a dedicated useTicketQuery hook would consolidate filter state transitions.
+  2. Duplicated Code (MyTickets.tsx:143-153)
+      • Heuristic: Priority mapping logic and Category interface definitions are duplicated between MyTickets.tsx and CreateTicket.tsx. Extracting shared badge helpers and common domain types into
+      client/src/types / client/src/utils prevents drifting implementations across screens.
+
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  • ui-spec.md:115 (Loading State): Spec mandates loading (table skeletons / card skeletons). Implementation renders a centered spinner (spinner-border) rather than skeleton placeholders. fix following this review dont open pr and use Pagination. if i create the ticket the create success i want it bring it back to the top
+```
+
+---
+
+<!-- Prompts 28..n appended during the sprint -->
 
 ## My Reflection
 
