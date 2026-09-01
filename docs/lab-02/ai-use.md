@@ -864,7 +864,30 @@ fix to follow the criteria
 
 ---
 
-<!-- Prompts 39..n appended during the sprint -->
+## Prompt 39 — Switch pageSize to bottom-left of pagination bar, finalize tests, and open PR for Issue #19 (2026-09-01)
+
+**Outcome:** Switched the `Per page:` select dropdown to the bottom-left of the pagination bar while keeping the page info and navigation controls on the bottom-right. Ran all test suites with 100% pass, committed, pushed, and opened Pull Request for Issue #19 into `lab2-staging`.
+
+**Prompt (verbatim):**
+
+```text
+/implement switch the per page make it bottom left   ### (b) Code Smells & Judgement Calls
+  1. Speculative Generality / Future Seam (Judgement Call):
+      • App.tsx:24-26 & MyTickets.tsx:20-24 include onSelectTicket as an explicit forward-compatibility seam for Issue #20 (Ticket Detail navigation).
+  2. Refactored Smells (Resolved on Branch):
+      • Duplicated Code: Integer parsing consolidated into tickets.ts:198-221.
+      • Duplicated Fetch Hooks: Reference data fetching consolidated into useReferenceData.ts:1-57.
+      • Repeated Switches: Replaced badge switches with typed dictionary maps in ZenBadge.tsx:3-11.
+ ### (b) Scope Creep / Unrequested Behaviour
+
+  1. Window Scroll in CreateTicket: CreateTicket.tsx:196-198 introduces window.scrollTo({ top: 0, behavior: "smooth" }) upon ticket creation (Issue #18 scope).
+  2. Root & Server Package Scripts: Added db:seed shortcuts in package.json and package.json.
+after this finish open the PR
+```
+
+---
+
+<!-- Prompts 40..n appended during the sprint -->
 
 ## My Reflection
 

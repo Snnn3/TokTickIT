@@ -538,7 +538,32 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
             {/* Pagination Controls [ui-spec §8: prev/next + page indicator "Page X of Y (N tickets)"; pageSize select {5,10,20}] */}
             <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
-              {/* Prev, Page Indicator, Next */}
+              {/* Page Size Selector (Bottom Left) */}
+              <div className="d-flex align-items-center gap-2 small text-muted">
+                <label htmlFor="page-size-select" className="mb-0">
+                  Per page:
+                </label>
+                <select
+                  id="page-size-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.pageSize}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      page: 1,
+                    }));
+                  }}
+                  aria-label="Page size"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
+
+              {/* Prev, Page Indicator, Next (Bottom Right) */}
               <div className="d-flex align-items-center gap-2">
                 <button
                   type="button"
@@ -563,31 +588,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 >
                   Next
                 </button>
-              </div>
-
-              {/* Page Size Selector */}
-              <div className="d-flex align-items-center gap-2 small text-muted">
-                <label htmlFor="page-size-select" className="mb-0">
-                  Per page:
-                </label>
-                <select
-                  id="page-size-select"
-                  className="form-select form-select-sm"
-                  style={{ width: "auto" }}
-                  value={queryState.pageSize}
-                  onChange={(e) => {
-                    setQueryState((prev) => ({
-                      ...prev,
-                      pageSize: Number(e.target.value),
-                      page: 1,
-                    }));
-                  }}
-                  aria-label="Page size"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                </select>
               </div>
             </div>
           </div>
