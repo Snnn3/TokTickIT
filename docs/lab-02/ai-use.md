@@ -301,7 +301,19 @@ i ran test and it fail
 
 ---
 
-<!-- Prompts 25..n appended during the sprint -->
+## Prompt 25 — Start Issue #19 (My Tickets) on feature/lab2-5-my-tickets (2026-09-01)
+
+**Outcome:** Closed Issue #18, updated the execution plan Kanban board, created feature branch `feature/lab2-5-my-tickets`, and began implementing the full My Tickets list view feature (search/filter/sort/pagination backend `GET /api/tickets` and Zen Green responsive table/card frontend `MyTickets.tsx`).
+
+**Prompt (verbatim):**
+
+```text
+/implement let do the issue 19 and close the issue 18 it is already finish do forget to moving the kanban board of issue and dont open pr when finished.
+```
+
+---
+
+<!-- Prompts 26..n appended during the sprint -->
 
 ## My Reflection
 

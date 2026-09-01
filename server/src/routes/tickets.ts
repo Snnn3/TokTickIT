@@ -182,6 +182,223 @@ async function createTicketTransaction(
   };
 }
 
+// GET /api/tickets [FR-08, BR-04, BR-19..BR-22, AC-16]
+ticketsRouter.get(
+  "/",
+  requireRequester,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const queryErrors: { parameter: string; issue: string }[] = [];
+
+    // Parse and validate search
+    let search: string | undefined;
+    if (req.query.search !== undefined) {
+      if (typeof req.query.search !== "string") {
+        queryErrors.push({ parameter: "search", issue: "Search must be a string" });
+      } else {
+        const trimmed = req.query.search.trim();
+        if (trimmed.length > 150) {
+          queryErrors.push({
+            parameter: "search",
+            issue: "Search query must not exceed 150 characters",
+          });
+        } else if (trimmed.length > 0) {
+          search = trimmed;
+        }
+      }
+    }
+
+    // Parse and validate categoryId
+    let categoryId: number | undefined;
+    if (req.query.categoryId !== undefined) {
+      const parsed = parseInt(String(req.query.categoryId), 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        queryErrors.push({
+          parameter: "categoryId",
+          issue: "Category ID must be a positive integer",
+        });
+      } else {
+        categoryId = parsed;
+      }
+    }
+
+    // Parse and validate priority
+    let priority: TicketPriority | undefined;
+    if (req.query.priority !== undefined) {
+      const p = String(req.query.priority);
+      if (!Object.values(TicketPriority).includes(p as TicketPriority)) {
+        queryErrors.push({
+          parameter: "priority",
+          issue: "Priority must be LOW, MEDIUM, or HIGH",
+        });
+      } else {
+        priority = p as TicketPriority;
+      }
+    }
+
+    // Parse and validate status
+    let status: TicketStatus | undefined;
+    if (req.query.status !== undefined) {
+      const s = String(req.query.status);
+      if (s !== "NEW") {
+        queryErrors.push({
+          parameter: "status",
+          issue: "Status must be NEW",
+        });
+      } else {
+        status = TicketStatus.NEW;
+      }
+    }
+
+    // Parse and validate sort
+    const allowedSorts = ["updatedAt", "createdAt", "number"];
+    let sort = "updatedAt";
+    if (req.query.sort !== undefined) {
+      const s = String(req.query.sort);
+      if (!allowedSorts.includes(s)) {
+        queryErrors.push({
+          parameter: "sort",
+          issue: "Sort field must be updatedAt, createdAt, or number",
+        });
+      } else {
+        sort = s;
+      }
+    }
+
+    // Parse and validate order
+    let order: "asc" | "desc" = "desc";
+    if (req.query.order !== undefined) {
+      const o = String(req.query.order).toLowerCase();
+      if (o !== "asc" && o !== "desc") {
+        queryErrors.push({
+          parameter: "order",
+          issue: "Order must be asc or desc",
+        });
+      } else {
+        order = o as "asc" | "desc";
+      }
+    }
+
+    // Parse and validate page
+    let page = 1;
+    if (req.query.page !== undefined) {
+      const parsed = parseInt(String(req.query.page), 10);
+      if (isNaN(parsed) || parsed < 1) {
+        queryErrors.push({
+          parameter: "page",
+          issue: "Page must be an integer >= 1",
+        });
+      } else {
+        page = parsed;
+      }
+    }
+
+    // Parse and validate pageSize
+    const allowedPageSizes = [5, 10, 20];
+    let pageSize = 10;
+    if (req.query.pageSize !== undefined) {
+      const parsed = parseInt(String(req.query.pageSize), 10);
+      if (isNaN(parsed) || !allowedPageSizes.includes(parsed)) {
+        queryErrors.push({
+          parameter: "pageSize",
+          issue: "Page size must be 5, 10, or 20",
+        });
+      } else {
+        pageSize = parsed;
+      }
+    }
+
+    if (queryErrors.length > 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_QUERY",
+          message: "Invalid query parameters",
+          details: queryErrors,
+        },
+      });
+    }
+
+    try {
+      const where: Prisma.TicketWhereInput = {
+        requesterId: requester.id,
+      };
+
+      if (search) {
+        where.OR = [
+          { number: { contains: search, mode: "insensitive" } },
+          { summary: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (categoryId) {
+        where.categoryId = categoryId;
+      }
+
+      if (priority) {
+        where.requestedPriority = priority;
+      }
+
+      if (status) {
+        where.status = status;
+      }
+
+      const orderBy: Prisma.TicketOrderByWithRelationInput[] = [
+        { [sort]: order },
+        { number: "desc" },
+      ];
+
+      const skip = (page - 1) * pageSize;
+      const take = pageSize;
+
+      const [total, tickets] = await Promise.all([
+        prisma.ticket.count({ where }),
+        prisma.ticket.findMany({
+          where,
+          orderBy,
+          skip,
+          take,
+          include: {
+            category: { select: { name: true } },
+            system: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+
+      const mappedTickets = tickets.map((t) => ({
+        id: t.id,
+        number: t.number,
+        summary: t.summary,
+        categoryId: t.categoryId,
+        categoryName: t.category?.name || "Unknown",
+        systemId: t.systemId,
+        systemName: t.system?.name || "Unknown",
+        requestedPriority: t.requestedPriority,
+        status: t.status,
+        ticketDate: t.ticketDate,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      }));
+
+      return res.status(200).json({
+        tickets: mappedTickets,
+        page,
+        pageSize,
+        total,
+        totalPages,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to retrieve tickets",
+        },
+      });
+    }
+  },
+);
+
 // POST /api/tickets [FR-05, BR-01, BR-07..BR-11, BR-13, BR-14, AC-01]
 ticketsRouter.post(
   "/",
