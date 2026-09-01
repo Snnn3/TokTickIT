@@ -109,7 +109,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     expect(onSelectTicket).toHaveBeenCalledWith(101);
   });
 
-  it("C-08: triggers search and updates query parameters (BR-19)", async () => {
+  it("C-08: triggers search and updates query parameters with 300ms debounce (BR-19)", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     render(
@@ -119,18 +119,21 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Search by ticket number or summary/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Search number or summary/i)).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search by ticket number or summary/i);
+    const searchInput = screen.getByPlaceholderText(/Search number or summary/i);
     fireEvent.change(searchInput, { target: { value: "Printer" } });
 
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("search=Printer"),
-        expect.anything()
-      );
-    });
+    await waitFor(
+      () => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          expect.stringContaining("search=Printer"),
+          expect.anything()
+        );
+      },
+      { timeout: 1000 }
+    );
   });
 
   it("C-09: filters by category, priority, and status (BR-20)", async () => {
@@ -236,21 +239,25 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("empty-tickets-state")).toBeInTheDocument();
-      expect(screen.getByText("No Tickets Found")).toBeInTheDocument();
+      expect(screen.getByText("No tickets yet")).toBeInTheDocument();
+      expect(screen.getByText("Create your first ticket")).toBeInTheDocument();
     });
 
     // Type search to trigger no-results state
-    fireEvent.change(screen.getByPlaceholderText(/Search by ticket number or summary/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search number or summary/i), {
       target: { value: "nonexistent" },
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId("no-results-state")).toBeInTheDocument();
-      expect(screen.getByText("No Matching Tickets")).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("no-results-state")).toBeInTheDocument();
+        expect(screen.getByText("No tickets match your filters")).toBeInTheDocument();
+      },
+      { timeout: 1000 }
+    );
   });
 
-  it("C-12: reset filters button clears all filters back to default", async () => {
+  it("C-12: clear filters button restores all filters back to default", async () => {
     render(
       <AuthenticatedWrapper>
         <MyTickets />
@@ -258,18 +265,18 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Search by ticket number or summary/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Search number or summary/i)).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search by ticket number or summary/i);
+    const searchInput = screen.getByPlaceholderText(/Search number or summary/i);
     fireEvent.change(searchInput, { target: { value: "Test search" } });
 
-    const resetBtn = screen.getByRole("button", { name: "Reset Filters" });
-    expect(resetBtn).not.toBeDisabled();
+    const clearBtn = screen.getByRole("button", { name: "Clear filters" });
+    expect(clearBtn).not.toBeDisabled();
 
-    fireEvent.click(resetBtn);
+    fireEvent.click(clearBtn);
 
     expect(searchInput).toHaveValue("");
-    expect(resetBtn).toBeDisabled();
+    expect(clearBtn).toBeDisabled();
   });
 });

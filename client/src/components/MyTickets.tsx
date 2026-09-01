@@ -194,11 +194,10 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 id="ticket-search"
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Search by ticket number or summary..."
+                placeholder="Search number or summary"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(1);
                 }}
               />
             </div>
@@ -218,9 +217,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 }}
               >
                 <option value="">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -266,7 +265,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </select>
             </div>
 
-            {/* Reset Filters */}
+            {/* Clear Filters */}
             <div className="col-6 col-md-3 col-lg-2 text-end">
               <button
                 type="button"
@@ -274,7 +273,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 onClick={handleResetFilters}
                 disabled={!hasActiveFilters}
               >
-                Reset Filters
+                Clear filters
               </button>
             </div>
           </div>
@@ -362,25 +361,25 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
           /* Empty / No Results State */
           hasActiveFilters ? (
             <div className="text-center py-5 border rounded bg-light" data-testid="no-results-state">
-              <div className="h5 fw-semibold mb-2 text-muted">No Matching Tickets</div>
+              <div className="h5 fw-semibold mb-2 text-muted">No tickets match your filters</div>
               <p className="text-muted small mb-3">
-                No tickets match your search or filter criteria.
+                Try adjusting your search keywords or filter criteria.
               </p>
               <button
                 type="button"
                 className="btn btn-sm btn-outline-secondary"
                 onClick={handleResetFilters}
               >
-                Clear Filters
+                Clear filters
               </button>
             </div>
           ) : (
             <div className="text-center py-5 border rounded bg-light" data-testid="empty-tickets-state">
               <div className="h5 fw-semibold mb-2" style={{ color: "var(--zg-primary)" }}>
-                No Tickets Found
+                No tickets yet
               </div>
               <p className="text-muted small mb-3">
-                You haven't created any support tickets yet.
+                Create your first ticket
               </p>
               <button
                 type="button"
@@ -389,7 +388,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   if (onCreateTicket) onCreateTicket();
                 }}
               >
-                + Create Your First Ticket
+                + Create your first ticket
               </button>
             </div>
           )
@@ -499,7 +498,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
                     <div className="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
                       <div>
-                        <span>{ticket.categoryName}</span> • <span>{ticket.systemName}</span>
+                        <span>Updated: {new Date(ticket.updatedAt).toLocaleString()}</span>
                       </div>
                       <button
                         type="button"
