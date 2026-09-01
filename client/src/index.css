@@ -125,8 +125,10 @@ body {
 
 .zg-readonly-field {
   background-color: var(--zg-readonly-field) !important;
-  color: var(--zg-text-primary);
+  color: var(--zg-text-primary) !important;
+  border: 1px solid var(--zg-input-border) !important;
   cursor: default;
+  font-weight: 500;
 }
 
 /* Badges */

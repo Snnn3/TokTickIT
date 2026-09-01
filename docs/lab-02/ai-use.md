@@ -203,7 +203,105 @@ create the Pull request tooo
 
 ---
 
-<!-- Prompts 17..n appended during the sprint -->
+## Prompt 17 — Start Issue #18 (Create Ticket) on feature/lab2-4-create-ticket (2026-09-01)
+
+**Outcome:** Synced `lab2-staging` after PR #27 merged, branched `feature/lab2-4-create-ticket`, updated execution plan and Kanban tracking, and started implementing the Create Ticket full-stack feature (multipart backend with transactional number generation and atomic attachments, Zen Green validated frontend form) per specification.md.
+
+**Prompt (verbatim):**
+
+```text
+/implement my friend already merge the PR#27. let do next issue and don't forget to move the kanban board.
+```
+
+---
+
+## Prompt 18 — Address Code Review & Spec Feedback on Issue #18 (2026-09-01)
+
+**Outcome:** Addressed all standards and spec review findings on `feature/lab2-4-create-ticket`: aligned client and server file validation logic, added tooltips and loading option states to Create Ticket form, streamlined backend file processing, and modularized ticket creation controller logic.
+
+**Prompt (verbatim):**
+
+```text
+/implement do following the code review and the spec
+```
+
+---
+
+## Prompt 19 — Boxed layout for ticket number and date (2026-09-01)
+
+**Outcome:** Refined the Create Ticket form and Success confirmation panel to display the Ticket Number and Ticket Date inside distinct, clearly framed readonly input boxes and highlighted metadata cards with Zen Green tokens.
+
+**Prompt (verbatim):**
+
+```text
+fix while create show the ticket number and date must be in box
+```
+
+---
+
+## Prompt 20 — Display actual ticket number and date in boxes on success state (2026-09-01)
+
+**Outcome:** Updated the Create Ticket component so that once a ticket is created, the official generated Ticket Number and timestamp are populated into the System Metadata boxes on the working screen.
+
+**Prompt (verbatim):**
+
+```text
+fix while create show the ticket number and date must be in box Generated after submission show the number
+```
+
+---
+
+## Prompt 21 — Show preview ticket number and date in creation mode (2026-09-01)
+
+**Outcome:** Updated creation mode to render the official ticket number format preview `TKT-YYYY-##### (Generated on submission)` and current date preview `Today (Auto-generated on submission)` inside the System Metadata boxes.
+
+**Prompt (verbatim):**
+
+```text
+in creation mode Generated after submission this must show the preview number
+```
+
+---
+
+## Prompt 22 — Update preview ticket number format to TKT-YYYY-XXXXX (2026-09-01)
+
+**Outcome:** Updated creation mode preview ticket number from `##### (Preview)` to clean format `TKT-YYYY-XXXXX`.
+
+**Prompt (verbatim):**
+
+```text
+##### (Preview) change to the actual number or xxxx
+```
+
+---
+
+## Prompt 23 — Allow submission when invalid attachment attempt is not staged (2026-09-01)
+
+**Outcome:** Fixed submission blocking bug in CreateTicket form: validation now evaluates active staged files rather than lingering attachment rejection warnings, added dismiss action to attachment warning alert, and auto-clears stale file errors on submission.
+
+**Prompt (verbatim):**
+
+```text
+if i Attachment worng file and i dont want to Attachment anymore i cant sumbit ticket
+```
+
+---
+
+## Prompt 24 — Restore legacy Lab 1 test compatibility (2026-09-01)
+
+**Outcome:** Extracted Lab 1's CheckSystem component into `CheckSystem.tsx` and updated `tests/lab-01/` UI test suite so that running full regression tests (`npm test`) passes 100% across all legacy Lab 1 and current Lab 2 suites.
+
+**Prompt (verbatim):**
+
+```text
+ FAIL  tests/lab-01/UI-03.error-state.test.tsx > Check System - API failure > displays a useful error message when the API is unavailable
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Check System"
+i ran test and it fail
+```
+
+---
+
+<!-- Prompts 25..n appended during the sprint -->
 
 ## My Reflection
 

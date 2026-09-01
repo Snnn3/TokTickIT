@@ -4,6 +4,8 @@ import { RequesterUser } from "@prisma/client";
 
 export interface AuthenticatedRequest extends Request {
   requester?: RequesterUser;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+  file?: Express.Multer.File;
 }
 
 export async function requireRequester(
