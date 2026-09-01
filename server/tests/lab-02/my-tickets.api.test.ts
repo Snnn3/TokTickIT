@@ -59,6 +59,33 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
     expect(res.body.tickets[0].systemName).toBe("Campus Wi-Fi");
   });
 
+  it("A-08b: enforces requester isolation (BR-04, AC-18: Requester B never sees Requester A's tickets)", async () => {
+    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
+      id: 2,
+      name: "Supaporn Srisuk",
+      email: "supaporn.s@example.com",
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const findManySpy = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    vi.spyOn(prisma.ticket, "count").mockResolvedValue(0);
+
+    const res = await request(app)
+      .get("/api/tickets")
+      .set("X-Requester-Id", "2");
+
+    expect(res.status).toBe(200);
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          requesterId: 2,
+        }),
+      })
+    );
+  });
+
   it("A-09: supports search query across ticket number and summary (BR-19)", async () => {
     vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
       id: 1,

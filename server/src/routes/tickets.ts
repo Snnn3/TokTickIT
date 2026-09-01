@@ -182,141 +182,174 @@ async function createTicketTransaction(
   };
 }
 
+interface QueryValidationResult {
+  valid: boolean;
+  search?: string;
+  categoryId?: number;
+  priority?: TicketPriority;
+  status?: TicketStatus;
+  sort: string;
+  order: "asc" | "desc";
+  page: number;
+  pageSize: number;
+  details: { parameter: string; issue: string }[];
+}
+
+function validateTicketQuery(query: any): QueryValidationResult {
+  const details: { parameter: string; issue: string }[] = [];
+
+  // Parse and validate search
+  let search: string | undefined;
+  if (query.search !== undefined) {
+    if (typeof query.search !== "string") {
+      details.push({ parameter: "search", issue: "Search must be a string" });
+    } else {
+      const trimmed = query.search.trim();
+      if (trimmed.length > 150) {
+        details.push({
+          parameter: "search",
+          issue: "Search query must not exceed 150 characters",
+        });
+      } else if (trimmed.length > 0) {
+        search = trimmed;
+      }
+    }
+  }
+
+  // Parse and validate categoryId
+  let categoryId: number | undefined;
+  if (query.categoryId !== undefined) {
+    const parsed = parseInt(String(query.categoryId), 10);
+    if (isNaN(parsed) || parsed <= 0) {
+      details.push({
+        parameter: "categoryId",
+        issue: "Category ID must be a positive integer",
+      });
+    } else {
+      categoryId = parsed;
+    }
+  }
+
+  // Parse and validate priority
+  let priority: TicketPriority | undefined;
+  if (query.priority !== undefined) {
+    const p = String(query.priority);
+    if (!Object.values(TicketPriority).includes(p as TicketPriority)) {
+      details.push({
+        parameter: "priority",
+        issue: "Priority must be LOW, MEDIUM, or HIGH",
+      });
+    } else {
+      priority = p as TicketPriority;
+    }
+  }
+
+  // Parse and validate status
+  let status: TicketStatus | undefined;
+  if (query.status !== undefined) {
+    const s = String(query.status);
+    if (s !== "NEW") {
+      details.push({
+        parameter: "status",
+        issue: "Status must be NEW",
+      });
+    } else {
+      status = TicketStatus.NEW;
+    }
+  }
+
+  // Parse and validate sort
+  const allowedSorts = ["updatedAt", "createdAt", "number"];
+  let sort = "updatedAt";
+  if (query.sort !== undefined) {
+    const s = String(query.sort);
+    if (!allowedSorts.includes(s)) {
+      details.push({
+        parameter: "sort",
+        issue: "Sort field must be updatedAt, createdAt, or number",
+      });
+    } else {
+      sort = s;
+    }
+  }
+
+  // Parse and validate order
+  let order: "asc" | "desc" = "desc";
+  if (query.order !== undefined) {
+    const o = String(query.order).toLowerCase();
+    if (o !== "asc" && o !== "desc") {
+      details.push({
+        parameter: "order",
+        issue: "Order must be asc or desc",
+      });
+    } else {
+      order = o as "asc" | "desc";
+    }
+  }
+
+  // Parse and validate page
+  let page = 1;
+  if (query.page !== undefined) {
+    const parsed = parseInt(String(query.page), 10);
+    if (isNaN(parsed) || parsed < 1) {
+      details.push({
+        parameter: "page",
+        issue: "Page must be an integer >= 1",
+      });
+    } else {
+      page = parsed;
+    }
+  }
+
+  // Parse and validate pageSize
+  const allowedPageSizes = [5, 10, 20];
+  let pageSize = 10;
+  if (query.pageSize !== undefined) {
+    const parsed = parseInt(String(query.pageSize), 10);
+    if (isNaN(parsed) || !allowedPageSizes.includes(parsed)) {
+      details.push({
+        parameter: "pageSize",
+        issue: "Page size must be 5, 10, or 20",
+      });
+    } else {
+      pageSize = parsed;
+    }
+  }
+
+  return {
+    valid: details.length === 0,
+    search,
+    categoryId,
+    priority,
+    status,
+    sort,
+    order,
+    page,
+    pageSize,
+    details,
+  };
+}
+
 // GET /api/tickets [FR-08, BR-04, BR-19..BR-22, AC-16]
 ticketsRouter.get(
   "/",
   requireRequester,
   async (req: AuthenticatedRequest, res: Response) => {
     const requester = req.requester!;
-    const queryErrors: { parameter: string; issue: string }[] = [];
+    const validation = validateTicketQuery(req.query);
 
-    // Parse and validate search
-    let search: string | undefined;
-    if (req.query.search !== undefined) {
-      if (typeof req.query.search !== "string") {
-        queryErrors.push({ parameter: "search", issue: "Search must be a string" });
-      } else {
-        const trimmed = req.query.search.trim();
-        if (trimmed.length > 150) {
-          queryErrors.push({
-            parameter: "search",
-            issue: "Search query must not exceed 150 characters",
-          });
-        } else if (trimmed.length > 0) {
-          search = trimmed;
-        }
-      }
-    }
-
-    // Parse and validate categoryId
-    let categoryId: number | undefined;
-    if (req.query.categoryId !== undefined) {
-      const parsed = parseInt(String(req.query.categoryId), 10);
-      if (isNaN(parsed) || parsed <= 0) {
-        queryErrors.push({
-          parameter: "categoryId",
-          issue: "Category ID must be a positive integer",
-        });
-      } else {
-        categoryId = parsed;
-      }
-    }
-
-    // Parse and validate priority
-    let priority: TicketPriority | undefined;
-    if (req.query.priority !== undefined) {
-      const p = String(req.query.priority);
-      if (!Object.values(TicketPriority).includes(p as TicketPriority)) {
-        queryErrors.push({
-          parameter: "priority",
-          issue: "Priority must be LOW, MEDIUM, or HIGH",
-        });
-      } else {
-        priority = p as TicketPriority;
-      }
-    }
-
-    // Parse and validate status
-    let status: TicketStatus | undefined;
-    if (req.query.status !== undefined) {
-      const s = String(req.query.status);
-      if (s !== "NEW") {
-        queryErrors.push({
-          parameter: "status",
-          issue: "Status must be NEW",
-        });
-      } else {
-        status = TicketStatus.NEW;
-      }
-    }
-
-    // Parse and validate sort
-    const allowedSorts = ["updatedAt", "createdAt", "number"];
-    let sort = "updatedAt";
-    if (req.query.sort !== undefined) {
-      const s = String(req.query.sort);
-      if (!allowedSorts.includes(s)) {
-        queryErrors.push({
-          parameter: "sort",
-          issue: "Sort field must be updatedAt, createdAt, or number",
-        });
-      } else {
-        sort = s;
-      }
-    }
-
-    // Parse and validate order
-    let order: "asc" | "desc" = "desc";
-    if (req.query.order !== undefined) {
-      const o = String(req.query.order).toLowerCase();
-      if (o !== "asc" && o !== "desc") {
-        queryErrors.push({
-          parameter: "order",
-          issue: "Order must be asc or desc",
-        });
-      } else {
-        order = o as "asc" | "desc";
-      }
-    }
-
-    // Parse and validate page
-    let page = 1;
-    if (req.query.page !== undefined) {
-      const parsed = parseInt(String(req.query.page), 10);
-      if (isNaN(parsed) || parsed < 1) {
-        queryErrors.push({
-          parameter: "page",
-          issue: "Page must be an integer >= 1",
-        });
-      } else {
-        page = parsed;
-      }
-    }
-
-    // Parse and validate pageSize
-    const allowedPageSizes = [5, 10, 20];
-    let pageSize = 10;
-    if (req.query.pageSize !== undefined) {
-      const parsed = parseInt(String(req.query.pageSize), 10);
-      if (isNaN(parsed) || !allowedPageSizes.includes(parsed)) {
-        queryErrors.push({
-          parameter: "pageSize",
-          issue: "Page size must be 5, 10, or 20",
-        });
-      } else {
-        pageSize = parsed;
-      }
-    }
-
-    if (queryErrors.length > 0) {
+    if (!validation.valid) {
       return res.status(400).json({
         error: {
           code: "INVALID_QUERY",
           message: "Invalid query parameters",
-          details: queryErrors,
+          details: validation.details,
         },
       });
     }
+
+    const { search, categoryId, priority, status, sort, order, page, pageSize } =
+      validation;
 
     try {
       const where: Prisma.TicketWhereInput = {
@@ -342,10 +375,10 @@ ticketsRouter.get(
         where.status = status;
       }
 
-      const orderBy: Prisma.TicketOrderByWithRelationInput[] = [
-        { [sort]: order },
-        { number: "desc" },
-      ];
+      const orderBy: Prisma.TicketOrderByWithRelationInput[] =
+        sort === "number"
+          ? [{ number: order }]
+          : [{ [sort]: order }, { number: "desc" }];
 
       const skip = (page - 1) * pageSize;
       const take = pageSize;

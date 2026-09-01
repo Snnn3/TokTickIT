@@ -194,7 +194,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("pagination-showing")).toHaveTextContent("Showing 1 to 10 of 25 tickets");
-      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent("Page 1 of 3");
+      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent("Page 1 of 3 (25 tickets)");
     });
 
     // Click Next page

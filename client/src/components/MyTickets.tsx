@@ -37,6 +37,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
   // Filters & Controls
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
@@ -44,6 +45,14 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Debounce search input by 300ms [ui-spec.md Section 8]
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Pagination metadata
   const [total, setTotal] = useState(0);
@@ -78,7 +87,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     setError(null);
 
     const params = new URLSearchParams();
-    if (search.trim()) params.set("search", search.trim());
+    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
     if (categoryId) params.set("categoryId", categoryId);
     if (priority) params.set("priority", priority);
     if (status) params.set("status", status);
@@ -115,7 +124,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedRequester, search, categoryId, priority, status, sort, order, page, pageSize]);
+  }, [selectedRequester, debouncedSearch, categoryId, priority, status, sort, order, page, pageSize]);
 
   useEffect(() => {
     fetchTickets();
@@ -394,7 +403,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   <tr>
                     <th scope="col" style={{ width: "160px" }}>Ticket Number</th>
                     <th scope="col">Summary</th>
-                    <th scope="col" style={{ width: "160px" }}>Category</th>
+                    <th scope="col" className="d-none d-lg-table-cell" style={{ width: "160px" }}>Category</th>
                     <th scope="col" style={{ width: "110px" }}>Priority</th>
                     <th scope="col" style={{ width: "90px" }}>Status</th>
                     <th scope="col" style={{ width: "170px" }}>Last Updated</th>
@@ -402,39 +411,39 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {tickets.map((t) => (
-                    <tr key={t.id}>
+                  {tickets.map((ticket) => (
+                    <tr key={ticket.id}>
                       <td>
                         <button
                           type="button"
                           className="btn btn-link p-0 fw-bold text-decoration-none"
                           style={{ color: "var(--zg-primary)" }}
                           onClick={() => {
-                            if (onSelectTicket) onSelectTicket(t.id);
+                            if (onSelectTicket) onSelectTicket(ticket.id);
                           }}
                         >
-                          {t.number}
+                          {ticket.number}
                         </button>
                       </td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: "340px" }} title={t.summary}>
-                          {t.summary}
+                        <div className="text-truncate" style={{ maxWidth: "340px" }} title={ticket.summary}>
+                          {ticket.summary}
                         </div>
                       </td>
-                      <td>
-                        <span className="small text-muted">{t.categoryName}</span>
+                      <td className="d-none d-lg-table-cell">
+                        <span className="small text-muted">{ticket.categoryName}</span>
                       </td>
                       <td>
-                        <span className={getPriorityBadgeClass(t.requestedPriority)}>
-                          {t.requestedPriority}
+                        <span className={getPriorityBadgeClass(ticket.requestedPriority)}>
+                          {ticket.requestedPriority}
                         </span>
                       </td>
                       <td>
-                        <span className="badge badge-zen-new">{t.status}</span>
+                        <span className="badge badge-zen-new">{ticket.status}</span>
                       </td>
                       <td>
                         <span className="small text-muted">
-                          {new Date(t.updatedAt).toLocaleString()}
+                          {new Date(ticket.updatedAt).toLocaleString()}
                         </span>
                       </td>
                       <td className="text-end">
@@ -442,7 +451,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                           type="button"
                           className="btn btn-zen-secondary btn-sm py-0 px-2"
                           onClick={() => {
-                            if (onSelectTicket) onSelectTicket(t.id);
+                            if (onSelectTicket) onSelectTicket(ticket.id);
                           }}
                         >
                           View
@@ -454,41 +463,50 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </table>
             </div>
 
-            {/* Mobile Cards View (< 768px) */}
+            {/* Mobile Cards View (< 768px) - Whole card clickable [AC-22, ui-spec §8] */}
             <div className="d-md-none" data-testid="tickets-mobile-cards">
               <div className="d-flex flex-column gap-3">
-                {tickets.map((t) => (
-                  <div key={t.id} className="p-3 border rounded bg-white shadow-sm">
+                {tickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="p-3 border rounded bg-white shadow-sm"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => {
+                      if (onSelectTicket) onSelectTicket(ticket.id);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (onSelectTicket) onSelectTicket(ticket.id);
+                      }
+                    }}
+                  >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <button
-                        type="button"
-                        className="btn btn-link p-0 fw-bold text-decoration-none"
-                        style={{ color: "var(--zg-primary)" }}
-                        onClick={() => {
-                          if (onSelectTicket) onSelectTicket(t.id);
-                        }}
-                      >
-                        {t.number}
-                      </button>
+                      <span className="fw-bold" style={{ color: "var(--zg-primary)" }}>
+                        {ticket.number}
+                      </span>
                       <div className="d-flex gap-1">
-                        <span className={getPriorityBadgeClass(t.requestedPriority)}>
-                          {t.requestedPriority}
+                        <span className={getPriorityBadgeClass(ticket.requestedPriority)}>
+                          {ticket.requestedPriority}
                         </span>
-                        <span className="badge badge-zen-new">{t.status}</span>
+                        <span className="badge badge-zen-new">{ticket.status}</span>
                       </div>
                     </div>
 
-                    <div className="fw-medium small mb-2 text-dark">{t.summary}</div>
+                    <div className="fw-medium small mb-2 text-dark">{ticket.summary}</div>
 
                     <div className="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
                       <div>
-                        <span>{t.categoryName}</span> • <span>{t.systemName}</span>
+                        <span>{ticket.categoryName}</span> • <span>{ticket.systemName}</span>
                       </div>
                       <button
                         type="button"
                         className="btn btn-zen-secondary btn-sm py-0 px-2"
-                        onClick={() => {
-                          if (onSelectTicket) onSelectTicket(t.id);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onSelectTicket) onSelectTicket(ticket.id);
                         }}
                       >
                         View
@@ -517,7 +535,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   Previous
                 </button>
                 <span className="small text-muted px-2" data-testid="pagination-page-info">
-                  Page <strong>{page}</strong> of <strong>{totalPages || 1}</strong>
+                  Page <strong>{page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
                 </span>
                 <button
                   type="button"
