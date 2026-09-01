@@ -130,6 +130,19 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleResetForm = () => {
+    setSuccessResult(null);
+    setSummary("");
+    setDescription("");
+    setCategoryId("");
+    setSystemId("");
+    setRequestedPriority("");
+    setStagedFiles([]);
+    setErrors({});
+    setFileErrors([]);
+    setApiError(null);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setApiError(null);
@@ -208,380 +221,399 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
     }
   };
 
-  if (successResult) {
-    return (
-      <div className="zg-card p-4 p-md-5 text-center my-4" data-testid="success-panel">
-        <div
-          className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
-          style={{ width: "64px", height: "64px", backgroundColor: "var(--zg-pale)" }}
-        >
-          <span style={{ fontSize: "2rem", color: "var(--zg-primary)" }}>✓</span>
-        </div>
-        <h2 className="h3 fw-bold mb-2" style={{ color: "var(--zg-primary)" }}>
-          Ticket Created Successfully!
-        </h2>
-        <p className="text-muted mb-4">
-          Your support request has been registered in the system.
-        </p>
+  return (
+    <div className="my-2">
+      {/* Success Banner / Card */}
+      {successResult && (
+        <div className="zg-card p-4 p-md-5 text-center mb-4" data-testid="success-panel">
+          <div
+            className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+            style={{ width: "64px", height: "64px", backgroundColor: "var(--zg-pale)" }}
+          >
+            <span style={{ fontSize: "2rem", color: "var(--zg-primary)" }}>✓</span>
+          </div>
+          <h2 className="h3 fw-bold mb-2" style={{ color: "var(--zg-primary)" }}>
+            Ticket Created Successfully!
+          </h2>
+          <p className="text-muted mb-4">
+            Your support request has been registered in the system.
+          </p>
 
-        <div
-          className="p-3 mb-4 rounded border"
-          style={{ backgroundColor: "var(--zg-pale)", borderColor: "rgba(0,107,60,0.2)" }}
-        >
-          <div className="row g-3 text-center align-items-center">
-            <div className="col-12 col-md-6 border-end-md">
-              <div className="small text-muted mb-1">Official Ticket Number</div>
-              <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }}>
-                {successResult.number}
+          <div
+            className="p-3 mb-4 rounded border text-start"
+            style={{ backgroundColor: "var(--zg-pale)", borderColor: "rgba(0,107,60,0.2)" }}
+          >
+            <div className="row g-3 align-items-center">
+              <div className="col-12 col-md-6 border-end-md">
+                <div className="small text-muted mb-1">Official Ticket Number</div>
+                <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }}>
+                  {successResult.number}
+                </div>
               </div>
-            </div>
-            <div className="col-12 col-md-6">
-              <div className="small text-muted mb-1">Ticket Date</div>
-              <div className="h5 fw-semibold mb-0" style={{ color: "var(--zg-text-primary)" }}>
-                {new Date(successResult.ticketDate).toLocaleString()}
+              <div className="col-12 col-md-6">
+                <div className="small text-muted mb-1">Ticket Date</div>
+                <div className="h6 fw-semibold mb-0" style={{ color: "var(--zg-text-primary)" }}>
+                  {new Date(successResult.ticketDate).toLocaleString()}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="d-flex justify-content-center gap-3">
-          <button
-            type="button"
-            className="btn btn-zen-primary"
-            onClick={() => {
-              if (onSuccessNavigate) {
-                onSuccessNavigate(successResult.id);
-              }
-            }}
-          >
-            View My Tickets
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="zg-card p-4 my-2">
-      <div className="border-bottom pb-3 mb-4">
-        <h1 className="h4 fw-bold mb-1" style={{ color: "var(--zg-primary)" }}>
-          Create Support Ticket
-        </h1>
-        <p className="text-muted small mb-0">
-          Describe the problem you are experiencing and classify your request.
-        </p>
-      </div>
-
-      {apiError && (
-        <div className="alert alert-danger mb-4" role="alert" data-testid="api-error-banner">
-          {apiError}
+          <div className="d-flex justify-content-center gap-3">
+            <button
+              type="button"
+              className="btn btn-zen-primary"
+              onClick={() => {
+                if (onSuccessNavigate) {
+                  onSuccessNavigate(successResult.id);
+                }
+              }}
+            >
+              View My Tickets
+            </button>
+            <button
+              type="button"
+              className="btn btn-zen-secondary"
+              onClick={handleResetForm}
+            >
+              + Create Another Ticket
+            </button>
+          </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
-        {/* 1. System Group (Read-only strip) */}
-        <div className="mb-4 p-3 rounded border bg-light">
-          <h2 className="h6 fw-semibold text-muted mb-3 text-uppercase" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-            System Metadata (Read-Only)
-          </h2>
-          <div className="row g-3">
-            <div className="col-12 col-md-4">
-              <label htmlFor="sys-ticket-number" className="form-label small fw-semibold mb-1">Ticket Number</label>
-              <input
-                id="sys-ticket-number"
-                type="text"
-                className="form-control form-control-sm zg-readonly-field"
-                value="Generated after submission"
-                readOnly
-              />
-            </div>
-            <div className="col-12 col-md-4">
-              <label htmlFor="sys-ticket-date" className="form-label small fw-semibold mb-1">Ticket Date</label>
-              <input
-                id="sys-ticket-date"
-                type="text"
-                className="form-control form-control-sm zg-readonly-field"
-                value="Generated after submission"
-                readOnly
-              />
-            </div>
-            <div className="col-12 col-md-4">
-              <label htmlFor="sys-requester" className="form-label small fw-semibold mb-1">Requester</label>
-              <input
-                id="sys-requester"
-                type="text"
-                className="form-control form-control-sm zg-readonly-field"
-                value={selectedRequester ? `${selectedRequester.name} (${selectedRequester.email})` : "Not selected"}
-                readOnly
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Classification Group */}
-        <div className="mb-4">
-          <h2 className="h6 fw-semibold mb-3">Classification</h2>
-          <div className="row g-3">
-            <div className="col-12 col-md-4">
-              <label htmlFor="category-select" className="form-label small fw-semibold mb-1">
-                Category <span className="text-danger">*</span>
-              </label>
-              <select
-                id="category-select"
-                className={`form-select ${errors.categoryId ? "is-invalid" : ""}`}
-                value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value);
-                  if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: "" }));
-                }}
-                disabled={submitting || loadingRefs}
-                required
-              >
-                {loadingRefs ? (
-                  <option value="">Loading categories...</option>
-                ) : (
-                  <>
-                    <option value="">-- Select Category --</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              {errors.categoryId && (
-                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
-                  {errors.categoryId}
-                </div>
-              )}
-            </div>
-
-            <div className="col-12 col-md-4">
-              <label htmlFor="system-select" className="form-label small fw-semibold mb-1">
-                Related System <span className="text-danger">*</span>
-              </label>
-              <select
-                id="system-select"
-                className={`form-select ${errors.systemId ? "is-invalid" : ""}`}
-                value={systemId}
-                onChange={(e) => {
-                  setSystemId(e.target.value);
-                  if (errors.systemId) setErrors((prev) => ({ ...prev, systemId: "" }));
-                }}
-                disabled={submitting || loadingRefs}
-                required
-              >
-                {loadingRefs ? (
-                  <option value="">Loading related systems...</option>
-                ) : (
-                  <>
-                    <option value="">-- Select Related System --</option>
-                    {systems.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-              {errors.systemId && (
-                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
-                  {errors.systemId}
-                </div>
-              )}
-            </div>
-
-            <div className="col-12 col-md-4">
-              <label htmlFor="priority-select" className="form-label small fw-semibold mb-1">
-                Requested Priority <span className="text-danger">*</span>
-              </label>
-              <select
-                id="priority-select"
-                className={`form-select ${errors.requestedPriority ? "is-invalid" : ""}`}
-                value={requestedPriority}
-                onChange={(e) => {
-                  setRequestedPriority(e.target.value);
-                  if (errors.requestedPriority) setErrors((prev) => ({ ...prev, requestedPriority: "" }));
-                }}
-                disabled={submitting || loadingRefs}
-                required
-              >
-                <option value="">-- Select Priority --</option>
-                <option value="LOW">LOW</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="HIGH">HIGH</option>
-              </select>
-              {errors.requestedPriority && (
-                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
-                  {errors.requestedPriority}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Details Group */}
-        <div className="mb-4">
-          <h2 className="h6 fw-semibold mb-3">Ticket Details</h2>
-          <div className="mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <label htmlFor="summary-input" className="form-label small fw-semibold mb-0">
-                Ticket Summary <span className="text-danger">*</span>
-              </label>
-              <span className={`small ${summary.length > 150 ? "text-danger fw-bold" : "text-muted"}`}>
-                {summary.length}/150
-              </span>
-            </div>
-            <input
-              id="summary-input"
-              type="text"
-              className={`form-control ${errors.summary ? "is-invalid" : ""}`}
-              placeholder="Brief summary of the issue (e.g. Cannot connect to Wi-Fi in building 3)"
-              value={summary}
-              maxLength={160}
-              onChange={(e) => {
-                setSummary(e.target.value);
-                if (errors.summary) setErrors((prev) => ({ ...prev, summary: "" }));
-              }}
-              disabled={submitting}
-              required
-            />
-            {errors.summary && (
-              <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
-                {errors.summary}
-              </div>
-            )}
-          </div>
-
-          <div className="mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <label htmlFor="description-input" className="form-label small fw-semibold mb-0">
-                Description <span className="text-danger">*</span>
-              </label>
-              <span className={`small ${description.length > 5000 ? "text-danger fw-bold" : "text-muted"}`}>
-                {description.length}/5000
-              </span>
-            </div>
-            <textarea
-              id="description-input"
-              className={`form-control ${errors.description ? "is-invalid" : ""}`}
-              style={{ minHeight: "130px" }}
-              placeholder="Detailed description of the issue, steps to reproduce, or error messages encountered..."
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
-              }}
-              disabled={submitting}
-              required
-            />
-            {errors.description && (
-              <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
-                {errors.description}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 4. Attachments Group */}
-        <div className="mb-4">
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h2 className="h6 fw-semibold mb-0">Attachments (Optional)</h2>
-            <span className="small text-muted">{stagedFiles.length}/{MAX_ATTACHMENTS} files</span>
-          </div>
-          <p className="small text-muted mb-2">
-            Allowed file types: JPG, PNG, WEBP, PDF. Max 5 MB per file.
+      {/* Main Form Container */}
+      <div className="zg-card p-4">
+        <div className="border-bottom pb-3 mb-4">
+          <h1 className="h4 fw-bold mb-1" style={{ color: "var(--zg-primary)" }}>
+            Create Support Ticket
+          </h1>
+          <p className="text-muted small mb-0">
+            Describe the problem you are experiencing and classify your request.
           </p>
+        </div>
 
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="d-none"
-            accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
-            multiple
-            onChange={handleFileChange}
-            disabled={submitting || stagedFiles.length >= MAX_ATTACHMENTS}
-            id="file-upload-input"
-          />
+        {apiError && (
+          <div className="alert alert-danger mb-4" role="alert" data-testid="api-error-banner">
+            {apiError}
+          </div>
+        )}
 
-          <div className="mb-3">
-            <label
-              htmlFor="file-upload-input"
-              className={`btn btn-sm btn-outline-secondary ${
-                submitting || stagedFiles.length >= MAX_ATTACHMENTS ? "disabled" : ""
-              }`}
-            >
-              + Add Files
-            </label>
+        <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
+          {/* 1. System Group (Read-only strip) */}
+          <div className="mb-4 p-3 rounded border bg-light">
+            <h2 className="h6 fw-semibold text-muted mb-3 text-uppercase" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+              System Metadata (Read-Only)
+            </h2>
+            <div className="row g-3">
+              <div className="col-12 col-md-4">
+                <label htmlFor="sys-ticket-number" className="form-label small fw-semibold mb-1">Ticket Number</label>
+                <input
+                  id="sys-ticket-number"
+                  type="text"
+                  className="form-control form-control-sm zg-readonly-field"
+                  value={successResult ? successResult.number : "Generated after submission"}
+                  readOnly
+                />
+              </div>
+              <div className="col-12 col-md-4">
+                <label htmlFor="sys-ticket-date" className="form-label small fw-semibold mb-1">Ticket Date</label>
+                <input
+                  id="sys-ticket-date"
+                  type="text"
+                  className="form-control form-control-sm zg-readonly-field"
+                  value={
+                    successResult
+                      ? new Date(successResult.ticketDate).toLocaleString()
+                      : "Generated after submission"
+                  }
+                  readOnly
+                />
+              </div>
+              <div className="col-12 col-md-4">
+                <label htmlFor="sys-requester" className="form-label small fw-semibold mb-1">Requester</label>
+                <input
+                  id="sys-requester"
+                  type="text"
+                  className="form-control form-control-sm zg-readonly-field"
+                  value={selectedRequester ? `${selectedRequester.name} (${selectedRequester.email})` : "Not selected"}
+                  readOnly
+                />
+              </div>
+            </div>
           </div>
 
-          {fileErrors.length > 0 && (
-            <div className="alert alert-warning py-2 mb-3" data-testid="file-errors">
-              <ul className="mb-0 small ps-3">
-                {fileErrors.map((err, idx) => (
-                  <li key={idx}>{err}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {stagedFiles.length > 0 && (
-            <div className="list-group mb-3" data-testid="staged-files-list">
-              {stagedFiles.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="list-group-item d-flex justify-content-between align-items-center py-2 px-3"
+          {/* 2. Classification Group */}
+          <div className="mb-4">
+            <h2 className="h6 fw-semibold mb-3">Classification</h2>
+            <div className="row g-3">
+              <div className="col-12 col-md-4">
+                <label htmlFor="category-select" className="form-label small fw-semibold mb-1">
+                  Category <span className="text-danger">*</span>
+                </label>
+                <select
+                  id="category-select"
+                  className={`form-select ${errors.categoryId ? "is-invalid" : ""}`}
+                  value={categoryId}
+                  onChange={(e) => {
+                    setCategoryId(e.target.value);
+                    if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: "" }));
+                  }}
+                  disabled={submitting || loadingRefs || !!successResult}
+                  required
                 >
-                  <div className="text-truncate me-2">
-                    <span className="fw-semibold small">{file.name}</span>
-                    <span className="text-muted small ms-2">({formatFileSize(file.size)})</span>
+                  {loadingRefs ? (
+                    <option value="">Loading categories...</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Category --</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                {errors.categoryId && (
+                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                    {errors.categoryId}
                   </div>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger py-0 px-2"
-                    aria-label={`Remove file ${file.name}`}
-                    title={`Remove ${file.name}`}
-                    onClick={() => removeStagedFile(idx)}
-                    disabled={submitting}
-                  >
-                    ×
-                  </button>
+                )}
+              </div>
+
+              <div className="col-12 col-md-4">
+                <label htmlFor="system-select" className="form-label small fw-semibold mb-1">
+                  Related System <span className="text-danger">*</span>
+                </label>
+                <select
+                  id="system-select"
+                  className={`form-select ${errors.systemId ? "is-invalid" : ""}`}
+                  value={systemId}
+                  onChange={(e) => {
+                    setSystemId(e.target.value);
+                    if (errors.systemId) setErrors((prev) => ({ ...prev, systemId: "" }));
+                  }}
+                  disabled={submitting || loadingRefs || !!successResult}
+                  required
+                >
+                  {loadingRefs ? (
+                    <option value="">Loading related systems...</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select Related System --</option>
+                      {systems.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                {errors.systemId && (
+                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                    {errors.systemId}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-12 col-md-4">
+                <label htmlFor="priority-select" className="form-label small fw-semibold mb-1">
+                  Requested Priority <span className="text-danger">*</span>
+                </label>
+                <select
+                  id="priority-select"
+                  className={`form-select ${errors.requestedPriority ? "is-invalid" : ""}`}
+                  value={requestedPriority}
+                  onChange={(e) => {
+                    setRequestedPriority(e.target.value);
+                    if (errors.requestedPriority) setErrors((prev) => ({ ...prev, requestedPriority: "" }));
+                  }}
+                  disabled={submitting || loadingRefs || !!successResult}
+                  required
+                >
+                  <option value="">-- Select Priority --</option>
+                  <option value="LOW">LOW</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HIGH">HIGH</option>
+                </select>
+                {errors.requestedPriority && (
+                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                    {errors.requestedPriority}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Details Group */}
+          <div className="mb-4">
+            <h2 className="h6 fw-semibold mb-3">Ticket Details</h2>
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <label htmlFor="summary-input" className="form-label small fw-semibold mb-0">
+                  Ticket Summary <span className="text-danger">*</span>
+                </label>
+                <span className={`small ${summary.length > 150 ? "text-danger fw-bold" : "text-muted"}`}>
+                  {summary.length}/150
+                </span>
+              </div>
+              <input
+                id="summary-input"
+                type="text"
+                className={`form-control ${errors.summary ? "is-invalid" : ""}`}
+                placeholder="Brief summary of the issue (e.g. Cannot connect to Wi-Fi in building 3)"
+                value={summary}
+                maxLength={160}
+                onChange={(e) => {
+                  setSummary(e.target.value);
+                  if (errors.summary) setErrors((prev) => ({ ...prev, summary: "" }));
+                }}
+                disabled={submitting || !!successResult}
+                required
+              />
+              {errors.summary && (
+                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                  {errors.summary}
                 </div>
-              ))}
+              )}
+            </div>
+
+            <div className="mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <label htmlFor="description-input" className="form-label small fw-semibold mb-0">
+                  Description <span className="text-danger">*</span>
+                </label>
+                <span className={`small ${description.length > 5000 ? "text-danger fw-bold" : "text-muted"}`}>
+                  {description.length}/5000
+                </span>
+              </div>
+              <textarea
+                id="description-input"
+                className={`form-control ${errors.description ? "is-invalid" : ""}`}
+                style={{ minHeight: "130px" }}
+                placeholder="Detailed description of the issue, steps to reproduce, or error messages encountered..."
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
+                }}
+                disabled={submitting || !!successResult}
+                required
+              />
+              {errors.description && (
+                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                  {errors.description}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Attachments Group */}
+          <div className="mb-4">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h2 className="h6 fw-semibold mb-0">Attachments (Optional)</h2>
+              <span className="small text-muted">{stagedFiles.length}/{MAX_ATTACHMENTS} files</span>
+            </div>
+            <p className="small text-muted mb-2">
+              Allowed file types: JPG, PNG, WEBP, PDF. Max 5 MB per file.
+            </p>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="d-none"
+              accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+              multiple
+              onChange={handleFileChange}
+              disabled={submitting || stagedFiles.length >= MAX_ATTACHMENTS || !!successResult}
+              id="file-upload-input"
+            />
+
+            {!successResult && (
+              <div className="mb-3">
+                <label
+                  htmlFor="file-upload-input"
+                  className={`btn btn-sm btn-outline-secondary ${
+                    submitting || stagedFiles.length >= MAX_ATTACHMENTS ? "disabled" : ""
+                  }`}
+                >
+                  + Add Files
+                </label>
+              </div>
+            )}
+
+            {fileErrors.length > 0 && (
+              <div className="alert alert-warning py-2 mb-3" data-testid="file-errors">
+                <ul className="mb-0 small ps-3">
+                  {fileErrors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {stagedFiles.length > 0 && (
+              <div className="list-group mb-3" data-testid="staged-files-list">
+                {stagedFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="list-group-item d-flex justify-content-between align-items-center py-2 px-3"
+                  >
+                    <div className="text-truncate me-2">
+                      <span className="fw-semibold small">{file.name}</span>
+                      <span className="text-muted small ms-2">({formatFileSize(file.size)})</span>
+                    </div>
+                    {!successResult && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger py-0 px-2"
+                        aria-label={`Remove file ${file.name}`}
+                        title={`Remove ${file.name}`}
+                        onClick={() => removeStagedFile(idx)}
+                        disabled={submitting}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 5. Actions */}
+          {!successResult && (
+            <div className="d-flex justify-content-end gap-2 pt-3 border-top">
+              <button
+                type="button"
+                className="btn btn-zen-secondary"
+                onClick={() => {
+                  if (onCancel) onCancel();
+                }}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-zen-primary d-flex align-items-center gap-2"
+                disabled={submitting || loadingRefs}
+                aria-busy={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Submit Ticket</span>
+                )}
+              </button>
             </div>
           )}
-        </div>
-
-        {/* 5. Actions */}
-        <div className="d-flex justify-content-end gap-2 pt-3 border-top">
-          <button
-            type="button"
-            className="btn btn-zen-secondary"
-            onClick={() => {
-              if (onCancel) onCancel();
-            }}
-            disabled={submitting}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="btn btn-zen-primary d-flex align-items-center gap-2"
-            disabled={submitting || loadingRefs}
-            aria-busy={submitting}
-          >
-            {submitting ? (
-              <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <span>Submitting...</span>
-              </>
-            ) : (
-              <span>Submit Ticket</span>
-            )}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
