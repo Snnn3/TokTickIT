@@ -866,7 +866,7 @@ fix to follow the criteria
 
 ## Prompt 39 — Switch pageSize to bottom-left of pagination bar, finalize tests, and open PR for Issue #19 (2026-09-01)
 
-**Outcome:** Switched the `Per page:` select dropdown to the bottom-left of the pagination bar while keeping the page info and navigation controls on the bottom-right. Ran all test suites with 100% pass, committed, pushed, and opened Pull Request for Issue #19 into `lab2-staging`.
+**Outcome:** Switched the `Per page:` select dropdown to the bottom-left of the pagination bar while keeping the page info and navigation controls on the bottom-right. Ran all test suites with 100% pass, committed, pushed, and opened Pull Request [#29](https://github.com/Snnn3/TokTickIT/pull/29) for Issue #19 into `lab2-staging`.
 
 **Prompt (verbatim):**
 
