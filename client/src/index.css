@@ -1,3 +1,168 @@
+:root {
+  --zg-primary: #006B3C;
+  --zg-secondary: #0B7A46;
+  --zg-pale: #EAF6EF;
+  --zg-page-bg: #F5F7F6;
+  --zg-surface: #FFFFFF;
+  --zg-text-primary: #22332B;
+  --zg-text-muted: #5B6B62;
+  --zg-editable-field: #FFFFFF;
+  --zg-readonly-field: #EEF3EF;
+  --zg-error: #B3261E;
+  --zg-warning: #B7791F;
+  --zg-success: #1F7A45;
+  --zg-border: #E2E8E4;
+  --zg-input-border: #C9D2CC;
+}
+
 body {
+  margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--zg-page-bg);
+  color: var(--zg-text-primary);
+  min-height: 100vh;
+}
+
+/* Header & Navigation */
+.zg-header {
+  background-color: var(--zg-primary);
+  color: #FFFFFF;
+}
+
+.zg-header .navbar-brand {
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.zg-header .nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  padding: 0.5rem 0.85rem;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+}
+
+.zg-header .nav-link:hover,
+.zg-header .nav-link:focus {
+  color: #FFFFFF;
+  background-color: var(--zg-secondary);
+}
+
+.zg-header .nav-link.active {
+  color: var(--zg-primary);
+  background-color: var(--zg-pale);
+  font-weight: 600;
+}
+
+/* Cards and Panels */
+.zg-card {
+  background-color: var(--zg-surface);
+  border: 1px solid var(--zg-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(34, 51, 43, 0.06);
+}
+
+/* Buttons */
+.btn-zen-primary {
+  background-color: var(--zg-primary);
+  color: #FFFFFF;
+  border: 1px solid var(--zg-primary);
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.45rem 1rem;
+}
+
+.btn-zen-primary:hover {
+  background-color: var(--zg-secondary);
+  border-color: var(--zg-secondary);
+  color: #FFFFFF;
+}
+
+.btn-zen-primary:focus-visible,
+.btn-zen-primary:focus {
+  background-color: var(--zg-secondary);
+  color: #FFFFFF;
+  outline: 2px solid var(--zg-secondary);
+  outline-offset: 1px;
+}
+
+.btn-zen-secondary {
+  background-color: #FFFFFF;
+  color: var(--zg-primary);
+  border: 1px solid var(--zg-primary);
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.45rem 1rem;
+}
+
+.btn-zen-secondary:hover {
+  background-color: var(--zg-pale);
+  color: var(--zg-primary);
+}
+
+.btn-zen-secondary:focus-visible,
+.btn-zen-secondary:focus {
+  outline: 2px solid var(--zg-secondary);
+  outline-offset: 1px;
+}
+
+.btn-zen-destructive {
+  background-color: var(--zg-error);
+  color: #FFFFFF;
+  border: 1px solid var(--zg-error);
+  border-radius: 6px;
+}
+
+/* Form Controls & Focus Rings */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--zg-secondary);
+  box-shadow: 0 0 0 2px rgba(11, 122, 70, 0.25);
+  outline: 2px solid var(--zg-secondary);
+  outline-offset: 1px;
+}
+
+.zg-readonly-field {
+  background-color: var(--zg-readonly-field) !important;
+  color: var(--zg-text-primary);
+  cursor: default;
+}
+
+/* Badges */
+.badge-zen-new {
+  background-color: var(--zg-pale);
+  color: var(--zg-primary);
+  font-weight: 600;
+  border: 1px solid rgba(0, 107, 60, 0.2);
+}
+
+.badge-zen-low {
+  background-color: #F0F2F1;
+  color: var(--zg-text-muted);
+  font-weight: 500;
+}
+
+.badge-zen-medium {
+  background-color: #CFE8DA;
+  color: var(--zg-secondary);
+  font-weight: 600;
+}
+
+.badge-zen-high {
+  background-color: var(--zg-primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* Requester Chip */
+.zg-requester-chip {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
