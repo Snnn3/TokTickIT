@@ -484,7 +484,24 @@ can you create the mockup data for me. does it conflict thge spec
 
 ---
 
-<!-- Prompts 32..n appended during the sprint -->
+## Prompt 32 — Fix missing npm run db:seed script in package.json (2026-09-01)
+
+**Outcome:** Added `db:seed` and `seed` script aliases to both root `package.json` and `server/package.json` so `npm run db:seed` executes reliably from either directory.
+
+**Prompt (verbatim):**
+
+```text
+npm run db:seed
+npm error Missing script: "db:seed"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: C:\Users\lchan\AppData\Local\npm-cache\_logs\2026-09-01T14_58_34_954Z-debug-0.log
+```
+
+---
+
+<!-- Prompts 33..n appended during the sprint -->
 
 ## My Reflection
 
