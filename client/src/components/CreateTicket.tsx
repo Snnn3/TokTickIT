@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import type { FormEvent, ChangeEvent } from "react";
 import { useRequester } from "../context/RequesterContext";
 import {
@@ -10,7 +10,7 @@ import {
   validateFile,
   MAX_ATTACHMENTS,
 } from "../utils/validation";
-import type { Category, RelatedSystem } from "../types/ticket";
+import { useReferenceData } from "../hooks/useReferenceData";
 
 interface CreatedTicketResult {
   id: number;
@@ -35,10 +35,8 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
   const [requestedPriority, setRequestedPriority] = useState("");
   const [stagedFiles, setStagedFiles] = useState<File[]>([]);
 
-  // Reference data
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [systems, setSystems] = useState<RelatedSystem[]>([]);
-  const [loadingRefs, setLoadingRefs] = useState(true);
+  // Reference data via shared hook
+  const { categories, systems, loading: loadingRefs } = useReferenceData();
 
   // States
   const [submitting, setSubmitting] = useState(false);
@@ -48,29 +46,6 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
   const [successResult, setSuccessResult] = useState<CreatedTicketResult | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    async function loadReferenceData() {
-      setLoadingRefs(true);
-      try {
-        const [catRes, sysRes] = await Promise.all([
-          fetch("/api/reference/categories"),
-          fetch("/api/reference/systems"),
-        ]);
-        if (catRes.ok && sysRes.ok) {
-          const catData = await catRes.json();
-          const sysData = await sysRes.json();
-          setCategories(catData.categories || []);
-          setSystems(sysData.systems || []);
-        }
-      } catch {
-        setApiError("Failed to load reference categories or systems.");
-      } finally {
-        setLoadingRefs(false);
-      }
-    }
-    loadReferenceData();
-  }, []);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFileErrors([]);

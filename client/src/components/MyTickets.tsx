@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRequester } from "../context/RequesterContext";
-import type { Category, TicketSummaryItem, TicketPriority, TicketStatus } from "../types/ticket";
+import type { TicketSummaryItem, TicketPriority, TicketStatus } from "../types/ticket";
+import { useCategories } from "../hooks/useReferenceData";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { formatDateTime } from "../utils/format";
 
@@ -38,7 +39,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
   // State
   const [tickets, setTickets] = useState<TicketSummaryItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,22 +68,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       queryState.sort !== "updatedAt" ||
       queryState.order !== "desc"
   );
-
-  // Load categories for filter dropdown
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const res = await fetch("/api/reference/categories");
-        if (res.ok) {
-          const data = await res.json();
-          setCategories(data.categories || []);
-        }
-      } catch {
-        // Silently fail category load; fallback to empty list
-      }
-    }
-    loadCategories();
-  }, []);
 
   // Fetch tickets
   const fetchTickets = useCallback(async () => {
@@ -518,7 +503,12 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       </div>
                     </div>
 
-                    <div className="fw-medium small mb-2 text-dark">{ticket.summary}</div>
+                    <div
+                      className="fw-medium small mb-2"
+                      style={{ color: "var(--zg-text-primary)" }}
+                    >
+                      {ticket.summary}
+                    </div>
 
                     <div className="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
                       <div>

@@ -575,7 +575,76 @@ npm error A complete log of this run can be found in: C:\Users\lchan\AppData\Loc
 
 ---
 
-<!-- Prompts 34..n appended during the sprint -->
+## Prompt 34 — Fix color token inconsistency on mobile card, extract useCategories hook, and clean baseline seed (2026-09-01)
+
+**Outcome:** Replaced `text-dark` on mobile card summary with `var(--zg-text-primary)` color token, extracted shared `useCategories` custom hook across `MyTickets.tsx` and `CreateTicket.tsx`, and reverted `server/prisma/seed.ts` to strictly adhere to the Section 7 baseline dataset.
+
+**Prompt (verbatim):**
+
+```text
+/implement following this comment   ## Standards
+
+  ### (a) Documented Standards Violations
+  1. Minor Token Inconsistency (ui-spec.md:17)
+      • Standard: docs/lab-02/ui-spec.md §1 (Color Tokens): text-primary (#22332B) — "dark charcoal-green body text (never pure black)".
+      • Location: MyTickets.tsx:521
+      • Violation: Mobile ticket card summary uses Bootstrap class text-dark (#212529 / pure black) instead of the design token var(--zg-text-primary) or inheriting body text color:
+        <div className="fw-medium small mb-2 text-dark">{ticket.summary}</div>
+  ### (b) Baseline Smells (Judgement Calls)
+  1. Duplicated Code / Data Clumps (MyTickets.tsx:72-85 vs CreateTicket.tsx:53-73)
+      • Hunk:
+        useEffect(() => {
+          async function loadCategories() {
+            try {
+              const res = await fetch("/api/reference/categories");
+              if (res.ok) {
+                const data = await res.json();
+              }
+            } catch { /* ... */ }
+          }
+          loadCategories();
+        }, []);
+
+      • Observation: Reference category fetching and state management are duplicated between MyTickets.tsx and CreateTicket.tsx. Extracting a shared custom hook (e.g., useCategories /
+      useReferenceData) would consolidate caching and error handling across views.
+
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  • None identified. All core functional and acceptance criteria requirements for Issue #19 / My Tickets are fully satisfied:
+      • FR-08 / BR-19 / AC-13: Debounced (300ms) case-insensitive search across Ticket Number OR Summary (ui-spec.md §8).
+      • BR-20 / AC-14 / AC-15: Category, Priority, and Status (NEW) filters; sortable by updatedAt, createdAt, number with default updatedAt desc + number desc tiebreak.
+      • BR-21 / AC-16: Pagination starting at page 1, pageSize select in {5, 10, 20} (default 10), {page, pageSize, total, totalPages} response envelope, and 400 validation on invalid query
+      parameters.
+      • BR-24 / AC-17: Distinct empty state ("No tickets yet - Create your first ticket") vs no-results state ("No tickets match your filters" + Clear filters) (ui-spec.md §8).
+      • AC-22 / ui-spec.md §8 & §11: Responsive design with desktop table (>=992px), tablet view (768–991px omitting Category column), and interactive mobile cards (<768px).
+
+                setCategories(data.categories || []);
+
+  ### (b) Scope Creep / Unrequested Behaviour
+
+  1. Mock Ticket Seed Dataset (specification.md:168-172):
+      • Spec Quote: specification.md Section 7 (Data Changes):
+      │ "Seed (idempotent, safe to rerun): 4 Categories (...); 7 Related Systems (...); 4 active Requesters (...); 1 inactive Requester (...)"
+
+      • Finding: In seed.ts:28-237, 16 pre-populated mock tickets and Postgres sequence synchronization were added under SEED_MOCK_TICKETS=true. While beneficial for manual UI verification and
+      pagination demonstration, pre-seeding ticket records was not requested in Section 7.
+
+
+  ### (c) Requirements Implemented Incorrectly
+
+  • None identified. Query validation in tickets.ts strictly adheres to api-spec.md §2 (400 INVALID_QUERY with parameter-level details; 401 AUTH_REQUIRED via requireRequester). MyTickets.tsx
+  correctly implements the Zen Green tokens, accessible button hierarchy, skeleton loaders, and badge color/text pairings.
+  ──────
+  Summary: 2 Standards findings (worst: minor Bootstrap text-dark class usage on mobile card summary instead of Zen Green body text token); 1 Spec finding (worst: optional mock ticket seeding
+  dataset added in seed.ts beyond Section 7 baseline).
+```
+
+---
+
+<!-- Prompts 35..n appended during the sprint -->
 
 ## My Reflection
 
