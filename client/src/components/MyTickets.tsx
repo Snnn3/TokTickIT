@@ -50,7 +50,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(queryState.search);
-      setQueryState((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
     }, 300);
     return () => clearTimeout(timer);
   }, [queryState.search]);
@@ -154,6 +153,21 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     if (onSelectTicket) onSelectTicket(ticketId);
   };
 
+  // Compute page numbers to display
+  const getPageNumbers = (): (number | string)[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const current = queryState.page;
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, "...", totalPages];
+    }
+    if (current >= totalPages - 3) {
+      return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, "...", current - 1, current, current + 1, "...", totalPages];
+  };
+
   return (
     <div className="my-2">
       {/* Header bar */}
@@ -196,7 +210,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 placeholder="Search number or summary"
                 value={queryState.search}
                 onChange={(e) => {
-                  setQueryState((prev) => ({ ...prev, search: e.target.value }));
+                  setQueryState((prev) => ({ ...prev, search: e.target.value, page: 1 }));
                 }}
               />
             </div>
@@ -282,9 +296,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
             </div>
           </div>
 
-          {/* Sort & Pagination Options Strip */}
+          {/* Sort Options Strip */}
           <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
-            <div className="col-12 col-md-auto d-flex align-items-center gap-2">
+            <div className="col-12 d-flex align-items-center gap-2">
               <span>Sort by:</span>
               <select
                 id="sort-select"
@@ -318,27 +332,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               >
                 <option value="desc">Descending</option>
                 <option value="asc">Ascending</option>
-              </select>
-            </div>
-
-            <div className="col-12 col-md-auto ms-md-auto d-flex align-items-center gap-2">
-              <span>Page size:</span>
-              <select
-                id="page-size-select"
-                className="form-select form-select-sm"
-                style={{ width: "auto" }}
-                value={queryState.pageSize}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    pageSize: Number(e.target.value),
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
               </select>
             </div>
           </div>
@@ -562,31 +555,86 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </div>
             </div>
 
-            {/* Pagination Controls [ui-spec §8: Page X of Y (N tickets)] */}
-            <div className="d-flex justify-content-end align-items-center gap-2 mt-4 pt-3 border-top">
-              <button
-                type="button"
-                className="btn btn-zen-secondary btn-sm"
-                disabled={queryState.page <= 1}
-                onClick={() => setQueryState((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
-                aria-label="Previous page"
-              >
-                Previous
-              </button>
-              <span className="small text-muted px-2" data-testid="pagination-page-info">
-                Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
-              </span>
-              <button
-                type="button"
-                className="btn btn-zen-secondary btn-sm"
-                disabled={queryState.page >= totalPages || totalPages === 0}
-                onClick={() =>
-                  setQueryState((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))
-                }
-                aria-label="Next page"
-              >
-                Next
-              </button>
+            {/* Pagination Controls [ui-spec §8: prev/next + page indicator "Page X of Y (N tickets)"; pageSize select {5,10,20}] */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+              {/* Page Indicator */}
+              <div className="d-flex align-items-center gap-2">
+                <span className="small text-muted" data-testid="pagination-page-info">
+                  Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
+                </span>
+              </div>
+
+              {/* Prev / Next & Number Buttons */}
+              <div className="d-flex align-items-center gap-1 flex-wrap justify-content-center">
+                <button
+                  type="button"
+                  className="btn btn-zen-secondary btn-sm me-1"
+                  disabled={queryState.page <= 1}
+                  onClick={() => setQueryState((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  aria-label="Previous page"
+                >
+                  Previous
+                </button>
+
+                {/* Direct Page Number Buttons to skip/jump */}
+                {totalPages > 1 &&
+                  getPageNumbers().map((item, index) =>
+                    typeof item === "number" ? (
+                      <button
+                        key={`page-${item}`}
+                        type="button"
+                        className={`btn btn-sm ${
+                          item === queryState.page ? "btn-zen-primary" : "btn-zen-secondary"
+                        }`}
+                        style={{ minWidth: "34px", padding: "0.25rem 0.5rem" }}
+                        onClick={() => setQueryState((prev) => ({ ...prev, page: item }))}
+                        aria-label={`Page ${item}`}
+                        aria-current={item === queryState.page ? "page" : undefined}
+                      >
+                        {item}
+                      </button>
+                    ) : (
+                      <span key={`ellipsis-${index}`} className="px-1 text-muted small">
+                        …
+                      </span>
+                    )
+                  )}
+
+                <button
+                  type="button"
+                  className="btn btn-zen-secondary btn-sm ms-1"
+                  disabled={queryState.page >= totalPages || totalPages === 0}
+                  onClick={() =>
+                    setQueryState((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))
+                  }
+                  aria-label="Next page"
+                >
+                  Next
+                </button>
+              </div>
+
+              {/* Page Size Dropdown */}
+              <div className="d-flex align-items-center gap-2 small text-muted">
+                <span>Per page:</span>
+                <select
+                  id="page-size-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.pageSize}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      page: 1,
+                    }));
+                  }}
+                  aria-label="Page size"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
+              </div>
             </div>
           </div>
         )}

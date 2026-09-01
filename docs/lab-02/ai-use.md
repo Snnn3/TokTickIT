@@ -448,7 +448,19 @@ i ran test and it fail
 
 ---
 
-<!-- Prompts 29..n appended during the sprint -->
+## Prompt 29 — Add direct page number jump buttons and fix pagination transitions (2026-09-01)
+
+**Outcome:** Added direct clickable page number buttons with smart windowing (allowing users to click exact page numbers to jump/skip pages directly), placed page size selector alongside pagination controls, and eliminated debounce timer state reset collisions.
+
+**Prompt (verbatim):**
+
+```text
+pagination doesnt work i want the number to skip it
+```
+
+---
+
+<!-- Prompts 30..n appended during the sprint -->
 
 ## My Reflection
 

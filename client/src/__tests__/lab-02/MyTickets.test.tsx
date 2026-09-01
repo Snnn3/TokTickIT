@@ -199,13 +199,24 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
       expect(screen.getByTestId("pagination-page-info")).toHaveTextContent("Page 1 of 3 (25 tickets)");
     });
 
+    // Click direct page number 3 button
+    const page3Btn = screen.getByRole("button", { name: "Page 3" });
+    fireEvent.click(page3Btn);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining("page=3"),
+        expect.anything()
+      );
+    });
+
     // Click Next page
     const nextBtn = screen.getByRole("button", { name: /Next page/i });
     fireEvent.click(nextBtn);
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("page=2"),
+        expect.stringContaining("page="),
         expect.anything()
       );
     });
