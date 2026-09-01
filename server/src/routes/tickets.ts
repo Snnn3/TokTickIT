@@ -192,29 +192,29 @@ interface QueryValidationResult {
   order: "asc" | "desc";
   page: number;
   pageSize: number;
-  details: { parameter: string; issue: string }[];
+  details: { field: string; parameter: string; issue: string }[];
 }
 
 function parseStrictInteger(
   value: unknown,
   parameter: string,
   issue: string,
-  details: { parameter: string; issue: string }[],
+  details: { field: string; parameter: string; issue: string }[],
   options?: { min?: number; allowed?: number[] },
 ): number | undefined {
   if (value === undefined) return undefined;
   const raw = String(value).trim();
   if (!/^\d+$/.test(raw)) {
-    details.push({ parameter, issue });
+    details.push({ field: parameter, parameter, issue });
     return undefined;
   }
   const parsed = parseInt(raw, 10);
   if (options?.min !== undefined && parsed < options.min) {
-    details.push({ parameter, issue });
+    details.push({ field: parameter, parameter, issue });
     return undefined;
   }
   if (options?.allowed !== undefined && !options.allowed.includes(parsed)) {
-    details.push({ parameter, issue });
+    details.push({ field: parameter, parameter, issue });
     return undefined;
   }
   return parsed;
@@ -223,17 +223,18 @@ function parseStrictInteger(
 function validateTicketQuery(
   query: Record<string, unknown>,
 ): QueryValidationResult {
-  const details: { parameter: string; issue: string }[] = [];
+  const details: { field: string; parameter: string; issue: string }[] = [];
 
   // Parse and validate search
   let search: string | undefined;
   if (query.search !== undefined) {
     if (typeof query.search !== "string") {
-      details.push({ parameter: "search", issue: "Search must be a string" });
+      details.push({ field: "search", parameter: "search", issue: "Search must be a string" });
     } else {
       const trimmed = query.search.trim();
       if (trimmed.length > 150) {
         details.push({
+          field: "search",
           parameter: "search",
           issue: "Search query must not exceed 150 characters",
         });
@@ -258,6 +259,7 @@ function validateTicketQuery(
     const p = String(query.priority);
     if (!Object.values(TicketPriority).includes(p as TicketPriority)) {
       details.push({
+        field: "priority",
         parameter: "priority",
         issue: "Priority must be LOW, MEDIUM, or HIGH",
       });
@@ -272,6 +274,7 @@ function validateTicketQuery(
     const s = String(query.status);
     if (s !== "NEW") {
       details.push({
+        field: "status",
         parameter: "status",
         issue: "Status must be NEW",
       });
@@ -287,6 +290,7 @@ function validateTicketQuery(
     const s = String(query.sort);
     if (!allowedSorts.includes(s)) {
       details.push({
+        field: "sort",
         parameter: "sort",
         issue: "Sort field must be updatedAt, createdAt, or number",
       });
@@ -301,6 +305,7 @@ function validateTicketQuery(
     const o = String(query.order).toLowerCase();
     if (o !== "asc" && o !== "desc") {
       details.push({
+        field: "order",
         parameter: "order",
         issue: "Order must be asc or desc",
       });

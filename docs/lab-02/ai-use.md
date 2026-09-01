@@ -809,7 +809,62 @@ fix to follow the criteria
 
 ---
 
-<!-- Prompts 38..n appended during the sprint -->
+## Prompt 38 — Final review verification for Issue #19 and query error field mapping (2026-09-01)
+
+**Outcome:** Verified 0 hard violations and 0 spec defects on `feature/lab2-5-my-tickets`. Aligned error detail objects to include both `field` and `parameter` properties for full Section 1 & Section 2 compliance.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### 1. Verification of Previous Feedback
+
+  • Duplicated Integer Parsing (tickets.ts:198-221): FIXED. Extracted tickets.ts:198-221 helper validating regex /^\d+$/, bounds, and allowed sets across categoryId, page, and pageSize.
+  • Duplicated Fetch Hooks (useReferenceData.ts:54-57): FIXED. useReferenceData.ts:54-57 delegates directly to useReferenceData.ts:7-49, avoiding redundant network request lifecycles.
+  • Type Safety & Badge Mapping (ZenBadge.tsx): FIXED. Uses typed lookup records PRIORITY_BADGE_MAP and STATUS_BADGE_MAP keyed by domain types with safe fallbacks, eliminating repeated switch logic.
+
+  ### 2. Standards Compliance by File / Hunk
+  • tickets.ts:185-442: Full compliance with api-spec.md §3 (GET /api/tickets), specification.md (FR-08, BR-04, BR-19..BR-22), and AC-16 (returns 400 INVALID_QUERY with field-level details).
+  Properly applies number tiebreaker across non-number sort orders per BR-20.
+  • MyTickets.tsx: Adheres to ui-spec.md §8 and specification.md (BR-24, AC-17, AC-22). Consolidates query state into TicketQueryState, isolating active filter flags from pagination/sorting for
+  correct empty-state display, and provides desktop table / mobile card skeletons.
+  • ticket.ts & format.ts: Clean extraction of domain types and date formatting helper; avoids Primitive Obsession.
+  ### 3. Baseline Smell Assessment
+
+  • Hard Violations: 0
+  • Judgement Calls / Smells: 0 (all previous smell items resolved).
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+  • None: All core requirements for Issue #19 across specification.md (FR-08, BR-19..BR-21, BR-24, AC-13..AC-17, AC-22), api-spec.md (GET /api/tickets), and ui-spec.md (§8 My Tickets Screen) are
+  fully implemented:
+      • Strict integer & enum query validation with 400 INVALID_QUERY (api-spec.md:81-90).
+      • Default sort updatedAt descending with number tiebreak (specification.md:110-111).
+      • Responsive table (desktop/tablet) and clickable card layout (mobile) (ui-spec.md:109-111).
+      • Debounced search (300ms), filter dropdowns, tertiary Clear Filters, loading skeletons, and pagination strip {5,10,20} (ui-spec.md:105-117).
+
+
+  ### (b) Unrequested Behavior / Scope Creep
+
+  1. **CreateTicket.tsx**: Refactored CreateTicket to consume useReferenceData and added smooth scroll-to-top on form submission (touches Issue #18 scope).
+  2. **Seed Scripts in package.json**: Added root and server db:seed convenience shortcuts.
+
+  ### (c) Divergences or Subtleties
+
+  1. Query Error Details Key Name: docs/lab-02/api-spec.md Section 1 defines generic error details as details: [{ "field": "...", "issue": "..." }], whereas tickets.ts:195-221 uses { parameter:
+  string, issue: string } for query validation per §2 L90 ("per-param details").
+  2. Empty State Copy Structure: docs/lab-02/ui-spec.md §8 specifies "No tickets yet - Create your first ticket" + CTA; MyTickets.tsx:406-422 structures this cleanly across a header, subtitle, and
+  primary button.
+  ──────
+  Summary: Standards: 0 findings (all prior refactoring items resolved). Spec: 2 minor observations (worst: harmless out-of-scope window.scrollTo in CreateTicket.tsx). All 27 server and 36 client
+  tests pass.
+```
+
+---
+
+<!-- Prompts 39..n appended during the sprint -->
 
 ## My Reflection
 
