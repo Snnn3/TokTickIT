@@ -460,7 +460,19 @@ pagination doesnt work i want the number to skip it
 
 ---
 
-<!-- Prompts 30..n appended during the sprint -->
+## Prompt 30 — Position pagination to bottom right, remove per-page selector, keep default page size 10 (2026-09-01)
+
+**Outcome:** Aligned pagination controls to the bottom right of the tickets list, removed the per-page selector dropdown from the UI while keeping pageSize fixed at the default of 10.
+
+**Prompt (verbatim):**
+
+```text
+make it bottom right of list delete the number showing per page keep defualt at 10
+```
+
+---
+
+<!-- Prompts 31..n appended during the sprint -->
 
 ## My Reflection
 
