@@ -392,7 +392,6 @@ ticketsRouter.get(
           take,
           include: {
             category: { select: { name: true } },
-            system: { select: { name: true } },
           },
         }),
       ]);
@@ -405,11 +404,8 @@ ticketsRouter.get(
         summary: t.summary,
         categoryId: t.categoryId,
         categoryName: t.category?.name || "Unknown",
-        systemId: t.systemId,
-        systemName: t.system?.name || "Unknown",
         requestedPriority: t.requestedPriority,
         status: t.status,
-        ticketDate: t.ticketDate,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
       }));

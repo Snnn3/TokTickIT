@@ -364,7 +364,91 @@ i ran test and it fail
 
 ---
 
-<!-- Prompts 28..n appended during the sprint -->
+## Prompt 28 — Implement button token alignment, query state consolidation, uncontracted field pruning, and pagination cleanup (2026-09-01)
+
+**Outcome:** Replaced default Bootstrap gray buttons with Zen Green tokens (`.btn-zen-secondary`), typed status with `TicketStatus`, consolidated filter state, extracted shared date formatting utility, pruned uncontracted fields (`systemId`, `systemName`, `ticketDate`) from `GET /api/tickets`, and cleaned up pagination display to strictly follow `ui-spec.md §8`.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### (a) Documented Standards Violations (Hard / Strict)
+
+  1. Button Hierarchy Token Deviation (ui-spec.md:42-46)
+      • Standard: ui-spec.md §3 (Component States and Buttons - Button hierarchy) defines strict button variants: Primary (#006B3C), Secondary (white bg, 1px #006B3C border), Tertiary/link, and
+      Destructive.
+      • Locations:
+          • MyTickets.tsx:390: <button className="btn btn-sm btn-outline-secondary" ...>Clear filters</button> in no-results state.
+          • MyTickets.tsx:540: <button className="btn btn-outline-secondary btn-sm" ...> in pagination controls.
+      • Violation: Uses default Bootstrap .btn-outline-secondary (gray border/hover) instead of Zen Green design tokens (.btn-zen-secondary or .btn-zen-tertiary).
+  ### (b) Baseline Code Smells (Judgement Calls)
+  1. Primitive Obsession (MyTickets.tsx:27)
+      • Hunk:
+        const [priority, setPriority] = useState<TicketPriority | "">("");
+        const [status, setStatus] = useState("");
+
+      • Smell: status is held as an untyped string primitive useState("") instead of utilizing the domain type TicketStatus | "" (as done with ticket.ts:3).
+  2. Data Clump (MyTickets.tsx:23-32)
+      • Hunk:
+        const [search, setSearch] = useState("");
+        const [debouncedSearch, setDebouncedSearch] = useState("");
+        const [categoryId, setCategoryId] = useState("");
+        const [priority, setPriority] = useState<TicketPriority | "">("");
+        const [status, setStatus] = useState("");
+        const [sort, setSort] = useState("updatedAt");
+        const [order, setOrder] = useState<"asc" | "desc">("desc");
+        const [page, setPage] = useState(1);
+        const [pageSize, setPageSize] = useState(10);
+
+      • Smell: Nine separate filter and pagination state hooks travel together across fetchTickets, URL parameter building, and reset handlers; bundling into a single query state object or custom
+      hook improves cohesion.
+  3. Duplicated Code (MyTickets.tsx:461, MyTickets.tsx:511)
+      • Hunk:
+        // Desktop row:
+        {new Date(ticket.updatedAt).toLocaleString()}
+        // Mobile card:
+        <span>Updated: {new Date(ticket.updatedAt).toLocaleString()}</span>
+
+      • Smell: Raw inline date formatting is duplicated across desktop and mobile render trees rather than using a shared date utility or formatting helper.
+
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  • None. All requirements across functional specifications (FR-08), business rules (BR-19–BR-21, BR-24), acceptance criteria (AC-13–AC-17, AC-22), UI specifications (ui-spec.md §8, §11, §12), and
+  REST contracts (api-spec.md §2) are fully implemented with unit, API, and component test coverage.
+
+  ### (b) Scope Creep / Unrequested Behaviour
+
+  1. Extra ticket fields in API list payload (api-spec.md:94-97):
+      • api-spec.md §2 defines list items with {id, number, summary, categoryId, categoryName, requestedPriority, status, createdAt, updatedAt}.
+      • tickets.ts:408-412 also maps and exposes systemId, systemName, and ticketDate in the list response.
+  2. Additional record counter in pagination strip (ui-spec.md:113):
+      • ui-spec.md §8 specifies Page X of Y (N tickets).
+      • MyTickets.tsx:531-534 adds a preceding "Showing X to Y of N tickets" label alongside the mandated page indicator.
+
+
+  ### (c) Implementation Discrepancies / Potential Issues
+
+  • None. Verification details:
+      • Search & Filters: Debounced at 300ms (ui-spec.md:105; FR-08), queries number OR summary case-insensitively (BR-19, AC-13), and strictly supports categoryId, priority, and status=NEW (BR-20,
+      AC-14).
+      • Sorting & Tiebreaking: Default updatedAt desc applies secondary number desc tiebreak (BR-20, tickets.ts:381, AC-15).
+      • Pagination & Validation: Whitelisted pageSize {5, 10, 20} with 400 on invalid input (BR-21, api-spec.md, AC-16).
+      • Empty vs. No-Results: Explicit separation of zero-ticket state from filter-miss state with correct copy and action CTAs (BR-24, AC-17, ui-spec.md §8).
+      • Responsive Layout: Desktop table (>=992px), tablet table hiding category column (768–991px), and touch-friendly mobile cards (<768px) with whole-card click handlers (ui-spec.md §8, §11, AC-
+      22).
+
+  ──────
+  Summary: 4 Standards findings (worst: pagination and no-results buttons using default Bootstrap gray outline rather than Zen Green tokens); 2 Spec findings (worst: GET /api/tickets exposing
+  additional uncontracted fields systemId, systemName, and ticketDate). fix following this
+```
+
+---
+
+<!-- Prompts 29..n appended during the sprint -->
 
 ## My Reflection
 

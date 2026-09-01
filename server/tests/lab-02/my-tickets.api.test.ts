@@ -56,7 +56,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
     expect(res.body.tickets).toHaveLength(1);
     expect(res.body.tickets[0].number).toBe("TKT-2026-00010");
     expect(res.body.tickets[0].categoryName).toBe("Network");
-    expect(res.body.tickets[0].systemName).toBe("Campus Wi-Fi");
+    expect(res.body.tickets[0].systemName).toBeUndefined();
   });
 
   it("A-08b: enforces requester isolation (BR-04, AC-18: Requester B never sees Requester A's tickets)", async () => {

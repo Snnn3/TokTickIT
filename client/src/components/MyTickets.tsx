@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRequester } from "../context/RequesterContext";
-import type { Category, TicketSummaryItem, TicketPriority } from "../types/ticket";
+import type { Category, TicketSummaryItem, TicketPriority, TicketStatus } from "../types/ticket";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
+import { formatDateTime } from "../utils/format";
 
 export type { TicketSummaryItem };
 
@@ -9,6 +10,28 @@ interface MyTicketsProps {
   onCreateTicket?: () => void;
   onSelectTicket?: (ticketId: number) => void;
 }
+
+interface TicketQueryState {
+  search: string;
+  categoryId: string;
+  priority: TicketPriority | "";
+  status: TicketStatus | "";
+  sort: "updatedAt" | "createdAt" | "number";
+  order: "asc" | "desc";
+  page: number;
+  pageSize: number;
+}
+
+const initialQueryState: TicketQueryState = {
+  search: "",
+  categoryId: "",
+  priority: "",
+  status: "",
+  sort: "updatedAt",
+  order: "desc",
+  page: 1,
+  pageSize: 10,
+};
 
 export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const { selectedRequester } = useRequester();
@@ -19,25 +42,18 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filters & Controls
-  const [search, setSearch] = useState("");
+  // Consolidated Query State
+  const [queryState, setQueryState] = useState<TicketQueryState>(initialQueryState);
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [priority, setPriority] = useState<TicketPriority | "">("");
-  const [status, setStatus] = useState("");
-  const [sort, setSort] = useState("updatedAt");
-  const [order, setOrder] = useState<"asc" | "desc">("desc");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
   // Debounce search input by 300ms [ui-spec.md Section 8]
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
+      setDebouncedSearch(queryState.search);
+      setQueryState((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [queryState.search]);
 
   // Pagination metadata
   const [total, setTotal] = useState(0);
@@ -45,7 +61,12 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
   // Track if any filter is active
   const hasActiveFilters = Boolean(
-    search.trim() || categoryId || priority || status || sort !== "updatedAt" || order !== "desc"
+    queryState.search.trim() ||
+      queryState.categoryId ||
+      queryState.priority ||
+      queryState.status ||
+      queryState.sort !== "updatedAt" ||
+      queryState.order !== "desc"
   );
 
   // Load categories for filter dropdown
@@ -73,13 +94,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
     const params = new URLSearchParams();
     if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
-    if (categoryId) params.set("categoryId", categoryId);
-    if (priority) params.set("priority", priority);
-    if (status) params.set("status", status);
-    if (sort) params.set("sort", sort);
-    if (order) params.set("order", order);
-    params.set("page", String(page));
-    params.set("pageSize", String(pageSize));
+    if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
+    if (queryState.priority) params.set("priority", queryState.priority);
+    if (queryState.status) params.set("status", queryState.status);
+    if (queryState.sort) params.set("sort", queryState.sort);
+    if (queryState.order) params.set("order", queryState.order);
+    params.set("page", String(queryState.page));
+    params.set("pageSize", String(queryState.pageSize));
 
     try {
       const res = await fetch(`/api/tickets?${params.toString()}`, {
@@ -109,28 +130,29 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedRequester, debouncedSearch, categoryId, priority, status, sort, order, page, pageSize]);
+  }, [
+    selectedRequester,
+    debouncedSearch,
+    queryState.categoryId,
+    queryState.priority,
+    queryState.status,
+    queryState.sort,
+    queryState.order,
+    queryState.page,
+    queryState.pageSize,
+  ]);
 
   useEffect(() => {
     fetchTickets();
   }, [fetchTickets]);
 
   const handleResetFilters = () => {
-    setSearch("");
-    setCategoryId("");
-    setPriority("");
-    setStatus("");
-    setSort("updatedAt");
-    setOrder("desc");
-    setPage(1);
+    setQueryState(initialQueryState);
   };
 
   const handleSelectTicket = (ticketId: number) => {
     if (onSelectTicket) onSelectTicket(ticketId);
   };
-
-  const startRecord = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const endRecord = Math.min(page * pageSize, total);
 
   return (
     <div className="my-2">
@@ -172,9 +194,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 type="text"
                 className="form-control form-control-sm"
                 placeholder="Search number or summary"
-                value={search}
+                value={queryState.search}
                 onChange={(e) => {
-                  setSearch(e.target.value);
+                  setQueryState((prev) => ({ ...prev, search: e.target.value }));
                 }}
               />
             </div>
@@ -187,10 +209,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               <select
                 id="category-filter"
                 className="form-select form-select-sm"
-                value={categoryId}
+                value={queryState.categoryId}
                 onChange={(e) => {
-                  setCategoryId(e.target.value);
-                  setPage(1);
+                  setQueryState((prev) => ({ ...prev, categoryId: e.target.value, page: 1 }));
                 }}
               >
                 <option value="">All Categories</option>
@@ -210,10 +231,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               <select
                 id="priority-filter"
                 className="form-select form-select-sm"
-                value={priority}
+                value={queryState.priority}
                 onChange={(e) => {
-                  setPriority(e.target.value as TicketPriority | "");
-                  setPage(1);
+                  setQueryState((prev) => ({
+                    ...prev,
+                    priority: e.target.value as TicketPriority | "",
+                    page: 1,
+                  }));
                 }}
               >
                 <option value="">All Priorities</option>
@@ -231,10 +255,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               <select
                 id="status-filter"
                 className="form-select form-select-sm"
-                value={status}
+                value={queryState.status}
                 onChange={(e) => {
-                  setStatus(e.target.value);
-                  setPage(1);
+                  setQueryState((prev) => ({
+                    ...prev,
+                    status: e.target.value as TicketStatus | "",
+                    page: 1,
+                  }));
                 }}
               >
                 <option value="">All Statuses</option>
@@ -263,10 +290,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 id="sort-select"
                 className="form-select form-select-sm"
                 style={{ width: "auto" }}
-                value={sort}
+                value={queryState.sort}
                 onChange={(e) => {
-                  setSort(e.target.value);
-                  setPage(1);
+                  setQueryState((prev) => ({
+                    ...prev,
+                    sort: e.target.value as "updatedAt" | "createdAt" | "number",
+                    page: 1,
+                  }));
                 }}
               >
                 <option value="updatedAt">Last Updated</option>
@@ -277,10 +307,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 id="order-select"
                 className="form-select form-select-sm"
                 style={{ width: "auto" }}
-                value={order}
+                value={queryState.order}
                 onChange={(e) => {
-                  setOrder(e.target.value as "asc" | "desc");
-                  setPage(1);
+                  setQueryState((prev) => ({
+                    ...prev,
+                    order: e.target.value as "asc" | "desc",
+                    page: 1,
+                  }));
                 }}
               >
                 <option value="desc">Descending</option>
@@ -294,10 +327,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 id="page-size-select"
                 className="form-select form-select-sm"
                 style={{ width: "auto" }}
-                value={pageSize}
+                value={queryState.pageSize}
                 onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
+                  setQueryState((prev) => ({
+                    ...prev,
+                    pageSize: Number(e.target.value),
+                    page: 1,
+                  }));
                 }}
               >
                 <option value={5}>5</option>
@@ -387,7 +423,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </p>
               <button
                 type="button"
-                className="btn btn-sm btn-outline-secondary"
+                className="btn btn-zen-secondary btn-sm"
                 onClick={handleResetFilters}
               >
                 Clear filters
@@ -458,7 +494,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                       </td>
                       <td>
                         <span className="small text-muted">
-                          {new Date(ticket.updatedAt).toLocaleString()}
+                          {formatDateTime(ticket.updatedAt)}
                         </span>
                       </td>
                       <td className="text-end">
@@ -508,7 +544,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
                     <div className="d-flex justify-content-between align-items-center small text-muted pt-2 border-top">
                       <div>
-                        <span>Updated: {new Date(ticket.updatedAt).toLocaleString()}</span>
+                        <span>Updated: {formatDateTime(ticket.updatedAt)}</span>
                       </div>
                       <button
                         type="button"
@@ -526,36 +562,31 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </div>
             </div>
 
-            {/* Pagination Controls */}
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-4 pt-3 border-top">
-              <div className="small text-muted" data-testid="pagination-showing">
-                Showing <strong>{startRecord}</strong> to <strong>{endRecord}</strong> of{" "}
-                <strong>{total}</strong> tickets
-              </div>
-
-              <div className="d-flex align-items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  aria-label="Previous page"
-                >
-                  Previous
-                </button>
-                <span className="small text-muted px-2" data-testid="pagination-page-info">
-                  Page <strong>{page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary btn-sm"
-                  disabled={page >= totalPages || totalPages === 0}
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                  aria-label="Next page"
-                >
-                  Next
-                </button>
-              </div>
+            {/* Pagination Controls [ui-spec §8: Page X of Y (N tickets)] */}
+            <div className="d-flex justify-content-end align-items-center gap-2 mt-4 pt-3 border-top">
+              <button
+                type="button"
+                className="btn btn-zen-secondary btn-sm"
+                disabled={queryState.page <= 1}
+                onClick={() => setQueryState((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <span className="small text-muted px-2" data-testid="pagination-page-info">
+                Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
+              </span>
+              <button
+                type="button"
+                className="btn btn-zen-secondary btn-sm"
+                disabled={queryState.page >= totalPages || totalPages === 0}
+                onClick={() =>
+                  setQueryState((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))
+                }
+                aria-label="Next page"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}
