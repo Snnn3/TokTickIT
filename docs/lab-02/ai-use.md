@@ -203,7 +203,19 @@ create the Pull request tooo
 
 ---
 
-<!-- Prompts 17..n appended during the sprint -->
+## Prompt 17 — Start Issue #18 (Create Ticket) on feature/lab2-4-create-ticket (2026-09-01)
+
+**Outcome:** Synced `lab2-staging` after PR #27 merged, branched `feature/lab2-4-create-ticket`, updated execution plan and Kanban tracking, and started implementing the Create Ticket full-stack feature (multipart backend with transactional number generation and atomic attachments, Zen Green validated frontend form) per specification.md.
+
+**Prompt (verbatim):**
+
+```text
+/implement my friend already merge the PR#27. let do next issue and don't forget to move the kanban board.
+```
+
+---
+
+<!-- Prompts 18..n appended during the sprint -->
 
 ## My Reflection
 
