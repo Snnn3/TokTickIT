@@ -887,7 +887,19 @@ after this finish open the PR
 
 ---
 
-<!-- Prompts 40..n appended during the sprint -->
+## Prompt 40 — Add comprehensive testing steps to Pull Request description (2026-09-01)
+
+**Outcome:** Updated Pull Request [#29](https://github.com/Snnn3/TokTickIT/pull/29) description with detailed "How to Test" guidance, including automated testing commands for client and server and a step-by-step manual verification procedure.
+
+**Prompt (verbatim):**
+
+```text
+in the pr wirte how to test too
+```
+
+---
+
+<!-- Prompts 41..n appended during the sprint -->
 
 ## My Reflection
 
