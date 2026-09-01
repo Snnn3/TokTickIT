@@ -219,14 +219,22 @@ function validateTicketQuery(query: any): QueryValidationResult {
   // Parse and validate categoryId
   let categoryId: number | undefined;
   if (query.categoryId !== undefined) {
-    const parsed = parseInt(String(query.categoryId), 10);
-    if (isNaN(parsed) || parsed <= 0) {
+    const raw = String(query.categoryId).trim();
+    if (!/^\d+$/.test(raw)) {
       details.push({
         parameter: "categoryId",
         issue: "Category ID must be a positive integer",
       });
     } else {
-      categoryId = parsed;
+      const parsed = parseInt(raw, 10);
+      if (parsed <= 0) {
+        details.push({
+          parameter: "categoryId",
+          issue: "Category ID must be a positive integer",
+        });
+      } else {
+        categoryId = parsed;
+      }
     }
   }
 
@@ -290,14 +298,22 @@ function validateTicketQuery(query: any): QueryValidationResult {
   // Parse and validate page
   let page = 1;
   if (query.page !== undefined) {
-    const parsed = parseInt(String(query.page), 10);
-    if (isNaN(parsed) || parsed < 1) {
+    const raw = String(query.page).trim();
+    if (!/^\d+$/.test(raw)) {
       details.push({
         parameter: "page",
         issue: "Page must be an integer >= 1",
       });
     } else {
-      page = parsed;
+      const parsed = parseInt(raw, 10);
+      if (parsed < 1) {
+        details.push({
+          parameter: "page",
+          issue: "Page must be an integer >= 1",
+        });
+      } else {
+        page = parsed;
+      }
     }
   }
 
@@ -305,14 +321,22 @@ function validateTicketQuery(query: any): QueryValidationResult {
   const allowedPageSizes = [5, 10, 20];
   let pageSize = 10;
   if (query.pageSize !== undefined) {
-    const parsed = parseInt(String(query.pageSize), 10);
-    if (isNaN(parsed) || !allowedPageSizes.includes(parsed)) {
+    const raw = String(query.pageSize).trim();
+    if (!/^\d+$/.test(raw)) {
       details.push({
         parameter: "pageSize",
         issue: "Page size must be 5, 10, or 20",
       });
     } else {
-      pageSize = parsed;
+      const parsed = parseInt(raw, 10);
+      if (!allowedPageSizes.includes(parsed)) {
+        details.push({
+          parameter: "pageSize",
+          issue: "Page size must be 5, 10, or 20",
+        });
+      } else {
+        pageSize = parsed;
+      }
     }
   }
 
@@ -378,7 +402,7 @@ ticketsRouter.get(
       const orderBy: Prisma.TicketOrderByWithRelationInput[] =
         sort === "number"
           ? [{ number: order }]
-          : [{ [sort]: order }, { number: "desc" }];
+          : [{ [sort]: order }, { number: order }];
 
       const skip = (page - 1) * pageSize;
       const take = pageSize;

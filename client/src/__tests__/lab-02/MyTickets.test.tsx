@@ -253,6 +253,13 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
       expect(screen.getByText("Create your first ticket")).toBeInTheDocument();
     });
 
+    // Changing sort order with 0 tickets should still keep empty-tickets-state (BR-24)
+    const sortSelect = screen.getByLabelText(/Sort by/i, { selector: "#sort-select" });
+    fireEvent.change(sortSelect, { target: { value: "createdAt" } });
+    await waitFor(() => {
+      expect(screen.getByTestId("empty-tickets-state")).toBeInTheDocument();
+    });
+
     // Type search to trigger no-results state
     fireEvent.change(screen.getByPlaceholderText(/Search number or summary/i), {
       target: { value: "nonexistent" },

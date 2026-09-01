@@ -174,12 +174,12 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
       expect.objectContaining({
         skip: 5,
         take: 5,
-        orderBy: [{ createdAt: "asc" }, { number: "desc" }],
+        orderBy: [{ createdAt: "asc" }, { number: "asc" }],
       })
     );
   });
 
-  it("A-12: returns 400 INVALID_QUERY on invalid query parameters (AC-16)", async () => {
+  it("A-12: returns 400 INVALID_QUERY on invalid query parameters including malformed integers (AC-16)", async () => {
     vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
       id: 1,
       name: "Anucha Wongchai",
@@ -190,12 +190,12 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
     });
 
     const res = await request(app)
-      .get("/api/tickets?pageSize=15&priority=INVALID&page=-1&sort=invalidField")
+      .get("/api/tickets?pageSize=15&priority=INVALID&page=2.5&categoryId=1abc&sort=invalidField")
       .set("X-Requester-Id", "1");
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_QUERY");
     expect(res.body.error.details).toBeInstanceOf(Array);
-    expect(res.body.error.details.length).toBeGreaterThanOrEqual(3);
+    expect(res.body.error.details.length).toBeGreaterThanOrEqual(4);
   });
 });

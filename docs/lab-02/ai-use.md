@@ -716,7 +716,34 @@ npm error A complete log of this run can be found in: C:\Users\lchan\AppData\Loc
 
 ---
 
-<!-- Prompts 36..n appended during the sprint -->
+## Prompt 36 — Fix query validation strictness, secondary tiebreak ordering, and empty-state filtering logic (2026-09-01)
+
+**Outcome:** Implemented strict integer validation for `categoryId`, `page`, and `pageSize` preventing malformed numbers (e.g. floats, trailing characters) from bypassing 400 INVALID_QUERY, aligned secondary tiebreak to respect requested sort direction, and decoupled sort/order state from the empty-state vs no-results-state determination per BR-24.
+
+**Prompt (verbatim):**
+
+```text
+/implement Requirements Implemented Incorrectly
+
+  1. Loose Query Validation for Integer Parameters (api-spec.md:80-90 BR-21, AC-16)
+      • Spec Quote: api-spec.md §2: "categoryId: integer ... must be positive int if present", "page: integer >=1", "Any invalid value -> 400 INVALID_QUERY with per-param details [AC-16]."
+      • Finding: In tickets.ts:221-231 and tickets.ts:292-302, standard parseInt() without regex/strict integer format checks allows malformed floats or trailing-character strings (e.g.
+      categoryId="1abc", page="2.5") to be parsed as valid integers rather than returning 400 INVALID_QUERY.
+  2. Secondary Tiebreak on Non-Default Sorts (specification.md:110-111 BR-20)
+      • Spec Quote: BR-20: "default sort updatedAt descending with number descending tiebreak."
+      • Finding: In tickets.ts:378-382, { number: "desc" } is unconditionally appended to all non-number queries, forcing a descending tiebreak even when explicitly querying ascending order (e.g.,
+      sort=createdAt&order=asc).
+1. Empty vs. No-Results State Discrepancy (specification.md:118-119 BR-24, AC-17, ui-spec.md:115-117)
+      • Spec Quote: BR-24: "My Tickets distinguishes the empty state (requester has zero tickets) from the no-results state (filters/search matched nothing)." / AC-17: "Given a requester with no
+      tickets versus filters matching nothing, then the empty state and the no-results state render distinctly."
+      • Finding: In MyTickets.tsx:63-70, hasActiveFilters includes sort !== "updatedAt" and order !== "desc". If a requester with 0 tickets changes sort options without applying any search/filter
+      criteria, the UI incorrectly renders the no-results-state ("No tickets match your filters") instead of empty-tickets-state ("No tickets yet - Create your first ticket").
+fix to follow the criteria
+```
+
+---
+
+<!-- Prompts 37..n appended during the sprint -->
 
 ## My Reflection
 

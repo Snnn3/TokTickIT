@@ -59,14 +59,12 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Track if any filter is active
+  // Track if any filter is active [BR-24, AC-17]
   const hasActiveFilters = Boolean(
     queryState.search.trim() ||
       queryState.categoryId ||
       queryState.priority ||
-      queryState.status ||
-      queryState.sort !== "updatedAt" ||
-      queryState.order !== "desc"
+      queryState.status
   );
 
   // Fetch tickets
@@ -131,7 +129,14 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   }, [fetchTickets]);
 
   const handleResetFilters = () => {
-    setQueryState(initialQueryState);
+    setQueryState((prev) => ({
+      ...prev,
+      search: "",
+      categoryId: "",
+      priority: "",
+      status: "",
+      page: 1,
+    }));
   };
 
   const handleSelectTicket = (ticketId: number) => {
@@ -269,7 +274,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
           {/* Sort Options Strip */}
           <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
             <div className="col-12 d-flex align-items-center gap-2">
-              <span>Sort by:</span>
+              <label htmlFor="sort-select" className="mb-0">
+                Sort by:
+              </label>
               <select
                 id="sort-select"
                 className="form-select form-select-sm"
@@ -287,6 +294,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 <option value="createdAt">Creation Date</option>
                 <option value="number">Ticket Number</option>
               </select>
+              <label htmlFor="order-select" className="visually-hidden">
+                Sort order
+              </label>
               <select
                 id="order-select"
                 className="form-select form-select-sm"
