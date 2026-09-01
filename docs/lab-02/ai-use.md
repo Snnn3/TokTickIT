@@ -215,7 +215,19 @@ create the Pull request tooo
 
 ---
 
-<!-- Prompts 18..n appended during the sprint -->
+## Prompt 18 — Address Code Review & Spec Feedback on Issue #18 (2026-09-01)
+
+**Outcome:** Addressed all standards and spec review findings on `feature/lab2-4-create-ticket`: aligned client and server file validation logic, added tooltips and loading option states to Create Ticket form, streamlined backend file processing, and modularized ticket creation controller logic.
+
+**Prompt (verbatim):**
+
+```text
+/implement do following the code review and the spec
+```
+
+---
+
+<!-- Prompts 19..n appended during the sprint -->
 
 ## My Reflection
 

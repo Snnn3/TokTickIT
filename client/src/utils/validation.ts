@@ -59,7 +59,9 @@ export function validateFile(file: File): string | null {
 
   const lowerName = file.name.toLowerCase();
   const hasExt = ALLOWED_EXTENSIONS.some((ext) => lowerName.endsWith(ext));
-  if (!ALLOWED_MIME_TYPES.includes(file.type) && !hasExt) {
+  const hasValidMime = !file.type || ALLOWED_MIME_TYPES.includes(file.type);
+
+  if (!hasExt || !hasValidMime) {
     return `File "${file.name}" has an unsupported format. Allowed types: JPG, PNG, WEBP, PDF`;
   }
 

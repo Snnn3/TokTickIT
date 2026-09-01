@@ -87,25 +87,29 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
 
     const filesArray = Array.from(e.target.files);
     const newErrors: string[] = [];
-    const validNewFiles: File[] = [];
 
     if (stagedFiles.length + filesArray.length > MAX_ATTACHMENTS) {
       newErrors.push(`You can only attach a maximum of ${MAX_ATTACHMENTS} files.`);
+      setFileErrors(newErrors);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
     }
 
+    const validNewFiles: File[] = [];
     for (const file of filesArray) {
       const err = validateFile(file);
       if (err) {
         newErrors.push(err);
-      } else if (validNewFiles.length + stagedFiles.length < MAX_ATTACHMENTS) {
+      } else {
         validNewFiles.push(file);
       }
     }
 
     if (newErrors.length > 0) {
       setFileErrors(newErrors);
-    }
-    if (validNewFiles.length > 0) {
+    } else {
       setStagedFiles((prev) => [...prev, ...validNewFiles]);
     }
 
@@ -326,12 +330,18 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 disabled={submitting || loadingRefs}
                 required
               >
-                <option value="">-- Select Category --</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {loadingRefs ? (
+                  <option value="">Loading categories...</option>
+                ) : (
+                  <>
+                    <option value="">-- Select Category --</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               {errors.categoryId && (
                 <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
@@ -355,12 +365,18 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 disabled={submitting || loadingRefs}
                 required
               >
-                <option value="">-- Select Related System --</option>
-                {systems.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
+                {loadingRefs ? (
+                  <option value="">Loading related systems...</option>
+                ) : (
+                  <>
+                    <option value="">-- Select Related System --</option>
+                    {systems.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
               {errors.systemId && (
                 <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
@@ -381,7 +397,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   setRequestedPriority(e.target.value);
                   if (errors.requestedPriority) setErrors((prev) => ({ ...prev, requestedPriority: "" }));
                 }}
-                disabled={submitting}
+                disabled={submitting || loadingRefs}
                 required
               >
                 <option value="">-- Select Priority --</option>
@@ -518,6 +534,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                     type="button"
                     className="btn btn-sm btn-outline-danger py-0 px-2"
                     aria-label={`Remove file ${file.name}`}
+                    title={`Remove ${file.name}`}
                     onClick={() => removeStagedFile(idx)}
                     disabled={submitting}
                   >
@@ -544,7 +561,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
           <button
             type="submit"
             className="btn btn-zen-primary d-flex align-items-center gap-2"
-            disabled={submitting}
+            disabled={submitting || loadingRefs}
             aria-busy={submitting}
           >
             {submitting ? (
