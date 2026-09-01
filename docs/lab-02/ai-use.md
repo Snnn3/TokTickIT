@@ -263,7 +263,19 @@ in creation mode Generated after submission this must show the preview number
 
 ---
 
-<!-- Prompts 22..n appended during the sprint -->
+## Prompt 22 — Update preview ticket number format to TKT-YYYY-XXXXX (2026-09-01)
+
+**Outcome:** Updated creation mode preview ticket number from `##### (Preview)` to clean format `TKT-YYYY-XXXXX`.
+
+**Prompt (verbatim):**
+
+```text
+##### (Preview) change to the actual number or xxxx
+```
+
+---
+
+<!-- Prompts 23..n appended during the sprint -->
 
 ## My Reflection
 

@@ -315,7 +315,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={
                     successResult
                       ? successResult.number
-                      : `TKT-${new Date().getFullYear()}-##### (Preview)`
+                      : `TKT-${new Date().getFullYear()}-XXXXX`
                   }
                   readOnly
                 />

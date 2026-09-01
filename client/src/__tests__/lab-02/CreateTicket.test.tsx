@@ -63,7 +63,7 @@ describe("CreateTicket Component (C-01..C-06, S-01)", () => {
     );
 
     expect(screen.getByText(/Create Support Ticket/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Ticket Number/i).getAttribute("value")).toMatch(/TKT-\d{4}-#####/);
+    expect(screen.getByLabelText(/Ticket Number/i).getAttribute("value")).toMatch(/TKT-\d{4}-XXXXX/);
     expect(screen.getByLabelText(/Requester/i)).toHaveValue("Anucha Wongchai (anucha.wongchai@example.com)");
 
     await waitFor(() => {
