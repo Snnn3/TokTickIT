@@ -4,6 +4,7 @@ import { RequesterSelection } from "./components/RequesterSelection";
 import { AppHeader } from "./components/AppHeader";
 import type { TabType } from "./components/AppHeader";
 import { CreateTicket } from "./components/CreateTicket";
+import { MyTickets } from "./components/MyTickets";
 
 function MainApp() {
   const { selectedRequester } = useRequester();
@@ -18,21 +19,12 @@ function MainApp() {
       <AppHeader activeTab={activeTab} onTabChange={setActiveTab} />
       <main className="container py-4 flex-grow-1" style={{ maxWidth: "1100px" }}>
         {activeTab === "my-tickets" && (
-          <div className="zg-card p-4">
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h2 className="h4 fw-semibold mb-0">My Tickets</h2>
-              <button
-                type="button"
-                className="btn btn-zen-primary btn-sm"
-                onClick={() => setActiveTab("create-ticket")}
-              >
-                + Create Ticket
-              </button>
-            </div>
-            <p className="text-muted">
-              Welcome, <strong>{selectedRequester.name}</strong>. Tickets list view will be implemented in Issue #19.
-            </p>
-          </div>
+          <MyTickets
+            onCreateTicket={() => setActiveTab("create-ticket")}
+            onSelectTicket={(_id) => {
+              // Ticket detail will be wired in Issue #20
+            }}
+          />
         )}
 
         {activeTab === "create-ticket" && (

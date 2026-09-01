@@ -182,6 +182,270 @@ async function createTicketTransaction(
   };
 }
 
+interface QueryValidationResult {
+  valid: boolean;
+  search?: string;
+  categoryId?: number;
+  priority?: TicketPriority;
+  status?: TicketStatus;
+  sort: string;
+  order: "asc" | "desc";
+  page: number;
+  pageSize: number;
+  details: { field: string; parameter: string; issue: string }[];
+}
+
+function parseStrictInteger(
+  value: unknown,
+  parameter: string,
+  issue: string,
+  details: { field: string; parameter: string; issue: string }[],
+  options?: { min?: number; allowed?: number[] },
+): number | undefined {
+  if (value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!/^\d+$/.test(raw)) {
+    details.push({ field: parameter, parameter, issue });
+    return undefined;
+  }
+  const parsed = parseInt(raw, 10);
+  if (options?.min !== undefined && parsed < options.min) {
+    details.push({ field: parameter, parameter, issue });
+    return undefined;
+  }
+  if (options?.allowed !== undefined && !options.allowed.includes(parsed)) {
+    details.push({ field: parameter, parameter, issue });
+    return undefined;
+  }
+  return parsed;
+}
+
+function validateTicketQuery(
+  query: Record<string, unknown>,
+): QueryValidationResult {
+  const details: { field: string; parameter: string; issue: string }[] = [];
+
+  // Parse and validate search
+  let search: string | undefined;
+  if (query.search !== undefined) {
+    if (typeof query.search !== "string") {
+      details.push({ field: "search", parameter: "search", issue: "Search must be a string" });
+    } else {
+      const trimmed = query.search.trim();
+      if (trimmed.length > 150) {
+        details.push({
+          field: "search",
+          parameter: "search",
+          issue: "Search query must not exceed 150 characters",
+        });
+      } else if (trimmed.length > 0) {
+        search = trimmed;
+      }
+    }
+  }
+
+  // Parse and validate categoryId
+  const categoryId = parseStrictInteger(
+    query.categoryId,
+    "categoryId",
+    "Category ID must be a positive integer",
+    details,
+    { min: 1 },
+  );
+
+  // Parse and validate priority
+  let priority: TicketPriority | undefined;
+  if (query.priority !== undefined) {
+    const p = String(query.priority);
+    if (!Object.values(TicketPriority).includes(p as TicketPriority)) {
+      details.push({
+        field: "priority",
+        parameter: "priority",
+        issue: "Priority must be LOW, MEDIUM, or HIGH",
+      });
+    } else {
+      priority = p as TicketPriority;
+    }
+  }
+
+  // Parse and validate status
+  let status: TicketStatus | undefined;
+  if (query.status !== undefined) {
+    const s = String(query.status);
+    if (s !== "NEW") {
+      details.push({
+        field: "status",
+        parameter: "status",
+        issue: "Status must be NEW",
+      });
+    } else {
+      status = TicketStatus.NEW;
+    }
+  }
+
+  // Parse and validate sort
+  const allowedSorts = ["updatedAt", "createdAt", "number"];
+  let sort = "updatedAt";
+  if (query.sort !== undefined) {
+    const s = String(query.sort);
+    if (!allowedSorts.includes(s)) {
+      details.push({
+        field: "sort",
+        parameter: "sort",
+        issue: "Sort field must be updatedAt, createdAt, or number",
+      });
+    } else {
+      sort = s;
+    }
+  }
+
+  // Parse and validate order
+  let order: "asc" | "desc" = "desc";
+  if (query.order !== undefined) {
+    const o = String(query.order).toLowerCase();
+    if (o !== "asc" && o !== "desc") {
+      details.push({
+        field: "order",
+        parameter: "order",
+        issue: "Order must be asc or desc",
+      });
+    } else {
+      order = o as "asc" | "desc";
+    }
+  }
+
+  // Parse and validate page
+  const page =
+    parseStrictInteger(
+      query.page,
+      "page",
+      "Page must be an integer >= 1",
+      details,
+      { min: 1 },
+    ) ?? 1;
+
+  // Parse and validate pageSize
+  const pageSize =
+    parseStrictInteger(
+      query.pageSize,
+      "pageSize",
+      "Page size must be 5, 10, or 20",
+      details,
+      { allowed: [5, 10, 20] },
+    ) ?? 10;
+
+  return {
+    valid: details.length === 0,
+    search,
+    categoryId,
+    priority,
+    status,
+    sort,
+    order,
+    page,
+    pageSize,
+    details,
+  };
+}
+
+// GET /api/tickets [FR-08, BR-04, BR-19..BR-22, AC-16]
+ticketsRouter.get(
+  "/",
+  requireRequester,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const validation = validateTicketQuery(req.query);
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_QUERY",
+          message: "Invalid query parameters",
+          details: validation.details,
+        },
+      });
+    }
+
+    const { search, categoryId, priority, status, sort, order, page, pageSize } =
+      validation;
+
+    try {
+      const where: Prisma.TicketWhereInput = {
+        requesterId: requester.id,
+      };
+
+      if (search) {
+        where.OR = [
+          { number: { contains: search, mode: "insensitive" } },
+          { summary: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (categoryId) {
+        where.categoryId = categoryId;
+      }
+
+      if (priority) {
+        where.requestedPriority = priority;
+      }
+
+      if (status) {
+        where.status = status;
+      }
+
+      const orderBy: Prisma.TicketOrderByWithRelationInput[] =
+        sort === "number"
+          ? [{ number: order }]
+          : [{ [sort]: order }, { number: order }];
+
+      const skip = (page - 1) * pageSize;
+      const take = pageSize;
+
+      const [total, tickets] = await Promise.all([
+        prisma.ticket.count({ where }),
+        prisma.ticket.findMany({
+          where,
+          orderBy,
+          skip,
+          take,
+          include: {
+            category: { select: { name: true } },
+          },
+        }),
+      ]);
+
+      const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
+
+      const mappedTickets = tickets.map((t) => ({
+        id: t.id,
+        number: t.number,
+        summary: t.summary,
+        categoryId: t.categoryId,
+        categoryName: t.category?.name || "Unknown",
+        requestedPriority: t.requestedPriority,
+        status: t.status,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      }));
+
+      return res.status(200).json({
+        tickets: mappedTickets,
+        page,
+        pageSize,
+        total,
+        totalPages,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to retrieve tickets",
+        },
+      });
+    }
+  },
+);
+
 // POST /api/tickets [FR-05, BR-01, BR-07..BR-11, BR-13, BR-14, AC-01]
 ticketsRouter.post(
   "/",
