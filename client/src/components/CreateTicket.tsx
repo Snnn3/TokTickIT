@@ -228,9 +228,19 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
           className="p-3 mb-4 rounded border"
           style={{ backgroundColor: "var(--zg-pale)", borderColor: "rgba(0,107,60,0.2)" }}
         >
-          <div className="small text-muted mb-1">Official Ticket Number</div>
-          <div className="h2 fw-bold mb-0" style={{ color: "var(--zg-primary)" }}>
-            {successResult.number}
+          <div className="row g-3 text-center align-items-center">
+            <div className="col-12 col-md-6 border-end-md">
+              <div className="small text-muted mb-1">Official Ticket Number</div>
+              <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }}>
+                {successResult.number}
+              </div>
+            </div>
+            <div className="col-12 col-md-6">
+              <div className="small text-muted mb-1">Ticket Date</div>
+              <div className="h5 fw-semibold mb-0" style={{ color: "var(--zg-text-primary)" }}>
+                {new Date(successResult.ticketDate).toLocaleString()}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -283,7 +293,6 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 className="form-control form-control-sm zg-readonly-field"
                 value="Generated after submission"
                 readOnly
-                disabled
               />
             </div>
             <div className="col-12 col-md-4">
@@ -294,7 +303,6 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 className="form-control form-control-sm zg-readonly-field"
                 value="Generated after submission"
                 readOnly
-                disabled
               />
             </div>
             <div className="col-12 col-md-4">
@@ -305,7 +313,6 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 className="form-control form-control-sm zg-readonly-field"
                 value={selectedRequester ? `${selectedRequester.name} (${selectedRequester.email})` : "Not selected"}
                 readOnly
-                disabled
               />
             </div>
           </div>

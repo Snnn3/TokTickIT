@@ -227,7 +227,19 @@ create the Pull request tooo
 
 ---
 
-<!-- Prompts 19..n appended during the sprint -->
+## Prompt 19 — Boxed layout for ticket number and date (2026-09-01)
+
+**Outcome:** Refined the Create Ticket form and Success confirmation panel to display the Ticket Number and Ticket Date inside distinct, clearly framed readonly input boxes and highlighted metadata cards with Zen Green tokens.
+
+**Prompt (verbatim):**
+
+```text
+fix while create show the ticket number and date must be in box
+```
+
+---
+
+<!-- Prompts 20..n appended during the sprint -->
 
 ## My Reflection
 
