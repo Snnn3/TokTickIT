@@ -1,12 +1,14 @@
 import type { TicketPriority, TicketStatus } from "../types/ticket";
 
+const PRIORITY_BADGE_MAP: Record<TicketPriority, string> = {
+  HIGH: "badge badge-zen-high",
+  MEDIUM: "badge badge-zen-medium",
+  LOW: "badge badge-zen-low",
+};
+
 export function ZenPriorityBadge({ priority }: { priority: TicketPriority | string }) {
-  let badgeClass = "badge badge-zen-low";
-  if (priority === "HIGH") {
-    badgeClass = "badge badge-zen-high";
-  } else if (priority === "MEDIUM") {
-    badgeClass = "badge badge-zen-medium";
-  }
+  const badgeClass =
+    PRIORITY_BADGE_MAP[priority as TicketPriority] || "badge badge-zen-low";
 
   return (
     <span className={badgeClass} aria-label={`Priority: ${priority}`}>

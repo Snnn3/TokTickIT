@@ -153,21 +153,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     if (onSelectTicket) onSelectTicket(ticketId);
   };
 
-  // Compute page numbers to display
-  const getPageNumbers = (): (number | string)[] => {
-    if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
-    }
-    const current = queryState.page;
-    if (current <= 4) {
-      return [1, 2, 3, 4, 5, "...", totalPages];
-    }
-    if (current >= totalPages - 3) {
-      return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-    }
-    return [1, "...", current - 1, current, current + 1, "...", totalPages];
-  };
-
   return (
     <div className="my-2">
       {/* Header bar */}
@@ -555,52 +540,25 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </div>
             </div>
 
-            {/* Pagination Controls [Bottom Right] */}
-            <div className="d-flex flex-column flex-sm-row justify-content-end align-items-center gap-3 mt-4 pt-3 border-top">
-              {/* Page Indicator */}
-              <span className="small text-muted me-sm-2" data-testid="pagination-page-info">
-                Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
-              </span>
-
-              {/* Prev / Next & Direct Page Number Buttons */}
-              <div className="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+            {/* Pagination Controls [ui-spec §8: prev/next + page indicator "Page X of Y (N tickets)"; pageSize select {5,10,20}] */}
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+              {/* Prev, Page Indicator, Next */}
+              <div className="d-flex align-items-center gap-2">
                 <button
                   type="button"
-                  className="btn btn-zen-secondary btn-sm me-1"
+                  className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page <= 1}
                   onClick={() => setQueryState((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
                   aria-label="Previous page"
                 >
                   Previous
                 </button>
-
-                {/* Direct Page Number Buttons to skip/jump */}
-                {totalPages > 1 &&
-                  getPageNumbers().map((item, index) =>
-                    typeof item === "number" ? (
-                      <button
-                        key={`page-${item}`}
-                        type="button"
-                        className={`btn btn-sm ${
-                          item === queryState.page ? "btn-zen-primary" : "btn-zen-secondary"
-                        }`}
-                        style={{ minWidth: "34px", padding: "0.25rem 0.5rem" }}
-                        onClick={() => setQueryState((prev) => ({ ...prev, page: item }))}
-                        aria-label={`Page ${item}`}
-                        aria-current={item === queryState.page ? "page" : undefined}
-                      >
-                        {item}
-                      </button>
-                    ) : (
-                      <span key={`ellipsis-${index}`} className="px-1 text-muted small">
-                        …
-                      </span>
-                    )
-                  )}
-
+                <span className="small text-muted px-2" data-testid="pagination-page-info">
+                  Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
+                </span>
                 <button
                   type="button"
-                  className="btn btn-zen-secondary btn-sm ms-1"
+                  className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page >= totalPages || totalPages === 0}
                   onClick={() =>
                     setQueryState((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))
@@ -609,6 +567,31 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 >
                   Next
                 </button>
+              </div>
+
+              {/* Page Size Selector */}
+              <div className="d-flex align-items-center gap-2 small text-muted">
+                <label htmlFor="page-size-select" className="mb-0">
+                  Per page:
+                </label>
+                <select
+                  id="page-size-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.pageSize}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      pageSize: Number(e.target.value),
+                      page: 1,
+                    }));
+                  }}
+                  aria-label="Page size"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                </select>
               </div>
             </div>
           </div>

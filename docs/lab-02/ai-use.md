@@ -501,7 +501,81 @@ npm error A complete log of this run can be found in: C:\Users\lchan\AppData\Loc
 
 ---
 
-<!-- Prompts 33..n appended during the sprint -->
+## Prompt 33 — Restore pageSize selector {5,10,20}, simplify pagination controls to prev/next + indicator, and refactor ZenBadge mapping (2026-09-01)
+
+**Outcome:** Restored the specified `pageSize` selector `{5, 10, 20}` in the bottom pagination bar per `ui-spec.md §8`, simplified pagination controls to `Previous`, `Page X of Y (N tickets)`, and `Next`, and refactored `ZenBadge.tsx` with a strongly typed lookup map (`Record<TicketPriority, string>`).
+
+**Prompt (verbatim):**
+
+```text
+## Standards
+
+  ### (a) Documented Standards Violations (Hard Violations)
+  1. Missing pageSize Selector in Pagination Bar (ui-spec.md:113)
+      • Standard: ui-spec.md §8 (Screen: My Tickets) specifies:
+      │ "Pagination bar: prev/next + page indicator 'Page X of Y (N tickets)'; pageSize select {5,10,20}."
+      • Location: MyTickets.tsx:558-614
+      • Violation: The pageSize selector {5, 10, 20} was omitted in the pagination strip, locking pageSize: 10 in query state.
+
+
+  ### (b) Baseline Code Smells (Judgement Calls)
+  1. Speculative Generality (MyTickets.tsx:157-169, MyTickets.tsx:579-599)
+      • Hunk:
+        const getPageNumbers = (): (number | string)[] => {
+          if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+          if (current <= 4) return [1, 2, 3, 4, 5, "...", totalPages];
+          if (current >= totalPages - 3) return [1, "...", totalPages - 4, ...];
+          return [1, "...", current - 1, current, current + 1, "...", totalPages];
+        };
+
+      • Observation: Generates multi-page range/ellipsis jumping buttons not specified in ui-spec.md §8 (which only specifies prev/next + page indicator), adding pagination logic while omitting the
+      specified pageSize selector.
+  2. Primitive Obsession / Repeated Switches (ZenBadge.tsx:3-9)
+      • Hunk:
+        let badgeClass = "badge badge-zen-low";
+        if (priority === "HIGH") {
+          badgeClass = "badge badge-zen-high";
+        } else if (priority === "MEDIUM") {
+          badgeClass = "badge badge-zen-medium";
+        }
+
+      • Observation: Using loose TicketPriority | string with cascading if/else conditionals instead of a typed lookup map (e.g., Record<TicketPriority, string>).
+
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  1. Page Size Selector Missing in UI (ui-spec.md:113, specification.md:279):
+      • Spec: ui-spec.md §8 specifies "Pagination bar: prev/next + page indicator 'Page X of Y (N tickets)'; pageSize select {5,10,20}." & specification.md Assumption A7: "pageSize whitelist {5,10,
+      20}, default 10 | Prevents abuse-sized pages; predictable UI dropdown".
+      • Finding: The per-page selector dropdown was removed from MyTickets.tsx. Users currently have no UI control to select between 5, 10, or 20 items per page even though backend support is
+      implemented.
+
+
+  ### (b) Behaviour in Diff Not Asked For (Scope Creep)
+
+  1. Direct Page Jump Number Buttons & Ellipsis Navigation (ui-spec.md:113):
+      • Spec: ui-spec.md §8 specifies Pagination bar: prev/next + page indicator "Page X of Y (N tickets)"; pageSize select {5,10,20}.
+      • Finding: MyTickets.tsx:157-169 adds numerical page jump buttons (1, 2, 3...) and ellipsis navigation logic beyond the prev/next + text page indicator requested.
+  2. Seeding Mock Tickets in Database Seed (specification.md:168-172):
+      • Spec: specification.md §7 specifies seeding 4 Categories, 7 Related Systems, 4 active Requesters, and 1 inactive Requester.
+      • Finding: seed.ts:28-237 added 16 mock Ticket entities. While useful for manual testing, ticket generation was not part of the initial seed contract.
+
+
+  ### (c) Requirements Implemented Incorrectly
+
+  • None. Search debounce (300ms, Number/Summary substring), multi-parameter filtering (Category, Priority, Status NEW), sorting (updatedAt desc + number desc), ownership isolation (X-Requester-Id),
+  empty vs no-results distinction, table/card responsive rendering, and query parameter validation (HTTP 400 INVALID_QUERY) strictly comply with specification.md (FR-08, BR-19..BR-21, BR-24, AC-13.
+  .AC-17, AC-22) and api-spec.md §2.
+  ──────
+  Summary: 3 Standards findings (worst: missing {5,10,20} pageSize selector in the pagination bar); 3 Spec findings (worst: missing required pageSize dropdown control in UI while adding unrequested
+  numeric jump buttons). fix following thjis
+```
+
+---
+
+<!-- Prompts 34..n appended during the sprint -->
 
 ## My Reflection
 

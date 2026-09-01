@@ -282,55 +282,59 @@ async function main() {
     (await prisma.requesterUser.findMany()).map((r) => [r.email, r.id]),
   );
 
-  console.log("Seeding mock tickets...");
+  const shouldSeedMockTickets = process.env.SEED_MOCK_TICKETS === "true";
 
-  for (const mock of MOCK_TICKETS) {
-    const categoryId = categoryMap.get(mock.categoryName);
-    const systemId = systemMap.get(mock.systemName);
-    const requesterId = requesterMap.get(mock.requesterEmail);
+  if (shouldSeedMockTickets) {
+    console.log("Seeding mock tickets (SEED_MOCK_TICKETS=true)...");
 
-    if (!categoryId || !systemId || !requesterId) {
-      console.warn(`Skipping ticket ${mock.number}: missing reference relation`);
-      continue;
+    for (const mock of MOCK_TICKETS) {
+      const categoryId = categoryMap.get(mock.categoryName);
+      const systemId = systemMap.get(mock.systemName);
+      const requesterId = requesterMap.get(mock.requesterEmail);
+
+      if (!categoryId || !systemId || !requesterId) {
+        console.warn(`Skipping ticket ${mock.number}: missing reference relation`);
+        continue;
+      }
+
+      await prisma.ticket.upsert({
+        where: { number: mock.number },
+        update: {
+          summary: mock.summary,
+          description: mock.description,
+          categoryId,
+          systemId,
+          requestedPriority: mock.priority,
+          status: "NEW",
+          requesterId,
+          ticketDate: mock.ticketDate,
+          createdAt: mock.createdAt,
+          updatedAt: mock.updatedAt,
+        },
+        create: {
+          number: mock.number,
+          summary: mock.summary,
+          description: mock.description,
+          categoryId,
+          systemId,
+          requestedPriority: mock.priority,
+          status: "NEW",
+          requesterId,
+          ticketDate: mock.ticketDate,
+          createdAt: mock.createdAt,
+          updatedAt: mock.updatedAt,
+        },
+      });
     }
 
-    await prisma.ticket.upsert({
-      where: { number: mock.number },
-      update: {
-        summary: mock.summary,
-        description: mock.description,
-        categoryId,
-        systemId,
-        requestedPriority: mock.priority,
-        status: "NEW",
-        requesterId,
-        ticketDate: mock.ticketDate,
-        createdAt: mock.createdAt,
-        updatedAt: mock.updatedAt,
-      },
-      create: {
-        number: mock.number,
-        summary: mock.summary,
-        description: mock.description,
-        categoryId,
-        systemId,
-        requestedPriority: mock.priority,
-        status: "NEW",
-        requesterId,
-        ticketDate: mock.ticketDate,
-        createdAt: mock.createdAt,
-        updatedAt: mock.updatedAt,
-      },
-    });
-  }
-
-  // Synchronize sequence counter past the highest seeded number
-  try {
-    await prisma.$executeRawUnsafe(
-      `SELECT setval('ticket_number_seq', (SELECT COALESCE(MAX(id), 1) + 16 FROM "Ticket"), true);`,
-    );
-  } catch {
-    // If sequence does not exist or in sqlite/test environment, continue safely
+    // Synchronize sequence counter past the highest seeded number
+    try {
+      await prisma.$executeRawUnsafe(
+        `SELECT setval('ticket_number_seq', (SELECT COALESCE(MAX(id), 1) + 16 FROM "Ticket"), true);`,
+      );
+    } catch {
+      // If sequence does not exist or in sqlite/test environment, continue safely
+    }
   }
 
   const [categories, systems, activeRequesters, inactiveRequesters, totalTickets] =
