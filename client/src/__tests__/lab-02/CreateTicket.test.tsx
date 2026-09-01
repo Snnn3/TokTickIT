@@ -262,4 +262,64 @@ describe("CreateTicket Component (C-01..C-06, S-01)", () => {
     expect(screen.getByLabelText(/Ticket Summary/i)).toHaveValue("Preserved Summary");
     expect(screen.getByLabelText(/Description/i)).toHaveValue("Preserved Description");
   });
+
+  it("allows submitting ticket even after attempting to attach an invalid file (AC-07)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/tickets") && init?.method === "POST") {
+        return {
+          ok: true,
+          json: async () => ({
+            ticket: {
+              id: 202,
+              number: "TKT-2026-00099",
+              ticketDate: new Date().toISOString(),
+              summary: "Valid ticket without attachments",
+            },
+          }),
+        } as Response;
+      }
+      if (url.includes("/api/reference/categories")) {
+        return { ok: true, json: async () => ({ categories: mockCategories }) } as Response;
+      }
+      if (url.includes("/api/reference/systems")) {
+        return { ok: true, json: async () => ({ systems: mockSystems }) } as Response;
+      }
+      return { ok: true, json: async () => ({}) } as Response;
+    });
+
+    render(
+      <AuthenticatedWrapper>
+        <CreateTicket />
+      </AuthenticatedWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Account and Access")).toBeInTheDocument();
+    });
+
+    // Fill valid text fields
+    fireEvent.change(screen.getByLabelText(/Category/i), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/Related System/i), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText(/Requested Priority/i), { target: { value: "HIGH" } });
+    fireEvent.change(screen.getByLabelText(/Ticket Summary/i), { target: { value: "Valid Summary" } });
+    fireEvent.change(screen.getByLabelText(/Description/i), { target: { value: "Valid Description" } });
+
+    // Attempt to attach an invalid .exe file
+    const fileInput = document.getElementById("file-upload-input") as HTMLInputElement;
+    const badFile = new File(["dummy"], "malicious.exe", { type: "application/x-msdownload" });
+    fireEvent.change(fileInput, { target: { files: [badFile] } });
+
+    // Warning is rendered
+    expect(screen.getByTestId("file-errors")).toBeInTheDocument();
+
+    // User decides to submit anyway without attachments
+    fireEvent.submit(screen.getByTestId("create-ticket-form"));
+
+    // Should successfully create ticket
+    await waitFor(() => {
+      expect(screen.getByTestId("success-panel")).toBeInTheDocument();
+    });
+    expect(screen.getByText("TKT-2026-00099")).toBeInTheDocument();
+  });
 });

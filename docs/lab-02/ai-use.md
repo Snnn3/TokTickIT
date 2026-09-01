@@ -275,7 +275,19 @@ in creation mode Generated after submission this must show the preview number
 
 ---
 
-<!-- Prompts 23..n appended during the sprint -->
+## Prompt 23 — Allow submission when invalid attachment attempt is not staged (2026-09-01)
+
+**Outcome:** Fixed submission blocking bug in CreateTicket form: validation now evaluates active staged files rather than lingering attachment rejection warnings, added dismiss action to attachment warning alert, and auto-clears stale file errors on submission.
+
+**Prompt (verbatim):**
+
+```text
+if i Attachment worng file and i dont want to Attachment anymore i cant sumbit ticket
+```
+
+---
+
+<!-- Prompts 24..n appended during the sprint -->
 
 ## My Reflection
 

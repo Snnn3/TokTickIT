@@ -148,7 +148,7 @@ PostgreSQL via Prisma. Conceptual models:
 | RequesterUser | id (PK), name, email (unique), isActive, createdAt, updatedAt |
 | Category *(existing)* | id (PK), name (unique), isActive, timestamps |
 | RelatedSystem | id (PK), name (unique, <=120), isActive, timestamps |
-| Ticket | id (PK), number varchar(20) unique, requesterId FK->RequesterUser, categoryId FK->Category, systemId FK->RelatedSystem, summary varchar(150), description text, requestedPriority enum, status enum(`NEW`), ticketDate timestamptz, createdAt, updatedAt |
+| Ticket | id (PK), number varchar(20) unique, requesterId FK->RequesterUser, categoryId FK->Category, systemId FK->RelatedSystem, summary varchar(i), description text, requestedPriority enum, status enum(`NEW`), ticketDate timestamptz, createdAt, updatedAt |
 | Attachment | id (PK), ticketId FK->Ticket (cascade), filename varchar(255), mimeType varchar(100), sizeBytes int, data bytea, uploadedAt, removedAt?, removedReason? varchar(300) |
 
 Relationships (labsheet 5.1): one Requester -> many Tickets; one Ticket -> one Requester;

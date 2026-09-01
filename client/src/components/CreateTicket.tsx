@@ -165,12 +165,24 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
     const priorityErr = validatePriority(requestedPriority);
     if (priorityErr) newErrors.requestedPriority = priorityErr;
 
-    if (Object.keys(newErrors).length > 0 || fileErrors.length > 0) {
+    for (const file of stagedFiles) {
+      const fileErr = validateFile(file);
+      if (fileErr) {
+        newErrors.files = fileErr;
+        break;
+      }
+    }
+    if (stagedFiles.length > MAX_ATTACHMENTS) {
+      newErrors.files = `Maximum ${MAX_ATTACHMENTS} attachments allowed`;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
     setErrors({});
+    setFileErrors([]);
     setSubmitting(true);
 
     try {
@@ -548,12 +560,22 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
             )}
 
             {fileErrors.length > 0 && (
-              <div className="alert alert-warning py-2 mb-3" data-testid="file-errors">
-                <ul className="mb-0 small ps-3">
+              <div
+                className="alert alert-warning py-2 px-3 mb-3 d-flex justify-content-between align-items-start"
+                data-testid="file-errors"
+              >
+                <ul className="mb-0 small ps-3 flex-grow-1">
                   {fileErrors.map((err, idx) => (
                     <li key={idx}>{err}</li>
                   ))}
                 </ul>
+                <button
+                  type="button"
+                  className="btn-close ms-2"
+                  aria-label="Dismiss warning"
+                  style={{ fontSize: "0.75rem" }}
+                  onClick={() => setFileErrors([])}
+                ></button>
               </div>
             )}
 
