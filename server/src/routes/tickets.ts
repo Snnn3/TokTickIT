@@ -195,7 +195,34 @@ interface QueryValidationResult {
   details: { parameter: string; issue: string }[];
 }
 
-function validateTicketQuery(query: any): QueryValidationResult {
+function parseStrictInteger(
+  value: unknown,
+  parameter: string,
+  issue: string,
+  details: { parameter: string; issue: string }[],
+  options?: { min?: number; allowed?: number[] },
+): number | undefined {
+  if (value === undefined) return undefined;
+  const raw = String(value).trim();
+  if (!/^\d+$/.test(raw)) {
+    details.push({ parameter, issue });
+    return undefined;
+  }
+  const parsed = parseInt(raw, 10);
+  if (options?.min !== undefined && parsed < options.min) {
+    details.push({ parameter, issue });
+    return undefined;
+  }
+  if (options?.allowed !== undefined && !options.allowed.includes(parsed)) {
+    details.push({ parameter, issue });
+    return undefined;
+  }
+  return parsed;
+}
+
+function validateTicketQuery(
+  query: Record<string, unknown>,
+): QueryValidationResult {
   const details: { parameter: string; issue: string }[] = [];
 
   // Parse and validate search
@@ -217,26 +244,13 @@ function validateTicketQuery(query: any): QueryValidationResult {
   }
 
   // Parse and validate categoryId
-  let categoryId: number | undefined;
-  if (query.categoryId !== undefined) {
-    const raw = String(query.categoryId).trim();
-    if (!/^\d+$/.test(raw)) {
-      details.push({
-        parameter: "categoryId",
-        issue: "Category ID must be a positive integer",
-      });
-    } else {
-      const parsed = parseInt(raw, 10);
-      if (parsed <= 0) {
-        details.push({
-          parameter: "categoryId",
-          issue: "Category ID must be a positive integer",
-        });
-      } else {
-        categoryId = parsed;
-      }
-    }
-  }
+  const categoryId = parseStrictInteger(
+    query.categoryId,
+    "categoryId",
+    "Category ID must be a positive integer",
+    details,
+    { min: 1 },
+  );
 
   // Parse and validate priority
   let priority: TicketPriority | undefined;
@@ -296,49 +310,24 @@ function validateTicketQuery(query: any): QueryValidationResult {
   }
 
   // Parse and validate page
-  let page = 1;
-  if (query.page !== undefined) {
-    const raw = String(query.page).trim();
-    if (!/^\d+$/.test(raw)) {
-      details.push({
-        parameter: "page",
-        issue: "Page must be an integer >= 1",
-      });
-    } else {
-      const parsed = parseInt(raw, 10);
-      if (parsed < 1) {
-        details.push({
-          parameter: "page",
-          issue: "Page must be an integer >= 1",
-        });
-      } else {
-        page = parsed;
-      }
-    }
-  }
+  const page =
+    parseStrictInteger(
+      query.page,
+      "page",
+      "Page must be an integer >= 1",
+      details,
+      { min: 1 },
+    ) ?? 1;
 
   // Parse and validate pageSize
-  const allowedPageSizes = [5, 10, 20];
-  let pageSize = 10;
-  if (query.pageSize !== undefined) {
-    const raw = String(query.pageSize).trim();
-    if (!/^\d+$/.test(raw)) {
-      details.push({
-        parameter: "pageSize",
-        issue: "Page size must be 5, 10, or 20",
-      });
-    } else {
-      const parsed = parseInt(raw, 10);
-      if (!allowedPageSizes.includes(parsed)) {
-        details.push({
-          parameter: "pageSize",
-          issue: "Page size must be 5, 10, or 20",
-        });
-      } else {
-        pageSize = parsed;
-      }
-    }
-  }
+  const pageSize =
+    parseStrictInteger(
+      query.pageSize,
+      "pageSize",
+      "Page size must be 5, 10, or 20",
+      details,
+      { allowed: [5, 10, 20] },
+    ) ?? 10;
 
   return {
     valid: details.length === 0,

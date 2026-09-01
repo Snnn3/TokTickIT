@@ -743,7 +743,73 @@ fix to follow the criteria
 
 ---
 
-<!-- Prompts 37..n appended during the sprint -->
+## Prompt 37 — Refactor query integer parser, type query validation input, unify reference data hooks, and map status badges (2026-09-01)
+
+**Outcome:** Extracted reusable `parseStrictInteger` query helper in `tickets.ts`, replaced `any` with typed `Record<string, unknown>` for query validation, unified `useCategories` onto `useReferenceData`, and added typed lookup map `STATUS_BADGE_MAP` in `ZenBadge.tsx`.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### (a) Documented Standards Violations
+  • None: No standalone CODING_STANDARDS.md or CONTRIBUTING.md exists in the repository. All documented rules in api-spec.md and ui-spec.md are satisfied (0 hard violations).
+
+  ### (b) Baseline Smells (Judgement Calls)
+
+  1. Duplicated Code — Query Integer Parsing (tickets.ts:221-238)
+      • Hunk:
+        const raw = String(query.categoryId).trim();
+        if (!/^\d+$/.test(raw)) { ... }
+
+      • Assessment: Regex check (/^\d+$/) and integer validation logic is duplicated across categoryId, page, and pageSize.
+      • Recommendation: Extract a reusable helper parsePositiveInt(val, paramName, errorMsg) to unify integer validation.
+  2. Primitive Obsession — Query Parameter Type (tickets.ts:198)
+      • Hunk:
+        function validateTicketQuery(query: any): QueryValidationResult
+
+      • Assessment: Takes an unconstrained any instead of ParsedQs or a typed query interface.
+  3. Duplicated Code — Reference Data Fetching (useReferenceData.ts:7-42)
+      • Hunk:
+        export function useCategories() { ... fetch("/api/reference/categories") ... }
+        export function useReferenceData() { ... Promise.all([fetch("/api/reference/categories"), ...]) ... }
+
+      • Assessment: Category fetch and lifecycle state management in useCategories duplicates logic in useReferenceData.
+  4. Speculative Generality — Unmapped Status Badge (ZenBadge.tsx:20-26)
+      • Hunk:
+        export function ZenStatusBadge({ status }: { status: TicketStatus | string }) {
+          return <span className="badge badge-zen-new" ...>{status}</span>;
+        }
+
+      • Assessment: ZenStatusBadge accepts TicketStatus | string prop but hardcodes class "badge badge-zen-new".
+
+  ──────
+  ## Spec
+
+  ### (a) Requirements Missing or Partial
+
+  • None: All core requirements for Issue #19 are fully implemented:
+      • FR-08 / BR-19 / AC-13 (specification.md:63-64): Free-text search matching Ticket Number or Summary case-insensitively with 300ms debounce (ui-spec.md:105).
+      • BR-20 / AC-14 / AC-15 (specification.md:110-111): Category, Priority, and Status (NEW) filters, with sortable fields (updatedAt, createdAt, number) and default descending sort with number
+      descending tiebreak.
+      • BR-21 / AC-16 (specification.md:112-113, api-spec.md:79-98): Strict query validation returning 400 INVALID_QUERY on malformed integers/enums and responding with full pagination envelope {
+      tickets, page, pageSize, total, totalPages }.
+      • BR-24 / AC-17 (specification.md:118-119): Clear distinction between empty state ("No tickets yet - Create your first ticket") and filtered no-results state ("No tickets match your filters")
+      (ui-spec.md:115-117).
+      • AC-22 (specification.md:241-242, ui-spec.md:109-111): Responsive layout rendering desktop table (>=992px), tablet view suppressing Category, and mobile cards (<768px, whole card clickable).
+
+
+  ### (b) Behaviour in Diff Not Asked For (Scope Creep)
+
+  1. CreateTicket scroll behavior modification (CreateTicket.tsx:196-198):
+      • Injected window.scrollTo({ top: 0, behavior: "smooth" }) into CreateTicket.tsx on successful ticket creation (belongs to Issue #18 rather than Issue #19).
+  2. Package Script Aliases (package.json:11-12, package.json:16-17):
+      • Added shortcut scripts "db:seed" and "seed" following ths
+```
+
+---
+
+<!-- Prompts 38..n appended during the sprint -->
 
 ## My Reflection
 

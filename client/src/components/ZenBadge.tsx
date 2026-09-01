@@ -6,6 +6,10 @@ const PRIORITY_BADGE_MAP: Record<TicketPriority, string> = {
   LOW: "badge badge-zen-low",
 };
 
+const STATUS_BADGE_MAP: Record<TicketStatus, string> = {
+  NEW: "badge badge-zen-new",
+};
+
 export function ZenPriorityBadge({ priority }: { priority: TicketPriority | string }) {
   const badgeClass =
     PRIORITY_BADGE_MAP[priority as TicketPriority] || "badge badge-zen-low";
@@ -18,8 +22,11 @@ export function ZenPriorityBadge({ priority }: { priority: TicketPriority | stri
 }
 
 export function ZenStatusBadge({ status }: { status: TicketStatus | string }) {
+  const badgeClass =
+    STATUS_BADGE_MAP[status as TicketStatus] || "badge badge-zen-new";
+
   return (
-    <span className="badge badge-zen-new" aria-label={`Status: ${status}`}>
+    <span className={badgeClass} aria-label={`Status: ${status}`}>
       {status}
     </span>
   );

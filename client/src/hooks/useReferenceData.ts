@@ -2,46 +2,6 @@ import { useState, useEffect } from "react";
 import type { Category, RelatedSystem } from "../types/ticket";
 
 /**
- * Shared hook to load active ticket categories for dropdowns and filters.
- */
-export function useCategories() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadCategories() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/reference/categories");
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setCategories(data.categories || []);
-          }
-        } else {
-          if (isMounted) setError("Failed to load categories");
-        }
-      } catch {
-        if (isMounted) setError("Network error loading categories");
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    loadCategories();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return { categories, loading, error };
-}
-
-/**
  * Shared hook to load active categories and related systems together.
  */
 export function useReferenceData() {
@@ -86,4 +46,12 @@ export function useReferenceData() {
   }, []);
 
   return { categories, systems, loading, error };
+}
+
+/**
+ * Convenience hook to load active ticket categories for dropdowns and filters.
+ */
+export function useCategories() {
+  const { categories, loading, error } = useReferenceData();
+  return { categories, loading, error };
 }
