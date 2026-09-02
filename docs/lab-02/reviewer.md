@@ -35,8 +35,7 @@
 
 **PR #29 — feature/lab2-5-my-tickets**
 - **Reviewer comment:** "Great job on this one! The API query validation is solid, and the 300ms debounce on the search input is a great UX touch. I also love how you separated the Empty state from the No-results state perfectly. Approved!"
-- **How I responded:** "Thank you for reviewing the search debouncing, strict query validations, and empty-state vs no-results state handling!"
-
+- **How I responded:** "Thank you for aproving and merging my PR."
 ---
 
 ## Pull Requests I reviewed for my partner
