@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { prisma } from "./prisma";
 import { ticketsRouter } from "./routes/tickets";
+import { attachmentsRouter } from "./routes/attachments";
 
 export const app = express();
 
@@ -82,3 +83,6 @@ app.get("/api/reference/systems", async (_req, res) => {
 
 // Lab 2 Tickets Router
 app.use("/api/tickets", ticketsRouter);
+
+// Lab 2 Attachments Router
+app.use("/api/attachments", attachmentsRouter);

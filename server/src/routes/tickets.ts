@@ -552,3 +552,234 @@ ticketsRouter.post(
     }
   },
 );
+
+// GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
+ticketsRouter.get(
+  "/:id",
+  requireRequester,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId <= 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    try {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: {
+          category: { select: { name: true } },
+          system: { select: { name: true } },
+          requester: { select: { id: true, name: true, email: true } },
+          attachments: {
+            orderBy: { uploadedAt: "asc" },
+            select: {
+              id: true,
+              ticketId: true,
+              filename: true,
+              mimeType: true,
+              sizeBytes: true,
+              uploadedAt: true,
+              removedAt: true,
+              removedReason: true,
+            },
+          },
+        },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found",
+          },
+        });
+      }
+
+      if (ticket.requesterId !== requester.id) {
+        return res.status(403).json({
+          error: {
+            code: "FORBIDDEN",
+            message: "Access denied",
+          },
+        });
+      }
+
+      return res.status(200).json({
+        ticket: {
+          id: ticket.id,
+          number: ticket.number,
+          summary: ticket.summary,
+          description: ticket.description,
+          categoryId: ticket.categoryId,
+          categoryName: ticket.category?.name || "Unknown",
+          relatedSystemId: ticket.systemId,
+          relatedSystemName: ticket.system?.name || "Unknown",
+          requestedPriority: ticket.requestedPriority,
+          status: ticket.status,
+          requesterId: ticket.requesterId,
+          requesterName: ticket.requester?.name || "Unknown",
+          ticketDate: ticket.ticketDate,
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
+          attachments: ticket.attachments,
+        },
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to retrieve ticket",
+        },
+      });
+    }
+  },
+);
+
+// POST /api/tickets/:id/attachments [FR-10, BR-13, BR-14, BR-15, AC-07..AC-09]
+ticketsRouter.post(
+  "/:id/attachments",
+  requireRequester,
+  (req, res, next) => {
+    upload.single("file")(req, res, (err: any) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({
+            error: {
+              code: "FILE_TOO_LARGE",
+              message: "Attachment exceeds the maximum allowed size of 5 MB",
+            },
+          });
+        }
+        return res.status(400).json({
+          error: {
+            code: "VALIDATION_FAILED",
+            message: err.message,
+          },
+        });
+      } else if (err) {
+        return res.status(500).json({
+          error: {
+            code: "UNEXPECTED",
+            message: "Failed to process attachment upload",
+          },
+        });
+      }
+      next();
+    });
+  },
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId <= 0) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "File is required",
+          details: [{ field: "file", issue: "Attachment file is required" }],
+        },
+      });
+    }
+
+    // Check MIME type and extension
+    if (
+      !ALLOWED_MIME_TYPES.includes(file.mimetype) ||
+      !hasValidExtension(file.originalname)
+    ) {
+      return res.status(415).json({
+        error: {
+          code: "UNSUPPORTED_TYPE",
+          message: `Unsupported file type for "${file.originalname}". Allowed types: JPG, PNG, WEBP, PDF`,
+        },
+      });
+    }
+
+    try {
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { id: true, requesterId: true },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found",
+          },
+        });
+      }
+
+      if (ticket.requesterId !== requester.id) {
+        return res.status(403).json({
+          error: {
+            code: "FORBIDDEN",
+            message: "Access denied",
+          },
+        });
+      }
+
+      const activeAttachmentsCount = await prisma.attachment.count({
+        where: {
+          ticketId,
+          removedAt: null,
+        },
+      });
+
+      if (activeAttachmentsCount >= 5) {
+        return res.status(409).json({
+          error: {
+            code: "LIMIT_REACHED",
+            message: "Ticket already has maximum 5 active attachments",
+          },
+        });
+      }
+
+      const attachment = await prisma.attachment.create({
+        data: {
+          ticketId,
+          filename: file.originalname,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          data: Buffer.from(file.buffer),
+        },
+      });
+
+      return res.status(201).json({
+        attachment: {
+          id: attachment.id,
+          ticketId: attachment.ticketId,
+          filename: attachment.filename,
+          mimeType: attachment.mimeType,
+          sizeBytes: attachment.sizeBytes,
+          uploadedAt: attachment.uploadedAt,
+          removedAt: attachment.removedAt,
+          removedReason: attachment.removedReason,
+        },
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to upload attachment",
+        },
+      });
+    }
+  },
+);

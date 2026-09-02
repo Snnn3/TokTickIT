@@ -899,7 +899,31 @@ in the pr wirte how to test too
 
 ---
 
-<!-- Prompts 41..n appended during the sprint -->
+## Prompt 41 — Create reviewer.md with peer review records for Lab 2 (2026-09-02)
+
+**Outcome:** Created `docs/lab-02/reviewer.md` documenting all Pull Requests authored on `Snnn3/TokTickIT` (PRs #25, #26, #27, #28, #29) and reviewed on `YummieGG/toktickit` (PRs #19, #20, #21), including verdicts, exact review comments, and partner responses.
+
+**Prompt (verbatim):**
+
+```text
+add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/pulls and i was review is in https://github.com/YummieGG/toktickit/pulls
+```
+
+---
+
+## Prompt 42 — Implement Issue #20: Ticket Detail and Attachment Lifecycle (2026-09-02)
+
+**Outcome:** Created branch `feature/lab2-6-detail-attachments`. Implemented `GET /api/tickets/:id`, `POST /api/tickets/:id/attachments`, `GET /api/attachments/:id`, `GET /api/attachments/:id/download`, and `DELETE /api/attachments/:id` with strict ownership checks, 410 REMOVED enforcement, confirmation dialog for soft removal, and responsive read-only Ticket Detail UI with AttachmentSection.
+
+**Prompt (verbatim):**
+
+```text
+/implement issue#20 dont open the pr
+```
+
+---
+
+<!-- Prompts 43..n appended during the sprint -->
 
 ## My Reflection
 
