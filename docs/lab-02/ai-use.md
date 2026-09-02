@@ -899,7 +899,19 @@ in the pr wirte how to test too
 
 ---
 
-<!-- Prompts 41..n appended during the sprint -->
+## Prompt 41 — Create reviewer.md with peer review records for Lab 2 (2026-09-02)
+
+**Outcome:** Created `docs/lab-02/reviewer.md` documenting all Pull Requests authored on `Snnn3/TokTickIT` (PRs #25, #26, #27, #28, #29) and reviewed on `YummieGG/toktickit` (PRs #19, #20, #21), including verdicts, exact review comments, and partner responses.
+
+**Prompt (verbatim):**
+
+```text
+add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/pulls and i was review is in https://github.com/YummieGG/toktickit/pulls
+```
+
+---
+
+<!-- Prompts 42..n appended during the sprint -->
 
 ## My Reflection
 
