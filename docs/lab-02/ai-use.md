@@ -923,7 +923,92 @@ add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/
 
 ---
 
-<!-- Prompts 43..n appended during the sprint -->
+## Prompt 43 — Resolve Code Review Findings for Issue #20 (2026-09-02)
+
+**Outcome:** Refactored `.btn-zen-destructive` styling and `.badge-zen-removed` tokens across `AttachmentSection.tsx`, applied `.zg-readonly-panel` shading to all read-only containers in `RequesterTicketDetail.tsx`, extracted `parsePositiveIntParam` and `serializeAttachment` helpers in `attachments.ts`, aligned soft-remove DELETE 200 payload with `api-spec.md`, and removed unrequested header counter badge.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### 1. Documented Standards Violations (Hard)
+
+  • AttachmentSection.tsx:403-486 — Destructive Button Styling
+      • Standard: ui-spec.md:43 (Button hierarchy: Destructive #B3261E bg, white text).
+      • Violation: Uses Bootstrap's btn btn-outline-danger (attachment list Remove) and btn btn-danger (modal action) instead of the Zen Green
+      token class .btn-zen-destructive.
+  • AttachmentSection.tsx:337 — Removed Attachment Badge Styling
+      • Standard: ui-spec.md:58 (Badges: Removed attachment fill #F0F2F1, text #5B6B62).
+      • Violation: Uses standard Bootstrap badge bg-secondary (#6c757d) instead of the Zen token fill/text (.badge-zen-low or token-styled badge).
+  • RequesterTicketDetail.tsx:99-231 — Read-only Group Background
+      • Standard: ui-spec.md:16-122 (All read-only ticket info cards/values shaded #EEF3EF / readonly-field).
+      • Violation: Uses Bootstrap bg-light (#f8f9fa) and bg-white rather than --zg-readonly-field / .zg-readonly-field (#EEF3EF).
+
+  ### 2. Baseline Code Smells (Judgement Calls)
+
+  • Duplicated Code — attachments.ts:49-153
+    if (isNaN(attachmentId) || attachmentId <= 0) {
+      return res.status(400).json({
+        error: { code: "INVALID_ID", message: "Attachment ID must be a positive integer" },
+      });
+    }
+  Param ID parsing & validation repeated across all 3 attachment route handlers; extract into a shared parameter validation helper/middleware.
+  • Duplicated Code — attachments.ts:66-209
+  Attachment DTO response serialization ({ id, ticketId, filename, mimeType, sizeBytes, uploadedAt, removedAt, removedReason }) is manually
+  reconstructed in multiple route responses instead of a reusable serializer function.
+  • Duplicated Code / Data Clump — AttachmentSection.tsx:5-6 & tickets.ts:17-18
+  ALLOWED_EXTENSIONS and MAX_FILE_SIZE constants and mime-validation logic are declared independently across client components and server route
+  files without a shared type/constant definition.
+  ──────
+  ## Spec
+
+  ### (a) Requirements Missing or Partial
+
+  1. Removed Attachment Badge Token:
+  │ ui-spec.md:58: "| Removed attachment | #F0F2F1 | #5B6B62 + strikethrough filename | disabled actions |"
+
+      • AttachmentSection.tsx:337 uses Bootstrap's badge bg-secondary (dark gray #6c757d) instead of Zen Green #F0F2F1 / #5B6B62 (badge-zen-low).
+  2. Destructive Button Styling:
+  │ ui-spec.md:43: "| Destructive | #B3261E bg, white text (attachment Remove) |"
+
+      • AttachmentSection.tsx:403 styles the row Remove button as btn-outline-danger instead of using the repository's .btn-zen-destructive token
+      class.
+  3. Read-only Shading on Description:
+  │ ui-spec.md:121-122: "Read-only ticket info grouped in cards, all values readonly-shaded: ... Description (preserved whitespace)"
+
+      • RequesterTicketDetail.tsx:231 applies bg-white to the description container rather than the readonly token shade #EEF3EF (.zg-readonly-
+      field).
+
+
+  ### (b) Unasked Behaviour (Scope Creep)
+
+  1. Extra Payload in Soft-Remove Response:
+  │ api-spec.md:140: "- 200: { \"removed\": true, \"removedAt\": \"<ts>\" }"
+
+      • attachments.ts:200-209 includes an extra full attachment metadata object in the 200 response alongside removed and removedAt. (Benign
+      client convenience).
+  2. Active Attachments Counter Badge:
+  │ ui-spec.md:126: "Attachment Section (separate card): header + Add attachment button (hidden/disabled at limit)."
+
+      • AttachmentSection.tsx:254-256 adds an unrequested "{activeCount} / 5 active" counter pill badge in the card header.
+
+
+  ### (c) Requirements Implemented but Look Wrong
+
+  • None Identified: Core specifications are correctly implemented:
+      • Ownership & Status Codes: X-Requester-Id ownership check strictly enforces 403 on foreign ticket/attachment access (BR-06, AC-03); 401 on
+      missing/inactive (BR-22); 404 on absent (AC-03); 410 on downloading removed items (FR-11, AC-11); 409 on duplicate removal or exceeding 5
+      active attachments (AC-09); 413/415 on file limits (AC-07, AC-08).
+      • Soft Removal & Dialog: Mandatory 1–300 char trimmed reason with Escape key and focus-trapped confirmation modal (FR-12, BR-16, BR-17, AC-
+      12).
+      • Submission Lockout: Busy-disabled states prevent duplicate submits (BR-18, AC-21).
+      • Read-Only View: No edit controls rendered (FR-09, AC-23).
+```
+
+---
+
+<!-- Prompts 44..n appended during the sprint -->
 
 ## My Reflection
 

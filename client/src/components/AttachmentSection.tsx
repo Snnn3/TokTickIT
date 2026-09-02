@@ -249,12 +249,7 @@ export function AttachmentSection({
     <div className="zg-card p-4 mt-4" data-testid="attachment-section">
       {/* Header with Title and Add Button */}
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="d-flex align-items-center gap-2">
-          <h2 className="h5 fw-bold mb-0 text-zen-primary">Attachments</h2>
-          <span className="badge badge-zen-low" data-testid="active-attachment-count">
-            {activeCount} / 5 active
-          </span>
-        </div>
+        <h2 className="h5 fw-bold mb-0 text-zen-primary">Attachments</h2>
 
         <div>
           <input
@@ -334,7 +329,7 @@ export function AttachmentSection({
                         <span className="text-decoration-line-through text-muted small fw-medium">
                           {att.filename}
                         </span>
-                        <span className="badge bg-secondary" data-testid={`removed-badge-${att.id}`}>
+                        <span className="badge badge-zen-removed" data-testid={`removed-badge-${att.id}`}>
                           Removed
                         </span>
                       </>
@@ -400,7 +395,7 @@ export function AttachmentSection({
 
                   <button
                     type="button"
-                    className="btn btn-outline-danger btn-sm"
+                    className="btn btn-zen-destructive btn-sm"
                     disabled={isRemoved}
                     onClick={() => openRemoveModal(att)}
                     aria-label={`Remove ${att.filename}`}
@@ -483,7 +478,7 @@ export function AttachmentSection({
                 </button>
                 <button
                   type="button"
-                  className="btn btn-danger btn-sm"
+                  className="btn btn-zen-destructive btn-sm"
                   disabled={isRemoving || !removeReason.trim()}
                   onClick={handleConfirmRemove}
                   data-testid="confirm-remove-button"

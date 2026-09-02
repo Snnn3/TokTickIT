@@ -171,7 +171,7 @@ export function RequesterTicketDetail({
         <div className="row g-3 mb-3">
           {/* System Group */}
           <div className="col-12 col-lg-6">
-            <div className="p-3 bg-light rounded border h-100" data-testid="system-metadata-group">
+            <div className="zg-readonly-panel p-3 h-100" data-testid="system-metadata-group">
               <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
                 System Metadata
               </h2>
@@ -195,7 +195,7 @@ export function RequesterTicketDetail({
 
           {/* Classification Group */}
           <div className="col-12 col-lg-6">
-            <div className="p-3 bg-light rounded border h-100" data-testid="classification-group">
+            <div className="zg-readonly-panel p-3 h-100" data-testid="classification-group">
               <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
                 Classification
               </h2>
@@ -216,7 +216,7 @@ export function RequesterTicketDetail({
         </div>
 
         {/* Details Group (Summary & Description) */}
-        <div className="p-3 bg-light rounded border mb-3" data-testid="ticket-details-group">
+        <div className="zg-readonly-panel p-3 mb-3" data-testid="ticket-details-group">
           <h2 className="small text-muted text-uppercase fw-bold mb-2" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
             Summary
           </h2>
@@ -229,7 +229,7 @@ export function RequesterTicketDetail({
           </h2>
           <div
             className="p-3 bg-white rounded border text-zen-body small"
-            style={{ whiteSpace: "pre-wrap", minHeight: "100px" }}
+            style={{ whiteSpace: "pre-wrap", minHeight: "100px", backgroundColor: "var(--zg-readonly-field)" }}
             data-testid="ticket-detail-description"
           >
             {ticket.description}

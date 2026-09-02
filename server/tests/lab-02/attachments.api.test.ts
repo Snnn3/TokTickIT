@@ -203,7 +203,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     expect(resSuccess.status).toBe(200);
     expect(resSuccess.body.removed).toBe(true);
-    expect(resSuccess.body.attachment.removedReason).toBe("Outdated log file");
+    expect(resSuccess.body.removedAt).toBeDefined();
 
     // 3. Repeat call -> 409 ALREADY_REMOVED
     vi.spyOn(prisma.attachment, "findUnique").mockResolvedValueOnce({
