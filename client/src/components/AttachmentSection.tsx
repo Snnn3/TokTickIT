@@ -5,12 +5,18 @@ import { formatDateTime, formatFileSize } from "../utils/format";
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
+export interface AttachmentRemovalUpdate {
+  attachmentId: number;
+  removedReason: string;
+  removedAt: string;
+}
+
 interface AttachmentSectionProps {
   ticketId: number;
   attachments: AttachmentMetadata[];
   requesterId: number;
   onAttachmentAdded?: (attachment: AttachmentMetadata) => void;
-  onAttachmentRemoved?: (attachmentId: number, removedReason: string, removedAt: string) => void;
+  onAttachmentRemoved?: (update: AttachmentRemovalUpdate) => void;
 }
 
 export function AttachmentSection({
@@ -46,6 +52,22 @@ export function AttachmentSection({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeRemoveModal();
+      } else if (e.key === "Tab" && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
       }
     };
 
@@ -208,7 +230,11 @@ export function AttachmentSection({
           ),
         );
         if (onAttachmentRemoved) {
-          onAttachmentRemoved(removingAttachment.id, trimmedReason, removedAt);
+          onAttachmentRemoved({
+            attachmentId: removingAttachment.id,
+            removedReason: trimmedReason,
+            removedAt,
+          });
         }
         closeRemoveModal();
       }
@@ -348,13 +374,28 @@ export function AttachmentSection({
                 <div className="d-flex align-items-center gap-2">
                   <button
                     type="button"
-                    className="btn btn-zen-secondary btn-sm"
+                    className="btn btn-zen-secondary btn-sm d-flex align-items-center gap-1"
                     disabled={isRemoved}
                     onClick={() => handleDownload(att)}
                     aria-label={`Download ${att.filename}`}
                     data-testid={`download-button-${att.id}`}
                   >
-                    Download
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Download</span>
                   </button>
 
                   <button

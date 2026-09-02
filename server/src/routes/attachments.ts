@@ -4,6 +4,40 @@ import { requireRequester, AuthenticatedRequest } from "../middleware/requester"
 
 export const attachmentsRouter = Router();
 
+/**
+ * Shared helper to load an attachment and enforce ticket ownership [BR-06, AC-03]
+ */
+async function getOwnedAttachment(
+  attachmentId: number,
+  requesterId: number,
+  includeData = false,
+) {
+  const attachment = await prisma.attachment.findUnique({
+    where: { id: attachmentId },
+    include: {
+      ticket: {
+        select: { requesterId: true },
+      },
+    },
+  });
+
+  if (!attachment) {
+    return { status: 404, error: { code: "NOT_FOUND", message: "Attachment not found" } };
+  }
+
+  if (attachment.ticket.requesterId !== requesterId) {
+    return { status: 403, error: { code: "FORBIDDEN", message: "Access denied" } };
+  }
+
+  if (!includeData) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data, ...metadata } = attachment;
+    return { status: 200, attachment, metadata };
+  }
+
+  return { status: 200, attachment };
+}
+
 // GET /api/attachments/:id [BR-06, AC-03]
 attachmentsRouter.get(
   "/:id",
@@ -22,43 +56,22 @@ attachmentsRouter.get(
     }
 
     try {
-      const attachment = await prisma.attachment.findUnique({
-        where: { id: attachmentId },
-        include: {
-          ticket: {
-            select: { requesterId: true },
-          },
-        },
-      });
-
-      if (!attachment) {
-        return res.status(404).json({
-          error: {
-            code: "NOT_FOUND",
-            message: "Attachment not found",
-          },
-        });
+      const result = await getOwnedAttachment(attachmentId, requester.id);
+      if (result.status !== 200) {
+        return res.status(result.status).json({ error: result.error });
       }
 
-      if (attachment.ticket.requesterId !== requester.id) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "Access denied",
-          },
-        });
-      }
-
+      const att = result.attachment!;
       return res.status(200).json({
         attachment: {
-          id: attachment.id,
-          ticketId: attachment.ticketId,
-          filename: attachment.filename,
-          mimeType: attachment.mimeType,
-          sizeBytes: attachment.sizeBytes,
-          uploadedAt: attachment.uploadedAt,
-          removedAt: attachment.removedAt,
-          removedReason: attachment.removedReason,
+          id: att.id,
+          ticketId: att.ticketId,
+          filename: att.filename,
+          mimeType: att.mimeType,
+          sizeBytes: att.sizeBytes,
+          uploadedAt: att.uploadedAt,
+          removedAt: att.removedAt,
+          removedReason: att.removedReason,
         },
       });
     } catch {
@@ -90,34 +103,13 @@ attachmentsRouter.get(
     }
 
     try {
-      const attachment = await prisma.attachment.findUnique({
-        where: { id: attachmentId },
-        include: {
-          ticket: {
-            select: { requesterId: true },
-          },
-        },
-      });
-
-      if (!attachment) {
-        return res.status(404).json({
-          error: {
-            code: "NOT_FOUND",
-            message: "Attachment not found",
-          },
-        });
+      const result = await getOwnedAttachment(attachmentId, requester.id, true);
+      if (result.status !== 200) {
+        return res.status(result.status).json({ error: result.error });
       }
 
-      if (attachment.ticket.requesterId !== requester.id) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "Access denied",
-          },
-        });
-      }
-
-      if (attachment.removedAt !== null) {
+      const att = result.attachment!;
+      if (att.removedAt !== null) {
         return res.status(410).json({
           error: {
             code: "REMOVED",
@@ -126,14 +118,12 @@ attachmentsRouter.get(
         });
       }
 
-      res.setHeader("Content-Type", attachment.mimeType);
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${encodeURIComponent(attachment.filename)}"`,
-      );
-      res.setHeader("Content-Length", attachment.sizeBytes);
+      const safeFilename = att.filename.replace(/"/g, '\\"');
+      res.setHeader("Content-Type", att.mimeType);
+      res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
+      res.setHeader("Content-Length", att.sizeBytes);
 
-      return res.status(200).send(Buffer.from(attachment.data));
+      return res.status(200).send(Buffer.from(att.data));
     } catch {
       return res.status(500).json({
         error: {
@@ -181,34 +171,13 @@ attachmentsRouter.delete(
     }
 
     try {
-      const attachment = await prisma.attachment.findUnique({
-        where: { id: attachmentId },
-        include: {
-          ticket: {
-            select: { requesterId: true },
-          },
-        },
-      });
-
-      if (!attachment) {
-        return res.status(404).json({
-          error: {
-            code: "NOT_FOUND",
-            message: "Attachment not found",
-          },
-        });
+      const result = await getOwnedAttachment(attachmentId, requester.id);
+      if (result.status !== 200) {
+        return res.status(result.status).json({ error: result.error });
       }
 
-      if (attachment.ticket.requesterId !== requester.id) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "Access denied",
-          },
-        });
-      }
-
-      if (attachment.removedAt !== null) {
+      const att = result.attachment!;
+      if (att.removedAt !== null) {
         return res.status(409).json({
           error: {
             code: "ALREADY_REMOVED",

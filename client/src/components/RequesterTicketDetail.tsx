@@ -70,17 +70,15 @@ export function RequesterTicketDetail({
   };
 
   const handleAttachmentRemoved = (
-    attachmentId: number,
-    removedReason: string,
-    removedAt: string,
+    update: { attachmentId: number; removedReason: string; removedAt: string },
   ) => {
     setTicket((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         attachments: prev.attachments.map((att) =>
-          att.id === attachmentId
-            ? { ...att, removedReason, removedAt }
+          att.id === update.attachmentId
+            ? { ...att, removedReason: update.removedReason, removedAt: update.removedAt }
             : att,
         ),
       };

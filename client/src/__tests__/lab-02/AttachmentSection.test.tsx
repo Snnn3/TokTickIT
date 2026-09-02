@@ -128,7 +128,11 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
-      expect(onRemoved).toHaveBeenCalledWith(101, "No longer needed by IT", "2026-08-30T12:00:00.000Z");
+      expect(onRemoved).toHaveBeenCalledWith({
+        attachmentId: 101,
+        removedReason: "No longer needed by IT",
+        removedAt: "2026-08-30T12:00:00.000Z",
+      });
       expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
     });
   });
