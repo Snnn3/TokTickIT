@@ -140,14 +140,10 @@ export function RequesterTicketDetail({
   }
 
   const categoryDisplayName =
-    categories.find((c) => c.id === ticket.categoryId)?.name ||
-    (ticket as unknown as { categoryName?: string }).categoryName ||
-    "Unknown";
+    categories.find((c) => c.id === ticket.categoryId)?.name || "Unknown";
 
   const systemDisplayName =
-    systems.find((s) => s.id === ticket.systemId)?.name ||
-    (ticket as unknown as { relatedSystemName?: string }).relatedSystemName ||
-    "Unknown";
+    systems.find((s) => s.id === ticket.systemId)?.name || "Unknown";
 
   const requesterDisplayName = ticket.requester?.name || "Unknown";
 

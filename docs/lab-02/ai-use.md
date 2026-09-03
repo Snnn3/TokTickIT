@@ -1213,11 +1213,64 @@ add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/
 
 ---
 
-<!-- Prompts 47..n appended during the sprint -->
+## Prompt 47 — Fix Attachment Link Tokens, Simplify Lookups, and Extract Shared Ownership & Utility Helpers (2026-09-03)
+
+**Outcome:** Styled active attachment filename button using `.zg-action-link` (`var(--zg-secondary)` / `#0B7A46`) per `ui-spec.md:10`, pruned vestigial casts for category/system names in `RequesterTicketDetail.tsx`, removed deprecated `data.attachment` response wrapper fallback in `AttachmentSection.tsx`, extracted shared `parsePositiveIntParam` and `serializeAttachment` into `server/src/utils/attachment.ts` decoupling routes, and introduced shared `getOwnedTicket` helper in `tickets.ts` unifying ticket lookup and ownership enforcement.
+
+**Prompt (verbatim):**
+
+```text
+/implement ### (a) Documented Standards Violations (Hard Violations)
+
+  1. Active Attachment Link Color Token Mismatch
+      • File: AttachmentSection.tsx:425-433
+      • Standard: ui-spec.md:10 (secondary-green | #0B7A46 | active tabs, focus accents, links, hover states)
+      • Violation: The active attachment filename button uses class text-zen-primary (#006B3C) instead of the documented link token secondary-green
+      (#0B7A46 / .zg-action-link).
+
+  ──────
+  ### (b) Baseline Smells (Judgement Calls)
+  1. Speculative Generality (Vestigial Property Checking)
+      • File: RequesterTicketDetail.tsx:142-151
+      • Hunk:
+        const categoryDisplayName = categories.find((c) => c.id === ticket.categoryId)?.name ||
+          (ticket as unknown as { categoryName?: string }).categoryName || "Unknown";
+        const systemDisplayName = systems.find((s) => s.id === ticket.systemId)?.name ||
+          (ticket as unknown as { relatedSystemName?: string }).relatedSystemName || "Unknown";
+      • Judgement Call: Casting ticket through unknown to read categoryName and relatedSystemName anticipates properties already pruned from the
+      backend response. The reference data arrays already resolve categoryId and systemId.
+  2. Speculative Generality (Deprecated Response Envelope Fallback)
+      • File: AttachmentSection.tsx:165
+      • Hunk:
+        const uploadedAtt: AttachmentMetadata = data.id ? data : data.attachment;
+
+      • Judgement Call: The data.attachment fallback handles an obsolete nested wrapper; tickets.ts:756 now returns the canonical root metadata
+      object directly.
+  3. Duplicated Code (Ticket Ownership Validation)
+      • File: tickets.ts:590-608 and tickets.ts:701-719
+      • Hunk:
+        const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, ... });
+        if (!ticket) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Ticket not found" } });
+        if (ticket.requesterId !== requester.id) return res.status(403).json({ error: { code: "FORBIDDEN", message: "Access denied" } });
+      • Judgement Call: Repeated in GET /:id and POST /:id/attachments. Extracting a shared getOwnedTicket helper would unify ownership checks,
+      mirroring getOwnedAttachment in attachments.ts:14-44.
+  4. Middle Man / Cross-Route Coupling
+      • File: tickets.ts:6
+      • Hunk:
+        import { parsePositiveIntParam, serializeAttachment } from "./attachments";
+
+      • Judgement Call: Route module tickets.ts imports parsing and serialization helpers from sibling route attachments.ts. Placing shared logic
+      in a shared utility module (e.g. server/src/utils/) avoids inter-route module coupling.
+```
+
+---
+
+<!-- Prompts 48..n appended during the sprint -->
 
 ## My Reflection
 
 *(To be completed at sprint end.)*
+
 
 
 

@@ -4,7 +4,7 @@ import { prisma } from "../prisma";
 import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
-import { parsePositiveIntParam, serializeAttachment } from "./attachments";
+import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
 
 export const ticketsRouter = Router();
 
@@ -562,6 +562,31 @@ ticketsRouter.post(
   },
 );
 
+/**
+ * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
+ */
+async function getOwnedTicket<T extends { include?: Prisma.TicketInclude; select?: Prisma.TicketSelect }>(
+  ticketId: number,
+  requesterId: number,
+  options?: T,
+) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    ...(options?.include ? { include: options.include } : {}),
+    ...(options?.select ? { select: options.select } : {}),
+  });
+
+  if (!ticket) {
+    return { status: 404 as const, error: { code: "NOT_FOUND", message: "Ticket not found" }, ticket: null };
+  }
+
+  if (ticket.requesterId !== requesterId) {
+    return { status: 403 as const, error: { code: "FORBIDDEN", message: "Access denied" }, ticket: null };
+  }
+
+  return { status: 200 as const, error: null, ticket };
+}
+
 // GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
 ticketsRouter.get(
   "/:id",
@@ -580,8 +605,7 @@ ticketsRouter.get(
     }
 
     try {
-      const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
+      const owned = await getOwnedTicket(ticketId, requester.id, {
         include: {
           requester: { select: { id: true, name: true } },
           attachments: {
@@ -600,23 +624,11 @@ ticketsRouter.get(
         },
       });
 
-      if (!ticket) {
-        return res.status(404).json({
-          error: {
-            code: "NOT_FOUND",
-            message: "Ticket not found",
-          },
-        });
+      if (owned.status !== 200 || !owned.ticket) {
+        return res.status(owned.status).json({ error: owned.error });
       }
 
-      if (ticket.requesterId !== requester.id) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "Access denied",
-          },
-        });
-      }
+      const ticket = owned.ticket;
 
       // Canonical ticket shape matching POST response plus attachments array [api-spec.md:104, 56-60, ui-spec.md:122-123]
       return res.status(200).json({
@@ -695,27 +707,12 @@ ticketsRouter.post(
     }
 
     try {
-      const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
+      const owned = await getOwnedTicket(ticketId, requester.id, {
         select: { id: true, requesterId: true },
       });
 
-      if (!ticket) {
-        return res.status(404).json({
-          error: {
-            code: "NOT_FOUND",
-            message: "Ticket not found",
-          },
-        });
-      }
-
-      if (ticket.requesterId !== requester.id) {
-        return res.status(403).json({
-          error: {
-            code: "FORBIDDEN",
-            message: "Access denied",
-          },
-        });
+      if (owned.status !== 200 || !owned.ticket) {
+        return res.status(owned.status).json({ error: owned.error });
       }
 
       const activeAttachmentsCount = await prisma.attachment.count({

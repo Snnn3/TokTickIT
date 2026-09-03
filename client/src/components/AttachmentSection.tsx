@@ -162,8 +162,8 @@ export function AttachmentSection({
           ),
         );
       } else {
-        const uploadedAtt: AttachmentMetadata = data.id ? data : data.attachment;
-        if (uploadedAtt) {
+        const uploadedAtt: AttachmentMetadata = data;
+        if (uploadedAtt?.id) {
           setFileList((prev) => [...prev, uploadedAtt]);
           setStagedFiles((prev) => prev.filter((f) => f.id !== tempId));
           if (onAttachmentAdded) onAttachmentAdded(uploadedAtt);
@@ -424,7 +424,7 @@ export function AttachmentSection({
                     ) : (
                       <button
                         type="button"
-                        className="btn btn-link p-0 text-decoration-none fw-medium text-zen-primary small text-start"
+                        className="zg-action-link small text-start"
                         onClick={() => handleDownload(att)}
                         title={`Download ${att.filename}`}
                       >

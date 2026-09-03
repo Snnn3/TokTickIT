@@ -241,7 +241,7 @@ body {
 }
 
 .zg-action-link {
-  color: var(--zg-primary) !important;
+  color: var(--zg-secondary) !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   background: transparent !important;
@@ -251,7 +251,7 @@ body {
 }
 
 .zg-action-link:hover {
-  color: var(--zg-secondary) !important;
+  color: var(--zg-primary) !important;
   text-decoration: underline !important;
 }
 
