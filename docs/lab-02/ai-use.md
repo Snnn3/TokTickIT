@@ -1153,10 +1153,71 @@ add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/
 
 ---
 
-<!-- Prompts 46..n appended during the sprint -->
+## Prompt 46 — Fix Meta Footer Timestamps, Focus Ring, Invalid Row Markup, and Requester Switching (2026-09-03)
+
+**Outcome:** Rendered `Created:` and `Last Updated:` timestamps in Ticket Detail meta footer per `ui-spec.md:122-123`, corrected `.btn-zen-destructive` focus ring to `var(--zg-secondary)` outline per `ui-spec.md:32-33`, removed unauthorized `.badge-zen-error` in favor of inline error message on invalid staged rows per `ui-spec.md §9`, removed unused Prisma relations from `GET /api/tickets/:id`, reset `selectedTicketId` upon requester switch/clearing per `specification.md FR-03, BR-05, AC-18`, and prevented modal dismissal (Escape & close button) during in-flight attachment removal per `specification.md BR-18`.
+
+**Prompt (verbatim):**
+
+```text
+/implement ### (a) Documented Standards Violations (Hard Violations)
+  1. Missing Meta Footer Timestamps
+      • File: RequesterTicketDetail.tsx:247-249
+      • Standard: ui-spec.md:122-123 §9 ("meta footer (created/updated timestamps)")
+      • Violation: The card footer renders only Date: {formatDateTime(ticket.ticketDate)}. It omits both the createdAt and updatedAt timestamps
+      mandated by UI spec §9.
+  2. Destructive Button Focus Ring Color
+      • File: index.css:124-130
+      • Standard: ui-spec.md:32-33 §3 ("focus (2px secondary-green outline, offset 1px, never removed)")
+      • Violation: .btn-zen-destructive:focus-visible, .btn-zen-destructive:focus sets outline: 2px solid var(--zg-error) instead of the required
+      secondary-green outline (var(--zg-secondary)).
+  3. Unauthorized Badge Variant
+      • File: AttachmentSection.tsx:366-368 & index.css:182-186
+      • Standard: ui-spec.md:52-59 §4 & §9 ("States per row: ... invalid (message)")
+      • Violation: Introduces an undocumented badge-zen-error ("Invalid" badge) on invalid staged rows, whereas §4 defines a closed set of badge
+      tokens and §9 dictates that invalid rows show an inline message rather than a badge.  Requirements Missing or Partial
+
+  1. Missing Created/Updated Timestamps in Meta Footer
+      • Spec Quote: ui-spec.md:122-123: "meta footer (created/updated timestamps)"
+      • Finding: In RequesterTicketDetail.tsx:247-249, the meta footer only renders ticketDate. Both createdAt and updatedAt are omitted from the
+      UI and excluded from GET /api/tickets/:id in tickets.ts:623-638.
+
+  ──────
+  ### (b) Behaviour Not Asked For (Scope Creep)
+
+  1. Unused Prisma Relations Fetched in Ticket Detail
+      • Spec Quote: api-spec.md:104: "200: ticket shape as POST response plus "attachments" array..."
+      • Finding: In tickets.ts:579-580, prisma.ticket.findUnique queries category: { select: { name: true } } and system: { select: { name: true }
+      }, which are never serialized into the response payload.
+  2. Unspecified Status Badge for Invalid Staged Attachments
+      • Spec Quote: ui-spec.md:128: "States per row: active | uploading (busy) | invalid (message) | removed (badge Removed, strikethrough, actions
+      disabled, reason tooltip/caption) | unavailable (download failed - retry)."
+      • Finding: In AttachmentSection.tsx:366-368 and index.css:182-186, an extra "Invalid" badge (.badge-zen-error) was introduced, whereas the
+      specification dictates an inline message for invalid rows.
+
+  ──────
+  ### (c) Requirements Implemented but Look Wrong
+
+  1. Ticket Detail State Persists Across Requester Switch
+      • Spec Quote: specification.md:54: "FR-03 A Change Requester action clears context-bound data and returns to Selection; switching reloads all
+      requester-specific data." (also BR-05, AC-18)
+      • Finding: In App.tsx:13-35, selectedTicketId is not reset when selectedRequester changes or is cleared. Switching to another requester
+      immediately attempts to fetch the previous requester's ticket, causing an unexpected 403 Forbidden error screen instead of returning to
+      MyTickets.
+  2. Modal Close & Escape Allowed During In-Flight Removal
+      • Spec Quote: specification.md:107: "BR-18 Duplicate-submission prevention: while a create/add/remove request is in flight the triggering
+      control is busy-disabled; further submits are impossible from the UI."
+      • Finding: In AttachmentSection.tsx:57-59, the modal header close button and the Escape key listener remain active while isRemoving is in
+      flight, allowing the user to dismiss the modal mid-flight and immediately re-trigger removal.
+```
+
+---
+
+<!-- Prompts 47..n appended during the sprint -->
 
 ## My Reflection
 
 *(To be completed at sprint end.)*
+
 
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RequesterProvider, useRequester } from "./context/RequesterContext";
 import { RequesterSelection } from "./components/RequesterSelection";
 import { AppHeader } from "./components/AppHeader";
@@ -11,6 +11,12 @@ function MainApp() {
   const { selectedRequester } = useRequester();
   const [activeTab, setActiveTab] = useState<TabType>("my-tickets");
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
+
+  // Clear context-bound data when requester changes or returns to selection [FR-03, BR-05, AC-18]
+  useEffect(() => {
+    setSelectedTicketId(null);
+    setActiveTab("my-tickets");
+  }, [selectedRequester?.id]);
 
   if (!selectedRequester) {
     return <RequesterSelection />;

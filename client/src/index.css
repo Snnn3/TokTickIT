@@ -125,7 +125,7 @@ body {
 .btn-zen-destructive:focus {
   background-color: #921E17;
   color: #FFFFFF;
-  outline: 2px solid var(--zg-error);
+  outline: 2px solid var(--zg-secondary);
   outline-offset: 1px;
 }
 
@@ -175,12 +175,6 @@ body {
 
 .badge-zen-high {
   background-color: var(--zg-primary);
-  color: #FFFFFF;
-  font-weight: 600;
-}
-
-.badge-zen-error {
-  background-color: var(--zg-error);
   color: #FFFFFF;
   font-weight: 600;
 }

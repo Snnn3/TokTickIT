@@ -243,9 +243,10 @@ export function RequesterTicketDetail({
           </div>
         </div>
 
-        {/* Meta Footer */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pt-2 text-muted small border-top">
-          <span>Date: {formatDateTime(ticket.ticketDate)}</span>
+        {/* Meta Footer [ui-spec §9, lines 122-123] */}
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pt-2 text-muted small border-top" data-testid="ticket-detail-meta-footer">
+          <span>Created: {formatDateTime(ticket.createdAt)}</span>
+          <span>Last Updated: {formatDateTime(ticket.updatedAt)}</span>
         </div>
       </div>
 

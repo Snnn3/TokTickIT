@@ -152,6 +152,8 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
         id: 1,
         name: "Anucha Wongchai",
       },
+      createdAt: mockDate.toISOString(),
+      updatedAt: mockDate.toISOString(),
       attachments: [
         {
           id: 101,

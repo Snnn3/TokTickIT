@@ -132,4 +132,49 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
     });
   });
+
+  it("locks out Escape and close button during in-flight removal (BR-18, AC-21)", async () => {
+    let resolveDeletePromise: (val: any) => void = () => {};
+    const deletePromise = new Promise((resolve) => {
+      resolveDeletePromise = resolve;
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() => deletePromise as any);
+
+    render(
+      <AttachmentSection
+        ticketId={10}
+        attachments={mockAttachments}
+        requesterId={1}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    const reasonInput = screen.getByTestId("removal-reason-input");
+    fireEvent.change(reasonInput, { target: { value: "Sensitive data" } });
+
+    const confirmBtn = screen.getByTestId("confirm-remove-button");
+    fireEvent.click(confirmBtn);
+
+    // In flight: confirm button is aria-busy, close button is disabled
+    expect(confirmBtn).toHaveAttribute("aria-busy", "true");
+    const closeBtn = screen.getByRole("button", { name: /Close/i });
+    expect(closeBtn).toBeDisabled();
+
+    // Press Escape during in flight -> modal stays open
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Settle flight
+    resolveDeletePromise({
+      ok: true,
+      json: async () => ({ removed: true, removedAt: new Date().toISOString() }),
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
+    });
+  });
 });

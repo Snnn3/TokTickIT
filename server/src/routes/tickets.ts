@@ -583,9 +583,7 @@ ticketsRouter.get(
       const ticket = await prisma.ticket.findUnique({
         where: { id: ticketId },
         include: {
-          category: { select: { name: true } },
-          system: { select: { name: true } },
-          requester: { select: { id: true, name: true, email: true } },
+          requester: { select: { id: true, name: true } },
           attachments: {
             orderBy: { uploadedAt: "asc" },
             select: {
@@ -620,7 +618,7 @@ ticketsRouter.get(
         });
       }
 
-      // Canonical ticket shape matching POST response plus attachments array [api-spec.md:104, 56-60]
+      // Canonical ticket shape matching POST response plus attachments array [api-spec.md:104, 56-60, ui-spec.md:122-123]
       return res.status(200).json({
         ticket: {
           id: ticket.id,
@@ -636,6 +634,8 @@ ticketsRouter.get(
             id: ticket.requester?.id ?? ticket.requesterId,
             name: ticket.requester?.name ?? "Unknown",
           },
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
           attachments: (ticket.attachments || []).map((a) => serializeAttachment(a)),
         },
       });

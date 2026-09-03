@@ -50,13 +50,15 @@ export function AttachmentSection({
     setFileList(attachments);
   }, [attachments]);
 
-  // Focus trap & Escape listener for modal [ui-spec §10]
+  // Focus trap & Escape listener for modal [ui-spec §10, BR-18]
   useEffect(() => {
     if (!removingAttachment) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        closeRemoveModal();
+        if (!isRemoving) {
+          closeRemoveModal();
+        }
       } else if (e.key === "Tab" && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
@@ -82,7 +84,7 @@ export function AttachmentSection({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [removingAttachment]);
+  }, [removingAttachment, isRemoving]);
 
   const activeAttachments = fileList.filter((a) => !a.removedAt);
   const isLimitReached = activeAttachments.length >= MAX_ATTACHMENTS;
@@ -357,14 +359,10 @@ export function AttachmentSection({
               <div>
                 <div className="d-flex align-items-center gap-2">
                   <span className="fw-medium small text-zen-body">{staged.filename}</span>
-                  {staged.status === "uploading" ? (
+                  {staged.status === "uploading" && (
                     <span className="badge badge-zen-medium d-flex align-items-center gap-1" data-testid="uploading-badge">
                       <span className="spinner-border spinner-border-sm" style={{ width: "10px", height: "10px" }} role="status" aria-hidden="true" />
                       Uploading
-                    </span>
-                  ) : (
-                    <span className="badge badge-zen-error" data-testid="invalid-badge">
-                      Invalid
                     </span>
                   )}
                 </div>
@@ -537,6 +535,7 @@ export function AttachmentSection({
                   type="button"
                   className="btn-close"
                   onClick={closeRemoveModal}
+                  disabled={isRemoving}
                   aria-label="Close"
                   title="Close"
                 />

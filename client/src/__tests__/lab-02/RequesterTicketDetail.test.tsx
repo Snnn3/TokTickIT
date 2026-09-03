@@ -17,6 +17,8 @@ const mockTicketDetail: TicketDetail = {
     name: "Anucha Wongchai",
   },
   ticketDate: "2026-08-30T09:00:00.000Z",
+  createdAt: "2026-08-30T09:00:00.000Z",
+  updatedAt: "2026-08-30T10:30:00.000Z",
   attachments: [
     {
       id: 1,
@@ -93,6 +95,11 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
 
     // Verify view mode only: no editable input or textarea for ticket fields
     expect(screen.queryByRole("textbox", { name: /summary/i })).not.toBeInTheDocument();
+
+    // Verify meta footer created and updated timestamps (ui-spec §9)
+    const metaFooter = screen.getByTestId("ticket-detail-meta-footer");
+    expect(metaFooter).toHaveTextContent(/Created:/);
+    expect(metaFooter).toHaveTextContent(/Last Updated:/);
 
     // Back navigation button works
     const backBtn = screen.getByTestId("back-to-tickets-btn");
