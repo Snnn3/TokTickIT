@@ -1,6 +1,46 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import * as path from "path";
 import * as fs from "fs";
+
+const ANUCHA_ID = "1";
+const ANUCHA_LABEL = "Anucha Wongchai (anucha.wongchai@example.com)";
+const BUSABA_LABEL = "Busaba Srisawat (busaba.srisawat@example.com)";
+
+interface ViewportConfig {
+  name: string;
+  width: number;
+  height: number;
+}
+
+const VIEWPORTS: ViewportConfig[] = [
+  { name: "desktop", width: 1366, height: 768 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "mobile", width: 375, height: 667 },
+];
+
+/**
+ * Reusable helper to assert zero horizontal scrolling (scrollWidth <= innerWidth)
+ * and capture full-page screenshot evidence across designated responsive viewports.
+ */
+async function assertNoHorizontalScrollAndCapture(
+  page: Page,
+  screenName: "create-ticket" | "my-tickets" | "ticket-detail",
+  screenshotsBase: string,
+  viewports: ViewportConfig[] = VIEWPORTS,
+) {
+  for (const vp of viewports) {
+    await page.setViewportSize({ width: vp.width, height: vp.height });
+
+    const hasHorizontalScroll = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(hasHorizontalScroll).toBe(false);
+
+    const shotPath = path.join(screenshotsBase, screenName, `${vp.name}.png`);
+    await page.screenshot({ path: shotPath, fullPage: true });
+    expect(fs.existsSync(shotPath)).toBe(true);
+  }
+}
 
 test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
   test.beforeEach(async ({ page }) => {
@@ -11,7 +51,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
   test("E-01: Selector -> Create Ticket Happy Path with Keyboard Usability (AC-01, AC-24, FR-01..FR-07)", async ({
     page,
   }) => {
-    // 1. Requester Selection screen renders
+    // 1. Requester Selection screen renders [FR-01, BR-03]
     await expect(page.getByRole("heading", { name: "TokTickIT", level: 1 })).toBeVisible();
     await expect(
       page.getByText("Select a Development Requester to test requester-specific ticket behavior"),
@@ -23,22 +63,25 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     // Verify continue button is disabled when unselected
     await expect(continueBtn).toBeDisabled();
 
-    // Keyboard-usable selection [AC-24]
+    // Keyboard-usable selection & navigation [AC-24, ui-spec §6]
     await selectDropdown.focus();
-    await selectDropdown.selectOption({ label: "Anucha Wongchai (anucha.wongchai@example.com)" });
+    await expect(selectDropdown).toBeFocused();
+    await selectDropdown.selectOption({ label: ANUCHA_LABEL });
     await expect(continueBtn).toBeEnabled();
 
-    // Submit selection via Enter key or button click
-    await continueBtn.click();
+    // Submit selection via Enter key navigation
+    await page.keyboard.press("Tab");
+    await expect(continueBtn).toBeFocused();
+    await page.keyboard.press("Enter");
 
-    // Lands on App Shell in My Tickets -> navigate to Create Ticket
+    // Lands on App Shell in My Tickets -> navigate to Create Ticket tab
     await page.getByRole("button", { name: "Create Ticket" }).first().click();
 
-    // 2. Lands on App Shell in Create Ticket tab
+    // 2. Lands on App Shell in Create Ticket tab [FR-04, BR-08, BR-10]
     await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
     await expect(page.locator("#sys-requester")).toHaveValue(/Anucha Wongchai/);
 
-    // 3. Fill ticket details
+    // 3. Fill ticket details with keyboard & select controls
     await page.locator("#category-select").selectOption({ index: 1 });
     await page.locator("#system-select").selectOption({ index: 1 });
     await page.locator("#priority-select").selectOption("MEDIUM");
@@ -47,7 +90,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.locator("#summary-input").fill(uniqueSummary);
     await page.locator("#description-input").fill("This is an end-to-end automated test ticket description.");
 
-    // Stage a valid file attachment
+    // Stage a valid file attachment [FR-06, BR-13]
     const filePayload = {
       name: "e2e-attachment.png",
       mimeType: "image/png",
@@ -61,7 +104,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    // 4. Success panel renders with official ticket number [AC-01, FR-07]
+    // 4. Success panel renders with official ticket number [AC-01, FR-07, BR-01]
     const successPanel = page.getByTestId("success-panel");
     await expect(successPanel).toBeVisible();
     await expect(page.getByRole("heading", { name: "Ticket Created Successfully!" })).toBeVisible();
@@ -69,7 +112,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     const ticketNumber = await successPanel.locator("div.h3.fw-bold").innerText();
     expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{5}$/);
 
-    // 5. Navigate to My Tickets and verify ticket is located
+    // 5. Navigate to My Tickets and verify ticket is located [FR-08, AC-02]
     await page.getByRole("button", { name: "View My Tickets" }).click();
     await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
 
@@ -83,7 +126,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     request,
   }) => {
     // --- Step 1: Requester A (Anucha) logs in and creates a ticket with attachment ---
-    await page.locator("#requester-select").selectOption({ label: "Anucha Wongchai (anucha.wongchai@example.com)" });
+    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Navigate to Create Ticket
@@ -115,7 +158,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.getByRole("button", { name: "Change Requester" }).click();
     await expect(page.locator("#requester-select")).toBeVisible();
 
-    await page.locator("#requester-select").selectOption({ label: "Busaba Srisawat (busaba.srisawat@example.com)" });
+    await page.locator("#requester-select").selectOption({ label: BUSABA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Lands on My Tickets
@@ -127,7 +170,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
 
     // --- Step 3: Switch back to Requester A and open Ticket Detail ---
     await page.getByRole("button", { name: "Change Requester" }).click();
-    await page.locator("#requester-select").selectOption({ label: "Anucha Wongchai (anucha.wongchai@example.com)" });
+    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
@@ -161,6 +204,19 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.getByRole("button", { name: /Dismiss/i }).click();
     await expect(page.getByText(/unsupported format/i)).not.toBeVisible();
 
+    // Extract active attachment ID from testid
+    const activeRow = page.getByTestId(/^attachment-row-/).first();
+    const activeRowTestId = await activeRow.getAttribute("data-testid");
+    const activeAttachmentId = activeRowTestId?.replace("attachment-row-", "");
+
+    // Verify active attachment download is accessible [FR-11, AC-11]
+    const activeDownloadRes = await request.get(`/api/attachments/${activeAttachmentId}/download`, {
+      headers: {
+        "X-Requester-Id": ANUCHA_ID,
+      },
+    });
+    expect(activeDownloadRes.status()).toBe(200);
+
     // --- Step 5: Soft-remove an attachment with mandatory reason [AC-11, AC-12, BR-17] ---
     const removeBtn = page.getByTestId(/^remove-button-/).first();
     await removeBtn.click();
@@ -188,12 +244,12 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     // Extract removed attachment ID from testid
     const removedBadge = page.getByTestId(/^removed-badge-/).first();
     const testIdAttr = await removedBadge.getAttribute("data-testid");
-    const attachmentId = testIdAttr?.replace("removed-badge-", "");
+    const removedAttachmentId = testIdAttr?.replace("removed-badge-", "");
 
     // Verify download byte streaming is blocked with HTTP 410 [AC-11, BR-16]
-    const downloadRes = await request.get(`/api/attachments/${attachmentId}/download`, {
+    const downloadRes = await request.get(`/api/attachments/${removedAttachmentId}/download`, {
       headers: {
-        "X-Requester-Id": "1", // Anucha Wongchai ID
+        "X-Requester-Id": ANUCHA_ID,
       },
     });
     expect(downloadRes.status()).toBe(410);
@@ -203,14 +259,8 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     page,
   }) => {
     // 1. Select Requester
-    await page.locator("#requester-select").selectOption({ label: "Anucha Wongchai (anucha.wongchai@example.com)" });
+    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
-
-    const viewports = [
-      { name: "desktop", width: 1366, height: 768 },
-      { name: "tablet", width: 768, height: 1024 },
-      { name: "mobile", width: 375, height: 667 },
-    ];
 
     const screenshotsBase = path.join(process.cwd(), "artifacts", "lab-02", "screenshots");
     fs.mkdirSync(path.join(screenshotsBase, "create-ticket"), { recursive: true });
@@ -220,40 +270,21 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     // --- Screen 1: My Tickets ---
     await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
 
-    for (const vp of viewports) {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.waitForTimeout(200);
+    // Assert responsive layout DOM element switching [AC-22, ui-spec §8]
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await expect(page.getByTestId("tickets-desktop-table")).toBeVisible();
 
-      const hasHorizontalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
-      });
-      expect(hasHorizontalScroll).toBe(false);
+    await page.setViewportSize({ width: 375, height: 667 });
+    await expect(page.getByTestId("tickets-mobile-cards")).toBeVisible();
 
-      const shotPath = path.join(screenshotsBase, "my-tickets", `${vp.name}.png`);
-      await page.screenshot({ path: shotPath, fullPage: true });
-      expect(fs.existsSync(shotPath)).toBe(true);
-    }
+    await assertNoHorizontalScrollAndCapture(page, "my-tickets", screenshotsBase);
 
     // --- Screen 2: Create Ticket ---
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.getByRole("button", { name: "Create Ticket" }).first().click();
     await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
 
-    for (const vp of viewports) {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.waitForTimeout(200);
-
-      // Verify no horizontal overflow
-      const hasHorizontalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
-      });
-      expect(hasHorizontalScroll).toBe(false);
-
-      // Capture screenshot
-      const shotPath = path.join(screenshotsBase, "create-ticket", `${vp.name}.png`);
-      await page.screenshot({ path: shotPath, fullPage: true });
-      expect(fs.existsSync(shotPath)).toBe(true);
-    }
+    await assertNoHorizontalScrollAndCapture(page, "create-ticket", screenshotsBase);
 
     // --- Screen 3: Ticket Detail ---
     // Create a ticket first to guarantee at least 1 ticket exists for Detail view capture
@@ -269,23 +300,11 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.getByRole("button", { name: "View My Tickets" }).click();
     await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
 
-    // Click the View button of the first ticket row
+    // Ensure desktop viewport before clicking table row
+    await page.setViewportSize({ width: 1366, height: 768 });
     await page.getByRole("button", { name: "View" }).first().click();
     await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
 
-    for (const vp of viewports) {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.waitForTimeout(200);
-
-      const hasHorizontalScroll = await page.evaluate(() => {
-        return document.documentElement.scrollWidth > window.innerWidth;
-      });
-      expect(hasHorizontalScroll).toBe(false);
-
-      const shotPath = path.join(screenshotsBase, "ticket-detail", `${vp.name}.png`);
-      await page.screenshot({ path: shotPath, fullPage: true });
-      expect(fs.existsSync(shotPath)).toBe(true);
-    }
+    await assertNoHorizontalScrollAndCapture(page, "ticket-detail", screenshotsBase);
   });
 });
-
