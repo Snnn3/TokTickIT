@@ -30,4 +30,8 @@ server/prisma/*.db
 *.pdf
 /material
 
-plan.md 
+# Playwright output
+test-results/
+playwright-report/
+
+plan.md
