@@ -255,7 +255,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
       .set("X-Requester-Id", "1");
 
     expect(resOwner.status).toBe(200);
-    expect(resOwner.body.attachment.id).toBe(501);
+    expect(resOwner.body.id).toBe(501);
 
     // 2. Forbidden 403
     vi.spyOn(prisma.attachment, "findUnique").mockResolvedValueOnce({

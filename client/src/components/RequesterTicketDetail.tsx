@@ -3,6 +3,7 @@ import type { TicketDetail, AttachmentMetadata } from "../types/ticket";
 import { formatDateTime, formatDateOnly } from "../utils/format";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { AttachmentSection } from "./AttachmentSection";
+import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -69,9 +70,7 @@ export function RequesterTicketDetail({
     });
   };
 
-  const handleAttachmentRemoved = (
-    update: { attachmentId: number; removedReason: string; removedAt: string },
-  ) => {
+  const handleAttachmentRemoved = (update: AttachmentRemovalUpdate) => {
     setTicket((prev) => {
       if (!prev) return prev;
       return {
@@ -137,11 +136,15 @@ export function RequesterTicketDetail({
     );
   }
 
+  const requesterDisplayName = ticket.requester?.name || ticket.requesterName || "Unknown";
+  const systemDisplayName = ticket.systemName || ticket.relatedSystemName || "Unknown";
+
   return (
     <div className="my-2" data-testid="ticket-detail-view">
-      {/* Top Header & Navigation */}
+      {/* Main Ticket Detail Card */}
       <div className="zg-card p-4 mb-4">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        {/* Top Navigation Bar */}
+        <div className="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
           <div className="d-flex align-items-center gap-3">
             <button
               type="button"
@@ -151,26 +154,18 @@ export function RequesterTicketDetail({
               data-testid="back-to-tickets-btn"
             >
               <span>←</span>
-              <span>Back</span>
+              <span>Back to My Tickets</span>
             </button>
-            <div>
-              <div className="d-flex align-items-center gap-2">
-                <h1 className="h4 fw-bold mb-0 text-zen-primary" data-testid="ticket-detail-number">
-                  {ticket.number}
-                </h1>
-                <ZenStatusBadge status={ticket.status} />
-              </div>
-              <p className="text-muted small mb-0 mt-1">
-                Submitted on {formatDateOnly(ticket.ticketDate)} by {ticket.requesterName}
-              </p>
-            </div>
+            <h1 className="h4 fw-bold mb-0 text-zen-primary" data-testid="ticket-detail-number">
+              {ticket.number}
+            </h1>
           </div>
         </div>
 
-        {/* Read-only Ticket Info [ui-spec §9, AC-23] */}
+        {/* Read-only Ticket Info [ui-spec §9, AC-23, Tablet two-column §11] */}
         <div className="row g-3 mb-3">
           {/* System Group */}
-          <div className="col-12 col-lg-6">
+          <div className="col-12 col-md-6">
             <div className="zg-readonly-panel p-3 h-100" data-testid="system-metadata-group">
               <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
                 System Metadata
@@ -183,7 +178,7 @@ export function RequesterTicketDetail({
                 <div className="col-6 fw-medium text-zen-body">{formatDateOnly(ticket.ticketDate)}</div>
 
                 <div className="col-6 text-muted">Requester:</div>
-                <div className="col-6 fw-medium text-zen-body">{ticket.requesterName}</div>
+                <div className="col-6 fw-medium text-zen-body">{requesterDisplayName}</div>
 
                 <div className="col-6 text-muted">Status:</div>
                 <div className="col-6">
@@ -194,7 +189,7 @@ export function RequesterTicketDetail({
           </div>
 
           {/* Classification Group */}
-          <div className="col-12 col-lg-6">
+          <div className="col-12 col-md-6">
             <div className="zg-readonly-panel p-3 h-100" data-testid="classification-group">
               <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
                 Classification
@@ -204,7 +199,7 @@ export function RequesterTicketDetail({
                 <div className="col-6 fw-medium text-zen-body">{ticket.categoryName}</div>
 
                 <div className="col-6 text-muted">Related System:</div>
-                <div className="col-6 fw-medium text-zen-body">{ticket.relatedSystemName}</div>
+                <div className="col-6 fw-medium text-zen-body">{systemDisplayName}</div>
 
                 <div className="col-6 text-muted">Requested Priority:</div>
                 <div className="col-6">

@@ -41,12 +41,18 @@ export interface TicketDetail {
   description: string;
   categoryId: number;
   categoryName: string;
-  relatedSystemId: number;
-  relatedSystemName: string;
+  systemId?: number;
+  systemName?: string;
+  relatedSystemId?: number;
+  relatedSystemName?: string;
   requestedPriority: TicketPriority;
   status: TicketStatus;
-  requesterId: number;
-  requesterName: string;
+  requester?: {
+    id: number;
+    name: string;
+  };
+  requesterId?: number;
+  requesterName?: string;
   ticketDate: string;
   createdAt: string;
   updatedAt: string;

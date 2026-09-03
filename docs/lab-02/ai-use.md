@@ -1008,8 +1008,79 @@ add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/
 
 ---
 
-<!-- Prompts 44..n appended during the sprint -->
+## Prompt 44 — Implement Review Feedback on Attachment Row States, Shape Parity, and Responsive Layout (2026-09-03)
+
+**Outcome:** Implemented all 5 attachment row states (active, uploading with spinner, invalid with message/dismiss, removed with audit caption, and unavailable with retry), styled buttons and badges with Zen Green tokens, added tablet two-column layout (`col-md-6`) on Ticket Detail view, removed duplicated ticket header, aligned `GET /api/tickets/:id` payload shape parity with `POST /api/tickets`, and returned attachment metadata at root for `GET /api/attachments/:id`.
+
+**Prompt (verbatim):**
+
+```text
+/implement following this ## Standards
+
+  ### Documented Standards Breaches (Hard)
+  1. Button Hierarchy (ui-spec.md:36-46):
+      • AttachmentSection.tsx:300: The retry button uses raw Bootstrap <button type="button" className="btn btn-sm btn-outline-dark" ...
+      >Retry</button> instead of adhering to the Zen Green button tokens (Secondary or Tertiary/link).
+  2. Attachment Row States (ui-spec.md:128-130):
+      • AttachmentSection.tsx:294-308: Spec specifies "States per row: active | uploading | invalid | removed | unavailable (download failed -
+      retry)". Download retry is rendered as a global card-level alert banner above the list rather than an inline per-row state.
+  3. Color Tokens & Reason Caption (ui-spec.md:7-21):
+      • AttachmentSection.tsx:359: Uses Bootstrap utility classes (text-danger, border-danger) for audit reason captions rather than the Zen Green
+      token (text-muted #5B6B62). Removal audit reasons are historical metadata, not validation errors.
+      • AttachmentSection.tsx:426: The modal title uses Bootstrap text-danger instead of Zen Green design tokens.
+  4. Busy Button State (ui-spec.md:45):
+      • AttachmentSection.tsx:485: {isRemoving ? "Removing..." : "Remove Attachment"} replaces text but omits the required spinner element ("Busy:
+      spinner replaces label area, stays disabled until settled").
+  ### Baseline Code Smells (Judgement Calls)
+
+  1. Duplicated Code:
+      • tickets.ts:688-698: Manually constructs the attachment response object, duplicating attachments.ts:14-34 from attachments.ts.
+      • tickets.ts:561: Duplicates integer parameter validation with looser semantics (parseInt) instead of reusing attachments.ts:7-12.
+  2. Primitive Obsession:
+      • AttachmentSection.tsx:5-6 & tickets.ts:31-40: File limits and allowed types are declared as disjoint primitive constants across frontend
+      and backend.
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  1. Attachment Row States Incomplete:
+      • Spec Quote: ui-spec.md:128 & ui-spec.md:153: "States per row: active | uploading (busy) | invalid (message) | removed (badge Removed,
+      strikethrough, actions disabled, reason tooltip/caption) | unavailable (download failed - retry)."
+      • Finding: In AttachmentSection.tsx:286-366, only active and removed are rendered as in-row states. The uploading state is only represented
+      on the header button, while invalid files and download failures (unavailable) are presented as card-level banners rather than per-row states.
+  2. Tablet Two-Column Layout Incomplete:
+      • Spec Quote: ui-spec.md:145: "Tablet 768-991px: Two-column where practical; Summary/Description keep width"
+      • Finding: In RequesterTicketDetail.tsx:173-197, System and Classification groups use col-12 col-lg-6, which collapses into a single column
+      on tablet viewports (768–991px), unlike the loading skeleton which correctly applied col-md-6.
+
+
+  ### (b) Scope Creep
+
+  1. Unrequested Outer Envelope on Attachment Metadata:
+      • Spec Quote: api-spec.md:123: 200: { "id", "ticketId", "filename", "mimeType", "sizeBytes", "uploadedAt", "removedAt", "removedReason" }
+      • Finding: In attachments.ts:86-88, GET /api/attachments/:id wraps the metadata payload in an unrequested { "attachment": { ... } } object
+      rather than returning the metadata object at the root.
+  2. Duplicated Ticket Header Summary:
+      • Spec Quote: ui-spec.md:121-124: "Read-only ticket info grouped in cards, all values readonly-shaded: System group (Number, Date, Status
+      badge, Requester) | Classification ... | Description ... | meta footer ..."
+      • Finding: In RequesterTicketDetail.tsx:157-166, an extra header card banner duplicates Ticket Number, Status badge, Ticket Date, and
+      Requester directly above the System group card that contains identical fields.
+
+
+  ### (c) Incorrect Implementation
+
+  1. GET Ticket Detail Payload Shape Discrepancy:
+      • Spec Quote: api-spec.md:104: 200: ticket shape as POST response plus "attachments" array...
+      • Finding: POST /api/tickets specifies systemId and nested requester: { id, name } (api-spec.md lines 58-59), whereas GET /api/tickets/:id in
+      tickets.ts:622-627 returns flattened fields (relatedSystemId, relatedSystemName, requesterId, requesterName), breaking shape parity.
+```
+
+---
+
+<!-- Prompts 45..n appended during the sprint -->
 
 ## My Reflection
 
 *(To be completed at sprint end.)*
+

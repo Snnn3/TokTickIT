@@ -4,7 +4,7 @@ import { requireRequester, AuthenticatedRequest } from "../middleware/requester"
 
 export const attachmentsRouter = Router();
 
-function parsePositiveIntParam(paramValue: string | undefined): number | null {
+export function parsePositiveIntParam(paramValue: string | undefined): number | null {
   const trimmed = String(paramValue || "").trim();
   if (!/^\d+$/.test(trimmed)) return null;
   const id = parseInt(trimmed, 10);
@@ -83,9 +83,7 @@ attachmentsRouter.get(
         return res.status(result.status).json({ error: result.error });
       }
 
-      return res.status(200).json({
-        attachment: serializeAttachment(result.attachment!),
-      });
+      return res.status(200).json(serializeAttachment(result.attachment!));
     } catch {
       return res.status(500).json({
         error: {

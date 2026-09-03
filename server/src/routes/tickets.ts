@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
+import { parsePositiveIntParam, serializeAttachment } from "./attachments";
 
 export const ticketsRouter = Router();
 
@@ -559,9 +560,9 @@ ticketsRouter.get(
   requireRequester,
   async (req: AuthenticatedRequest, res: Response) => {
     const requester = req.requester!;
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = parsePositiveIntParam(req.params.id);
 
-    if (isNaN(ticketId) || ticketId <= 0) {
+    if (!ticketId) {
       return res.status(400).json({
         error: {
           code: "INVALID_ID",
@@ -611,24 +612,30 @@ ticketsRouter.get(
         });
       }
 
+      // Parity with POST /api/tickets response shape plus attachments [api-spec.md:104, 56-60]
       return res.status(200).json({
         ticket: {
           id: ticket.id,
           number: ticket.number,
+          ticketDate: ticket.ticketDate,
+          status: ticket.status,
+          requestedPriority: ticket.requestedPriority,
           summary: ticket.summary,
           description: ticket.description,
           categoryId: ticket.categoryId,
           categoryName: ticket.category?.name || "Unknown",
+          systemId: ticket.systemId,
+          systemName: ticket.system?.name || "Unknown",
           relatedSystemId: ticket.systemId,
           relatedSystemName: ticket.system?.name || "Unknown",
-          requestedPriority: ticket.requestedPriority,
-          status: ticket.status,
+          requester: ticket.requester
+            ? { id: ticket.requester.id, name: ticket.requester.name }
+            : { id: ticket.requesterId, name: "Unknown" },
           requesterId: ticket.requesterId,
           requesterName: ticket.requester?.name || "Unknown",
-          ticketDate: ticket.ticketDate,
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
-          attachments: ticket.attachments,
+          attachments: (ticket.attachments || []).map((a) => serializeAttachment(a)),
         },
       });
     } catch {
@@ -676,9 +683,9 @@ ticketsRouter.post(
   },
   async (req: AuthenticatedRequest, res: Response) => {
     const requester = req.requester!;
-    const ticketId = parseInt(req.params.id, 10);
+    const ticketId = parsePositiveIntParam(req.params.id);
 
-    if (isNaN(ticketId) || ticketId <= 0) {
+    if (!ticketId) {
       return res.status(400).json({
         error: {
           code: "INVALID_ID",
@@ -762,16 +769,7 @@ ticketsRouter.post(
       });
 
       return res.status(201).json({
-        attachment: {
-          id: attachment.id,
-          ticketId: attachment.ticketId,
-          filename: attachment.filename,
-          mimeType: attachment.mimeType,
-          sizeBytes: attachment.sizeBytes,
-          uploadedAt: attachment.uploadedAt,
-          removedAt: attachment.removedAt,
-          removedReason: attachment.removedReason,
-        },
+        attachment: serializeAttachment(attachment),
       });
     } catch {
       return res.status(500).json({

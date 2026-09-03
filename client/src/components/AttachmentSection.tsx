@@ -11,6 +11,14 @@ export interface AttachmentRemovalUpdate {
   removedAt: string;
 }
 
+interface StagedFile {
+  id: string;
+  filename: string;
+  sizeBytes: number;
+  status: "uploading" | "invalid";
+  errorMessage?: string;
+}
+
 interface AttachmentSectionProps {
   ticketId: number;
   attachments: AttachmentMetadata[];
@@ -27,9 +35,8 @@ export function AttachmentSection({
   onAttachmentRemoved,
 }: AttachmentSectionProps) {
   const [fileList, setFileList] = useState<AttachmentMetadata[]>(attachments);
-  const [uploading, setUploading] = useState(false);
-  const [clientError, setClientError] = useState<string | null>(null);
-  const [downloadError, setDownloadError] = useState<{ id: number; message: string } | null>(null);
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+  const [downloadErrors, setDownloadErrors] = useState<Record<number, string>>({});
 
   // Modal / Dialog state for soft removal
   const [removingAttachment, setRemovingAttachment] = useState<AttachmentMetadata | null>(null);
@@ -80,39 +87,75 @@ export function AttachmentSection({
   }, [removingAttachment]);
 
   const activeAttachments = fileList.filter((a) => !a.removedAt);
-  const activeCount = activeAttachments.length;
-  const isLimitReached = activeCount >= 5;
+  const isLimitReached = activeAttachments.length >= 5;
+  const isUploading = stagedFiles.some((f) => f.status === "uploading");
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setClientError(null);
+    const tempId = `staged-${Date.now()}-${Math.random()}`;
 
     // 1. Client-side extension validation [AC-07]
     const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      setClientError(`Unsupported file type for "${file.name}". Allowed formats: JPG, PNG, WEBP, PDF.`);
+      setStagedFiles((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          filename: file.name,
+          sizeBytes: file.size,
+          status: "invalid",
+          errorMessage: `Unsupported file type for "${file.name}". Allowed formats: JPG, PNG, WEBP, PDF.`,
+        },
+      ]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     // 2. Client-side size validation [AC-08]
     if (file.size > MAX_FILE_SIZE) {
-      setClientError(`File "${file.name}" exceeds the maximum allowed size of 5 MB.`);
+      setStagedFiles((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          filename: file.name,
+          sizeBytes: file.size,
+          status: "invalid",
+          errorMessage: `File "${file.name}" exceeds the maximum allowed size of 5 MB.`,
+        },
+      ]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
     // 3. Active count check [AC-09]
-    if (activeCount >= 5) {
-      setClientError("Maximum 5 active attachments allowed per ticket.");
+    if (isLimitReached) {
+      setStagedFiles((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          filename: file.name,
+          sizeBytes: file.size,
+          status: "invalid",
+          errorMessage: "Maximum 5 active attachments allowed per ticket.",
+        },
+      ]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    // Upload attachment
-    setUploading(true);
+    // Add in uploading state
+    setStagedFiles((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        filename: file.name,
+        sizeBytes: file.size,
+        status: "uploading",
+      },
+    ]);
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -127,23 +170,43 @@ export function AttachmentSection({
 
       const data = await res.json();
       if (!res.ok) {
-        setClientError(data?.error?.message || "Failed to upload attachment.");
+        setStagedFiles((prev) =>
+          prev.map((f) =>
+            f.id === tempId
+              ? { ...f, status: "invalid", errorMessage: data?.error?.message || "Failed to upload attachment." }
+              : f,
+          ),
+        );
       } else if (data.attachment) {
         setFileList((prev) => [...prev, data.attachment]);
+        setStagedFiles((prev) => prev.filter((f) => f.id !== tempId));
         if (onAttachmentAdded) onAttachmentAdded(data.attachment);
       }
     } catch {
-      setClientError("Network error while uploading attachment.");
+      setStagedFiles((prev) =>
+        prev.map((f) =>
+          f.id === tempId
+            ? { ...f, status: "invalid", errorMessage: "Network error while uploading attachment." }
+            : f,
+        ),
+      );
     } finally {
-      setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const dismissStagedFile = (id: string) => {
+    setStagedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
   const handleDownload = async (attachment: AttachmentMetadata) => {
     if (attachment.removedAt) return; // Blocked for removed items [AC-11]
 
-    setDownloadError(null);
+    setDownloadErrors((prev) => {
+      const copy = { ...prev };
+      delete copy[attachment.id];
+      return copy;
+    });
 
     try {
       const res = await fetch(`/api/attachments/${attachment.id}/download`, {
@@ -153,13 +216,19 @@ export function AttachmentSection({
       });
 
       if (res.status === 410) {
-        setDownloadError({ id: attachment.id, message: "This attachment has been removed and cannot be downloaded." });
+        setDownloadErrors((prev) => ({
+          ...prev,
+          [attachment.id]: "This attachment has been removed and cannot be downloaded.",
+        }));
         return;
       }
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setDownloadError({ id: attachment.id, message: data?.error?.message || "Failed to download attachment." });
+        setDownloadErrors((prev) => ({
+          ...prev,
+          [attachment.id]: data?.error?.message || "Download failed. Please try again.",
+        }));
         return;
       }
 
@@ -173,7 +242,10 @@ export function AttachmentSection({
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
-      setDownloadError({ id: attachment.id, message: "Network error downloading attachment. Click to retry." });
+      setDownloadErrors((prev) => ({
+        ...prev,
+        [attachment.id]: "Network error downloading attachment.",
+      }));
     }
   };
 
@@ -245,6 +317,8 @@ export function AttachmentSection({
     }
   };
 
+  const hasItems = fileList.length > 0 || stagedFiles.length > 0;
+
   return (
     <div className="zg-card p-4 mt-4" data-testid="attachment-section">
       {/* Header with Title and Add Button */}
@@ -263,12 +337,12 @@ export function AttachmentSection({
           <button
             type="button"
             className="btn btn-zen-secondary btn-sm d-flex align-items-center gap-1"
-            disabled={isLimitReached || uploading}
+            disabled={isLimitReached || isUploading}
             onClick={() => fileInputRef.current?.click()}
             aria-label="Add attachment"
             data-testid="add-attachment-button"
           >
-            {uploading ? (
+            {isUploading ? (
               <>
                 <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
                 <span>Uploading...</span>
@@ -283,37 +357,63 @@ export function AttachmentSection({
         </div>
       </div>
 
-      {/* Client validation error banner */}
-      {clientError && (
-        <div className="alert alert-danger py-2 small mb-3" role="alert" data-testid="attachment-error-banner">
-          {clientError}
-        </div>
-      )}
-
-      {/* Download error alert */}
-      {downloadError && (
-        <div className="alert alert-warning py-2 small mb-3 d-flex justify-content-between align-items-center" role="alert">
-          <span>{downloadError.message}</span>
-          <button
-            type="button"
-            className="btn btn-sm btn-outline-dark"
-            onClick={() => {
-              const target = fileList.find((a) => a.id === downloadError.id);
-              if (target) handleDownload(target);
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Attachments List */}
-      {fileList.length === 0 ? (
+      {/* Attachments List with All 5 States [ui-spec §9, §12] */}
+      {!hasItems ? (
         <p className="text-muted small mb-0 fst-italic">No attachments on this ticket.</p>
       ) : (
         <div className="list-group list-group-flush border-top">
+          {/* Staged files in uploading or invalid state */}
+          {stagedFiles.map((staged) => (
+            <div
+              key={staged.id}
+              className="list-group-item px-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2"
+              data-testid={`staged-attachment-row-${staged.id}`}
+            >
+              <div>
+                <div className="d-flex align-items-center gap-2">
+                  <span className="fw-medium small text-zen-body">{staged.filename}</span>
+                  {staged.status === "uploading" ? (
+                    <span className="badge badge-zen-medium d-flex align-items-center gap-1" data-testid="uploading-badge">
+                      <span className="spinner-border spinner-border-sm" style={{ width: "10px", height: "10px" }} role="status" aria-hidden="true" />
+                      Uploading
+                    </span>
+                  ) : (
+                    <span className="badge bg-danger" data-testid="invalid-badge">
+                      Invalid
+                    </span>
+                  )}
+                </div>
+
+                <div className="text-muted small mt-1">
+                  <span>{formatFileSize(staged.sizeBytes)}</span>
+                </div>
+
+                {staged.errorMessage && (
+                  <div className="small text-danger mt-1" data-testid="staged-error-message">
+                    {staged.errorMessage}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                {staged.status === "invalid" && (
+                  <button
+                    type="button"
+                    className="btn btn-zen-secondary btn-sm"
+                    onClick={() => dismissStagedFile(staged.id)}
+                    aria-label={`Dismiss ${staged.filename}`}
+                  >
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Persisted attachment items */}
           {fileList.map((att) => {
             const isRemoved = Boolean(att.removedAt);
+            const downloadErr = downloadErrors[att.id];
 
             return (
               <div
@@ -351,16 +451,31 @@ export function AttachmentSection({
                     <span>Uploaded {formatDateTime(att.uploadedAt)}</span>
                   </div>
 
-                  {/* Removal reason caption [AC-11, AC-12] */}
+                  {/* Removal reason caption using Zen tokens [ui-spec §1, §9] */}
                   {isRemoved && att.removedReason && (
                     <div
-                      className="small text-danger mt-1 bg-light p-1 rounded border-start border-danger border-2"
+                      className="small text-zen-muted mt-1 zg-readonly-panel p-2 rounded"
                       data-testid={`removed-reason-${att.id}`}
                     >
-                      <strong>Reason:</strong> {att.removedReason}
+                      <strong className="text-zen-body">Reason:</strong> {att.removedReason}
                       {att.removedAt && (
                         <span className="text-muted ms-1">({formatDateTime(att.removedAt)})</span>
                       )}
+                    </div>
+                  )}
+
+                  {/* Unavailable state inline error with retry button [ui-spec §9] */}
+                  {downloadErr && (
+                    <div className="small text-danger mt-1 d-flex align-items-center gap-2" data-testid={`unavailable-state-${att.id}`}>
+                      <span>{downloadErr}</span>
+                      <button
+                        type="button"
+                        className="btn btn-zen-secondary btn-sm py-0 px-2"
+                        onClick={() => handleDownload(att)}
+                        aria-label={`Retry download ${att.filename}`}
+                      >
+                        Retry
+                      </button>
                     </div>
                   )}
                 </div>
@@ -422,7 +537,7 @@ export function AttachmentSection({
           <div className="modal-dialog modal-dialog-centered" ref={modalRef}>
             <div className="modal-content">
               <div className="modal-header">
-                <h3 className="modal-title h5 text-danger fw-bold">Remove Attachment</h3>
+                <h3 className="modal-title h5 text-zen-primary fw-bold">Remove Attachment</h3>
                 <button
                   type="button"
                   className="btn-close"
@@ -478,12 +593,20 @@ export function AttachmentSection({
                 </button>
                 <button
                   type="button"
-                  className="btn btn-zen-destructive btn-sm"
+                  className="btn btn-zen-destructive btn-sm d-flex align-items-center gap-1"
                   disabled={isRemoving || !removeReason.trim()}
                   onClick={handleConfirmRemove}
+                  aria-busy={isRemoving}
                   data-testid="confirm-remove-button"
                 >
-                  {isRemoving ? "Removing..." : "Remove Attachment"}
+                  {isRemoving ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                      <span>Removing...</span>
+                    </>
+                  ) : (
+                    <span>Remove Attachment</span>
+                  )}
                 </button>
               </div>
             </div>
