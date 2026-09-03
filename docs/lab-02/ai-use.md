@@ -1078,9 +1078,85 @@ add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/
 
 ---
 
-<!-- Prompts 45..n appended during the sprint -->
+## Prompt 45 — Address Review Findings on Tokens, Live Regions, Upload Handlers, and Canonical Payloads (2026-09-03)
+
+**Outcome:** Fixed conflicting read-only shading in Ticket Detail Description container by removing `.bg-white` and relying on `.zg-readonly-panel`, added `.badge-zen-error` design token, added `title="Close"` tooltip to modal close button, reused centralized `validateFile` in `AttachmentSection.tsx`, consolidated upload error and validation handling into shared helpers (`handleMulterError`, `isValidAttachmentFile`) in `tickets.ts`, added `aria-live="polite"` to status messages, unwrapped `POST /api/tickets/:id/attachments` 201 response, and standardized `TicketDetail` to canonical POST-parity domain model.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+  ### Hard Violations (Documented Standards)
+  1. Conflicting Read-Only Shading (ui-spec.md:17):
+      • Location: RequesterTicketDetail.tsx:230-236
+      • Violation: The Description container combines className="... bg-white ..." with style={{ backgroundColor: "var(--zg-readonly-field)" }}.
+      Bootstrap’s .bg-white rule carries !important, overriding the inline token and preventing the field from rendering with the required #EEF3EF
+      gray-green read-only shading.
+  2. Non-Standard Badge Token (ui-spec.md:18):
+      • Location: AttachmentSection.tsx:381-383
+      • Violation: Uses Bootstrap's bg-danger (#dc3545) for the invalid state badge instead of Zen Green error token #B3261E (var(--zg-error)).
+  3. Icon-Only Control Missing Tooltip (ui-spec.md:136):
+      • Location: AttachmentSection.tsx:494-501
+      • Violation: The modal close button <button className="btn-close" aria-label="Close" /> provides an aria-label but omits a title tooltip
+      ("icon-only controls carry aria-label AND tooltip").
+
+
+  ### Judgement Calls (Baseline Smells)
+  1. Duplicated Code (File validation & limits):
+      • Location: AttachmentSection.tsx:5-6
+      • Re-implements file size and extension checks rather than reusing validation.ts:55-69 and shared constants from client/src/utils/validation.
+      ts.
+  2. Duplicated Code (Upload handling boilerplate):
+      • Location: tickets.ts:654-680
+      • Multer error handling (LIMIT_FILE_SIZE, VALIDATION_FAILED) and ALLOWED_MIME_TYPES validation in POST /:id/attachments duplicate existing
+      logic from POST /api/tickets (lines 454–480, 500–510).
+  3. Data Clumps / Speculative Generality (Property Aliasing):
+      • Location: ticket.ts:37-60 & tickets.ts:622-630
+      • Aliased pairs (systemId/relatedSystemId, systemName/relatedSystemName, requester/requesterName) are bundled together across interfaces and
+      endpoint responses rather than standardizing on a single domain model structure.
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  1. Live Region Status Announcements:
+      • Spec Quote: ui-spec.md:137: "status messages announced politely (live region)"
+      • Finding: In AttachmentSection.tsx, dynamic error/status alerts (staged-error-message, unavailable-state, and dialog errors) lack aria-
+      live="polite" containers for accessibility.
+  ### (b) Behaviour Not Asked For (Scope Creep)
+  1. Denormalized & Alias Fields in Ticket Detail Response:
+      • Spec Quote: api-spec.md:104: "200: ticket shape as POST response plus "attachments" array where each item includes {id, filename, mimeType,
+      sizeBytes, uploadedAt, removedAt: null | ts, removedReason: null | string}."
+      • Finding: In tickets.ts:616-639, GET /api/tickets/:id returns redundant convenience aliases and timestamps (categoryName, systemName,
+      relatedSystemId, relatedSystemName, requesterId, requesterName, createdAt, updatedAt) beyond the canonical POST /api/tickets response shape
+      (api-spec.md:56-60).
+  2. Wrapped Envelope on Attachment Upload:
+      • Spec Quote: api-spec.md:114: "- 201: attachment metadata object."
+      • Finding: In tickets.ts:771-773, POST /api/tickets/:id/attachments wraps the response in { attachment: ... } rather than returning the root
+      metadata object directly (in contrast to GET /api/attachments/:id).
+
+
+  ### (c) Requirements Implemented but Look Wrong
+
+  • None Identified: Core Issue #20 requirements are fully implemented and verified by tests:
+      • Strict ownership access control returning 403 on cross-requester access (specification.md:94, specification.md:202), 401 on missing auth
+      (specification.md:114), and 404 on absent entities.
+      • Maximum 5 active attachments cap enforced with 409 LIMIT_REACHED and UI button disablement (specification.md:102, specification.md:214).
+      • Byte-stream download blocking returning 410 on soft-removed items (specification.md:67, specification.md:106, specification.md:218).
+      • Soft removal requiring mandatory 1–300 character trimmed reason with Escape key and focus-trapped confirmation modal (specification.md:68,
+      specification.md:107, specification.md:220).
+      • All 5 attachment row states (active, uploading with spinner, invalid with inline message/dismiss, removed with audit caption, and
+      unavailable with retry) conform to ui-spec.md:128-130.
+      • Ticket detail layout renders read-only fields with preserved whitespace and two-column layout on tablet viewports (specification.md:65,
+      specification.md:241, specification.md:243, ui-spec.md:145).
+```
+
+---
+
+<!-- Prompts 46..n appended during the sprint -->
 
 ## My Reflection
 
 *(To be completed at sprint end.)*
+
 

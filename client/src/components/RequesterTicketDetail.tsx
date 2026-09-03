@@ -4,6 +4,7 @@ import { formatDateTime, formatDateOnly } from "../utils/format";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { AttachmentSection } from "./AttachmentSection";
 import type { AttachmentRemovalUpdate } from "./AttachmentSection";
+import { useReferenceData } from "../hooks/useReferenceData";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -19,6 +20,8 @@ export function RequesterTicketDetail({
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { categories, systems } = useReferenceData();
 
   const fetchTicketDetail = useCallback(async () => {
     setLoading(true);
@@ -136,8 +139,17 @@ export function RequesterTicketDetail({
     );
   }
 
-  const requesterDisplayName = ticket.requester?.name || ticket.requesterName || "Unknown";
-  const systemDisplayName = ticket.systemName || ticket.relatedSystemName || "Unknown";
+  const categoryDisplayName =
+    categories.find((c) => c.id === ticket.categoryId)?.name ||
+    (ticket as unknown as { categoryName?: string }).categoryName ||
+    "Unknown";
+
+  const systemDisplayName =
+    systems.find((s) => s.id === ticket.systemId)?.name ||
+    (ticket as unknown as { relatedSystemName?: string }).relatedSystemName ||
+    "Unknown";
+
+  const requesterDisplayName = ticket.requester?.name || "Unknown";
 
   return (
     <div className="my-2" data-testid="ticket-detail-view">
@@ -196,7 +208,7 @@ export function RequesterTicketDetail({
               </h2>
               <div className="row g-2 small">
                 <div className="col-6 text-muted">Category:</div>
-                <div className="col-6 fw-medium text-zen-body">{ticket.categoryName}</div>
+                <div className="col-6 fw-medium text-zen-body">{categoryDisplayName}</div>
 
                 <div className="col-6 text-muted">Related System:</div>
                 <div className="col-6 fw-medium text-zen-body">{systemDisplayName}</div>
@@ -223,8 +235,8 @@ export function RequesterTicketDetail({
             Description
           </h2>
           <div
-            className="p-3 bg-white rounded border text-zen-body small"
-            style={{ whiteSpace: "pre-wrap", minHeight: "100px", backgroundColor: "var(--zg-readonly-field)" }}
+            className="zg-readonly-panel p-3 text-zen-body small"
+            style={{ whiteSpace: "pre-wrap", minHeight: "100px" }}
             data-testid="ticket-detail-description"
           >
             {ticket.description}
@@ -233,8 +245,7 @@ export function RequesterTicketDetail({
 
         {/* Meta Footer */}
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pt-2 text-muted small border-top">
-          <span>Created: {formatDateTime(ticket.createdAt)}</span>
-          <span>Last Updated: {formatDateTime(ticket.updatedAt)}</span>
+          <span>Date: {formatDateTime(ticket.ticketDate)}</span>
         </div>
       </div>
 

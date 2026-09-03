@@ -31,6 +31,39 @@ function hasValidExtension(filename: string): boolean {
   return ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
+function handleMulterError(err: unknown, res: Response): boolean {
+  if (!err) return false;
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({
+        error: {
+          code: "FILE_TOO_LARGE",
+          message: "Attachment exceeds the maximum allowed size of 5 MB",
+        },
+      });
+      return true;
+    }
+    res.status(400).json({
+      error: {
+        code: "VALIDATION_FAILED",
+        message: err.message,
+      },
+    });
+    return true;
+  }
+  res.status(500).json({
+    error: {
+      code: "UNEXPECTED",
+      message: "Failed to process attachment upload",
+    },
+  });
+  return true;
+}
+
+function isValidAttachmentFile(file: Express.Multer.File): boolean {
+  return ALLOWED_MIME_TYPES.includes(file.mimetype) && hasValidExtension(file.originalname);
+}
+
 interface ValidationResult {
   valid: boolean;
   summary: string;
@@ -453,29 +486,7 @@ ticketsRouter.post(
   requireRequester,
   (req, res, next) => {
     upload.array("files")(req, res, (err: any) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(413).json({
-            error: {
-              code: "FILE_TOO_LARGE",
-              message: "Attachment exceeds the maximum allowed size of 5 MB",
-            },
-          });
-        }
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_FAILED",
-            message: err.message,
-          },
-        });
-      } else if (err) {
-        return res.status(500).json({
-          error: {
-            code: "UNEXPECTED",
-            message: "Failed to process multipart upload",
-          },
-        });
-      }
+      if (handleMulterError(err, res)) return;
       next();
     });
   },
@@ -496,10 +507,7 @@ ticketsRouter.post(
 
     // Check MIME types and safe extensions [BR-13, AC-07]
     for (const file of files) {
-      if (
-        !ALLOWED_MIME_TYPES.includes(file.mimetype) ||
-        !hasValidExtension(file.originalname)
-      ) {
+      if (!isValidAttachmentFile(file)) {
         return res.status(415).json({
           error: {
             code: "UNSUPPORTED_TYPE",
@@ -612,7 +620,7 @@ ticketsRouter.get(
         });
       }
 
-      // Parity with POST /api/tickets response shape plus attachments [api-spec.md:104, 56-60]
+      // Canonical ticket shape matching POST response plus attachments array [api-spec.md:104, 56-60]
       return res.status(200).json({
         ticket: {
           id: ticket.id,
@@ -623,18 +631,11 @@ ticketsRouter.get(
           summary: ticket.summary,
           description: ticket.description,
           categoryId: ticket.categoryId,
-          categoryName: ticket.category?.name || "Unknown",
           systemId: ticket.systemId,
-          systemName: ticket.system?.name || "Unknown",
-          relatedSystemId: ticket.systemId,
-          relatedSystemName: ticket.system?.name || "Unknown",
-          requester: ticket.requester
-            ? { id: ticket.requester.id, name: ticket.requester.name }
-            : { id: ticket.requesterId, name: "Unknown" },
-          requesterId: ticket.requesterId,
-          requesterName: ticket.requester?.name || "Unknown",
-          createdAt: ticket.createdAt,
-          updatedAt: ticket.updatedAt,
+          requester: {
+            id: ticket.requester?.id ?? ticket.requesterId,
+            name: ticket.requester?.name ?? "Unknown",
+          },
           attachments: (ticket.attachments || []).map((a) => serializeAttachment(a)),
         },
       });
@@ -655,29 +656,7 @@ ticketsRouter.post(
   requireRequester,
   (req, res, next) => {
     upload.single("file")(req, res, (err: any) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(413).json({
-            error: {
-              code: "FILE_TOO_LARGE",
-              message: "Attachment exceeds the maximum allowed size of 5 MB",
-            },
-          });
-        }
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_FAILED",
-            message: err.message,
-          },
-        });
-      } else if (err) {
-        return res.status(500).json({
-          error: {
-            code: "UNEXPECTED",
-            message: "Failed to process attachment upload",
-          },
-        });
-      }
+      if (handleMulterError(err, res)) return;
       next();
     });
   },
@@ -706,10 +685,7 @@ ticketsRouter.post(
     }
 
     // Check MIME type and extension
-    if (
-      !ALLOWED_MIME_TYPES.includes(file.mimetype) ||
-      !hasValidExtension(file.originalname)
-    ) {
+    if (!isValidAttachmentFile(file)) {
       return res.status(415).json({
         error: {
           code: "UNSUPPORTED_TYPE",
@@ -768,9 +744,8 @@ ticketsRouter.post(
         },
       });
 
-      return res.status(201).json({
-        attachment: serializeAttachment(attachment),
-      });
+      // Response per api-spec.md:114 (- 201: attachment metadata object)
+      return res.status(201).json(serializeAttachment(attachment));
     } catch {
       return res.status(500).json({
         error: {

@@ -9,16 +9,14 @@ const mockTicketDetail: TicketDetail = {
   summary: "VPN disconnecting randomly",
   description: "Every 10 minutes the VPN connection drops.\nPlease investigate firewall logs.",
   categoryId: 4,
-  categoryName: "Network",
-  relatedSystemId: 2,
-  relatedSystemName: "Corporate VPN",
+  systemId: 2,
   requestedPriority: "HIGH",
   status: "NEW",
-  requesterId: 1,
-  requesterName: "Anucha Wongchai",
+  requester: {
+    id: 1,
+    name: "Anucha Wongchai",
+  },
   ticketDate: "2026-08-30T09:00:00.000Z",
-  createdAt: "2026-08-30T09:00:00.000Z",
-  updatedAt: "2026-08-30T10:30:00.000Z",
   attachments: [
     {
       id: 1,
@@ -39,10 +37,28 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
   });
 
   it("C-10: renders read-only ticket info with distinct shading and no editable controls (AC-23)", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ ticket: mockTicketDetail }),
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/reference/categories")) {
+        return {
+          ok: true,
+          json: async () => ({ categories: [{ id: 4, name: "Network" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/reference/systems")) {
+        return {
+          ok: true,
+          json: async () => ({ systems: [{ id: 2, name: "Corporate VPN" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/tickets/42")) {
+        return {
+          ok: true,
+          json: async () => ({ ticket: mockTicketDetail }),
+        } as Response;
+      }
+      return { ok: false, status: 404, json: async () => ({}) } as Response;
+    });
 
     const onBack = vi.fn();
 
@@ -85,11 +101,20 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
   });
 
   it("handles 403 Forbidden or 404 Not Found error states cleanly", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({ error: { code: "FORBIDDEN", message: "Access denied" } }),
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/api/tickets/99")) {
+        return {
+          ok: false,
+          status: 403,
+          json: async () => ({ error: { code: "FORBIDDEN", message: "Access denied" } }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => ({ categories: [], systems: [] }),
+      } as Response;
+    });
 
     render(
       <RequesterTicketDetail

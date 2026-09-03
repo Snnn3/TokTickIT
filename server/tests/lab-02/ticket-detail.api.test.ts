@@ -145,13 +145,13 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
       summary: "Broken keyboard key",
       description: "Spacebar stuck",
       categoryId: 2,
-      categoryName: "Hardware",
-      relatedSystemId: 3,
-      relatedSystemName: "Workstation",
+      systemId: 3,
       requestedPriority: "HIGH",
       status: "NEW",
-      requesterId: 1,
-      requesterName: "Anucha Wongchai",
+      requester: {
+        id: 1,
+        name: "Anucha Wongchai",
+      },
       attachments: [
         {
           id: 101,

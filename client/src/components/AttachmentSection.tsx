@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { AttachmentMetadata } from "../types/ticket";
 import { formatDateTime, formatFileSize } from "../utils/format";
-
-const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+import { validateFile, MAX_ATTACHMENTS } from "../utils/validation";
 
 export interface AttachmentRemovalUpdate {
   attachmentId: number;
@@ -87,7 +85,7 @@ export function AttachmentSection({
   }, [removingAttachment]);
 
   const activeAttachments = fileList.filter((a) => !a.removedAt);
-  const isLimitReached = activeAttachments.length >= 5;
+  const isLimitReached = activeAttachments.length >= MAX_ATTACHMENTS;
   const isUploading = stagedFiles.some((f) => f.status === "uploading");
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,9 +94,9 @@ export function AttachmentSection({
 
     const tempId = `staged-${Date.now()}-${Math.random()}`;
 
-    // 1. Client-side extension validation [AC-07]
-    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    // 1. Centralized client-side validation [AC-07, AC-08]
+    const validationError = validateFile(file);
+    if (validationError) {
       setStagedFiles((prev) => [
         ...prev,
         {
@@ -106,30 +104,14 @@ export function AttachmentSection({
           filename: file.name,
           sizeBytes: file.size,
           status: "invalid",
-          errorMessage: `Unsupported file type for "${file.name}". Allowed formats: JPG, PNG, WEBP, PDF.`,
+          errorMessage: validationError,
         },
       ]);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    // 2. Client-side size validation [AC-08]
-    if (file.size > MAX_FILE_SIZE) {
-      setStagedFiles((prev) => [
-        ...prev,
-        {
-          id: tempId,
-          filename: file.name,
-          sizeBytes: file.size,
-          status: "invalid",
-          errorMessage: `File "${file.name}" exceeds the maximum allowed size of 5 MB.`,
-        },
-      ]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    // 3. Active count check [AC-09]
+    // 2. Active count check [AC-09]
     if (isLimitReached) {
       setStagedFiles((prev) => [
         ...prev,
@@ -177,10 +159,13 @@ export function AttachmentSection({
               : f,
           ),
         );
-      } else if (data.attachment) {
-        setFileList((prev) => [...prev, data.attachment]);
-        setStagedFiles((prev) => prev.filter((f) => f.id !== tempId));
-        if (onAttachmentAdded) onAttachmentAdded(data.attachment);
+      } else {
+        const uploadedAtt: AttachmentMetadata = data.id ? data : data.attachment;
+        if (uploadedAtt) {
+          setFileList((prev) => [...prev, uploadedAtt]);
+          setStagedFiles((prev) => prev.filter((f) => f.id !== tempId));
+          if (onAttachmentAdded) onAttachmentAdded(uploadedAtt);
+        }
       }
     } catch {
       setStagedFiles((prev) =>
@@ -378,7 +363,7 @@ export function AttachmentSection({
                       Uploading
                     </span>
                   ) : (
-                    <span className="badge bg-danger" data-testid="invalid-badge">
+                    <span className="badge badge-zen-error" data-testid="invalid-badge">
                       Invalid
                     </span>
                   )}
@@ -389,7 +374,12 @@ export function AttachmentSection({
                 </div>
 
                 {staged.errorMessage && (
-                  <div className="small text-danger mt-1" data-testid="staged-error-message">
+                  <div
+                    className="small text-danger mt-1"
+                    role="alert"
+                    aria-live="polite"
+                    data-testid="staged-error-message"
+                  >
                     {staged.errorMessage}
                   </div>
                 )}
@@ -464,9 +454,14 @@ export function AttachmentSection({
                     </div>
                   )}
 
-                  {/* Unavailable state inline error with retry button [ui-spec §9] */}
+                  {/* Unavailable state inline error with retry button [ui-spec §9, §10] */}
                   {downloadErr && (
-                    <div className="small text-danger mt-1 d-flex align-items-center gap-2" data-testid={`unavailable-state-${att.id}`}>
+                    <div
+                      className="small text-danger mt-1 d-flex align-items-center gap-2"
+                      role="alert"
+                      aria-live="polite"
+                      data-testid={`unavailable-state-${att.id}`}
+                    >
                       <span>{downloadErr}</span>
                       <button
                         type="button"
@@ -525,7 +520,7 @@ export function AttachmentSection({
         </div>
       )}
 
-      {/* Remove Confirmation Dialog / Modal [AC-12, BR-17] */}
+      {/* Remove Confirmation Dialog / Modal [AC-12, BR-17, ui-spec §10] */}
       {removingAttachment && (
         <div
           className="modal fade show d-block"
@@ -543,6 +538,7 @@ export function AttachmentSection({
                   className="btn-close"
                   onClick={closeRemoveModal}
                   aria-label="Close"
+                  title="Close"
                 />
               </div>
 
@@ -571,7 +567,12 @@ export function AttachmentSection({
                   />
                   <div className="d-flex justify-content-between mt-1">
                     {removeReasonError ? (
-                      <span className="text-danger small" data-testid="removal-reason-error">
+                      <span
+                        className="text-danger small"
+                        role="alert"
+                        aria-live="polite"
+                        data-testid="removal-reason-error"
+                      >
                         {removeReasonError}
                       </span>
                     ) : (

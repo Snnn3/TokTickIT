@@ -43,8 +43,8 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
       .attach("file", Buffer.from("fake image bytes"), "screenshot.png");
 
     expect(res.status).toBe(201);
-    expect(res.body.attachment.id).toBe(201);
-    expect(res.body.attachment.filename).toBe("screenshot.png");
+    expect(res.body.id).toBe(201);
+    expect(res.body.filename).toBe("screenshot.png");
   });
 
   it("A-17: enforces attachment limits: 6th active -> 409 LIMIT_REACHED; unsupported type -> 415; oversize -> 413 (AC-07..AC-09, BR-13)", async () => {

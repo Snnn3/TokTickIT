@@ -37,24 +37,16 @@ export interface TicketSummaryItem {
 export interface TicketDetail {
   id: number;
   number: string;
+  ticketDate: string;
+  status: TicketStatus;
+  requestedPriority: TicketPriority;
   summary: string;
   description: string;
   categoryId: number;
-  categoryName: string;
-  systemId?: number;
-  systemName?: string;
-  relatedSystemId?: number;
-  relatedSystemName?: string;
-  requestedPriority: TicketPriority;
-  status: TicketStatus;
-  requester?: {
+  systemId: number;
+  requester: {
     id: number;
     name: string;
   };
-  requesterId?: number;
-  requesterName?: string;
-  ticketDate: string;
-  createdAt: string;
-  updatedAt: string;
   attachments: AttachmentMetadata[];
 }

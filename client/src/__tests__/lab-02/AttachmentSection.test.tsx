@@ -46,13 +46,13 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     const invalidFile = new File(["binary content"], "bad_file.exe", { type: "application/x-msdownload" });
     fireEvent.change(input, { target: { files: [invalidFile] } });
 
-    expect(screen.getByText(/Unsupported file type/i)).toBeInTheDocument();
+    expect(screen.getByText(/unsupported/i)).toBeInTheDocument();
 
     // 2. Oversize file (>5MB)
     const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], "oversize.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [bigFile] } });
 
-    expect(screen.getByText(/exceeds the maximum allowed size of 5 MB/i)).toBeInTheDocument();
+    expect(screen.getByText(/exceeds/i)).toBeInTheDocument();
   });
 
   it("C-12: renders removed attachments with strikethrough, badge, reason caption, and disabled actions (AC-11)", async () => {

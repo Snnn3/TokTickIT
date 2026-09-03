@@ -179,6 +179,12 @@ body {
   font-weight: 600;
 }
 
+.badge-zen-error {
+  background-color: var(--zg-error);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
 /* Requester Chip */
 .zg-requester-chip {
   background-color: rgba(255, 255, 255, 0.15);
