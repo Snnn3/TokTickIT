@@ -109,7 +109,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await expect(successPanel).toBeVisible();
     await expect(page.getByRole("heading", { name: "Ticket Created Successfully!" })).toBeVisible();
 
-    const ticketNumber = await successPanel.locator("div.h3.fw-bold").innerText();
+    const ticketNumber = await successPanel.getByTestId("success-ticket-number").innerText();
     expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{5}$/);
 
     // 5. Navigate to My Tickets and verify ticket is located [FR-08, AC-02]
@@ -151,7 +151,7 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await expect(successPanel).toBeVisible();
     await expect(page.getByRole("heading", { name: "Ticket Created Successfully!" })).toBeVisible();
 
-    const ticketNumber = await successPanel.locator("div.h3.fw-bold").innerText();
+    const ticketNumber = await successPanel.getByTestId("success-ticket-number").innerText();
     expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{5}$/);
 
     // --- Step 2: Switch to Requester B (Busaba) and assert data isolation [AC-18, BR-04] ---

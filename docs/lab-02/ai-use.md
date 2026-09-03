@@ -1313,7 +1313,19 @@ update my @[docs/lab-02/reviewer.md] too.
 
 ---
 
-<!-- Prompts 52..n appended during the sprint -->
+## Prompt 52 — Open Pull Request for Issue #21 (2026-09-04)
+
+**Outcome:** Prepared and opened Pull Request for Issue #21 targeting `lab2-staging` containing the automated Playwright E2E test suite, responsive overflow checks, and 9 visual screenshot evidence artifacts across desktop, tablet, and mobile breakpoints.
+
+**Prompt (verbatim):**
+
+```text
+open pr only the scope of the issue#21
+```
+
+---
+
+<!-- Prompts 53..n appended during the sprint -->
 
 ## My Reflection
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { AttachmentMetadata } from "../types/ticket";
 import { formatDateTime, formatFileSize } from "../utils/format";
 import { validateFile, MAX_ATTACHMENTS } from "../utils/validation";
@@ -50,7 +50,15 @@ export function AttachmentSection({
     setFileList(attachments);
   }, [attachments]);
 
+  const closeRemoveModal = useCallback(() => {
+    setRemovingAttachment(null);
+    setRemoveReason("");
+    setRemoveReasonError(null);
+    setIsRemoving(false);
+  }, []);
+
   // Focus trap & Escape listener for modal [ui-spec §10, BR-18]
+  // closeRemoveModal is stable (setters only) so the effect stays subscribed correctly.
   useEffect(() => {
     if (!removingAttachment) return;
 
@@ -84,7 +92,7 @@ export function AttachmentSection({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [removingAttachment, isRemoving]);
+  }, [removingAttachment, isRemoving, closeRemoveModal]);
 
   const activeAttachments = fileList.filter((a) => !a.removedAt);
   const isLimitReached = activeAttachments.length >= MAX_ATTACHMENTS;
@@ -240,13 +248,6 @@ export function AttachmentSection({
     setRemovingAttachment(attachment);
     setRemoveReason("");
     setRemoveReasonError(null);
-  };
-
-  const closeRemoveModal = () => {
-    setRemovingAttachment(null);
-    setRemoveReason("");
-    setRemoveReasonError(null);
-    setIsRemoving(false);
   };
 
   const handleConfirmRemove = async () => {

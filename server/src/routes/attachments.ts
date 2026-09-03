@@ -3,8 +3,8 @@ import { prisma } from "../prisma";
 import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
 
 import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
+import { getOwnedResource } from "../utils/ownership";
 
-export { parsePositiveIntParam, serializeAttachment };
 export const attachmentsRouter = Router();
 
 /**
@@ -14,24 +14,25 @@ async function getOwnedAttachment(
   attachmentId: number,
   requesterId: number,
 ) {
-  const attachment = await prisma.attachment.findUnique({
-    where: { id: attachmentId },
-    include: {
-      ticket: {
-        select: { requesterId: true },
-      },
-    },
-  });
+  const result = await getOwnedResource(
+    () =>
+      prisma.attachment.findUnique({
+        where: { id: attachmentId },
+        include: {
+          ticket: {
+            select: { requesterId: true },
+          },
+        },
+      }),
+    (attachment) => attachment.ticket.requesterId === requesterId,
+    "Attachment not found",
+  );
 
-  if (!attachment) {
-    return { status: 404, error: { code: "NOT_FOUND", message: "Attachment not found" } };
+  if (result.status !== 200) {
+    return { status: result.status, error: result.error };
   }
 
-  if (attachment.ticket.requesterId !== requesterId) {
-    return { status: 403, error: { code: "FORBIDDEN", message: "Access denied" } };
-  }
-
-  return { status: 200, attachment };
+  return { status: 200 as const, attachment: result.resource };
 }
 
 // GET /api/attachments/:id [BR-06, AC-03]

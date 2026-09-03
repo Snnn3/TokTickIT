@@ -5,6 +5,7 @@ import { requireRequester, AuthenticatedRequest } from "../middleware/requester"
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
 import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
+import { getOwnedResource } from "../utils/ownership";
 
 export const ticketsRouter = Router();
 
@@ -565,25 +566,76 @@ ticketsRouter.post(
 /**
  * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
  */
-async function getOwnedTicket<T extends Prisma.TicketDefaultArgs>(
+type TicketDetailOptions = {
+  include: {
+    requester: { select: { id: true; name: true } };
+    attachments: {
+      orderBy: { uploadedAt: "asc" };
+      select: {
+        id: true;
+        ticketId: true;
+        filename: true;
+        mimeType: true;
+        sizeBytes: true;
+        uploadedAt: true;
+        removedAt: true;
+        removedReason: true;
+      };
+    };
+  };
+};
+
+type TicketOwnershipOptions = {
+  select: { id: true; requesterId: true };
+};
+
+type OwnedTicketFailure = {
+  status: 404 | 403;
+  error: { code: "NOT_FOUND" | "FORBIDDEN"; message: string };
+  ticket: null;
+};
+
+async function getOwnedTicket(
   ticketId: number,
   requesterId: number,
-  options?: Prisma.Exact<T, Prisma.TicketDefaultArgs>,
+  options: TicketDetailOptions,
+): Promise<
+  | { status: 200; error: null; ticket: Prisma.TicketGetPayload<TicketDetailOptions> }
+  | OwnedTicketFailure
+>;
+async function getOwnedTicket(
+  ticketId: number,
+  requesterId: number,
+  options: TicketOwnershipOptions,
+): Promise<
+  | { status: 200; error: null; ticket: Prisma.TicketGetPayload<TicketOwnershipOptions> }
+  | OwnedTicketFailure
+>;
+async function getOwnedTicket(
+  ticketId: number,
+  requesterId: number,
+  options: TicketDetailOptions | TicketOwnershipOptions,
 ) {
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    ...(options as any),
-  });
+  const result = await getOwnedResource(
+    () =>
+      "include" in options
+        ? prisma.ticket.findUnique({
+            where: { id: ticketId },
+            include: options.include,
+          })
+        : prisma.ticket.findUnique({
+            where: { id: ticketId },
+            select: options.select,
+          }),
+    (ticket) => ticket.requesterId === requesterId,
+    "Ticket not found",
+  );
 
-  if (!ticket) {
-    return { status: 404 as const, error: { code: "NOT_FOUND", message: "Ticket not found" }, ticket: null };
+  if (result.status !== 200) {
+    return { status: result.status, error: result.error, ticket: null };
   }
 
-  if (ticket.requesterId !== requesterId) {
-    return { status: 403 as const, error: { code: "FORBIDDEN", message: "Access denied" }, ticket: null };
-  }
-
-  return { status: 200 as const, error: null, ticket: ticket as Prisma.TicketGetPayload<T> };
+  return { status: 200 as const, error: null, ticket: result.resource };
 }
 
 // GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
@@ -661,7 +713,7 @@ ticketsRouter.get(
   },
 );
 
-// POST /api/tickets/:id/attachments [FR-10, BR-13, BR-14, BR-15, AC-07..AC-09]
+// POST /api/tickets/:id/attachments [FR-10, BR-13, BR-15, AC-07..AC-09]
 ticketsRouter.post(
   "/:id/attachments",
   requireRequester,
