@@ -11,6 +11,17 @@ export interface RelatedSystem {
   name: string;
 }
 
+export interface AttachmentMetadata {
+  id: number;
+  ticketId: number;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  removedAt: string | null;
+  removedReason: string | null;
+}
+
 export interface TicketSummaryItem {
   id: number;
   number: string;
@@ -21,4 +32,23 @@ export interface TicketSummaryItem {
   status: TicketStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TicketDetail {
+  id: number;
+  number: string;
+  ticketDate: string;
+  status: TicketStatus;
+  requestedPriority: TicketPriority;
+  summary: string;
+  description: string;
+  categoryId: number;
+  systemId: number;
+  requester: {
+    id: number;
+    name: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  attachments: AttachmentMetadata[];
 }

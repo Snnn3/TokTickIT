@@ -38,5 +38,9 @@ describe("App Root & Route Guard (Issue #24, AC-02, C-09)", () => {
     expect(screen.getByTestId("requester-chip")).toHaveTextContent("Signed in as Anucha Wongchai (dev)");
     expect(screen.getByRole("button", { name: "My Tickets" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create Ticket" })).toBeInTheDocument();
+
+    // Click Change Requester clears context-bound state and returns to selection (FR-03, BR-05, AC-18)
+    fireEvent.click(screen.getByTestId("change-requester-btn"));
+    expect(screen.getByText(/Select a Development Requester/i)).toBeInTheDocument();
   });
 });

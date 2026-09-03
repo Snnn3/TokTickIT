@@ -112,6 +112,21 @@ body {
   color: #FFFFFF;
   border: 1px solid var(--zg-error);
   border-radius: 6px;
+  font-weight: 500;
+}
+
+.btn-zen-destructive:hover {
+  background-color: #921E17;
+  border-color: #921E17;
+  color: #FFFFFF;
+}
+
+.btn-zen-destructive:focus-visible,
+.btn-zen-destructive:focus {
+  background-color: #921E17;
+  color: #FFFFFF;
+  outline: 2px solid var(--zg-secondary);
+  outline-offset: 1px;
 }
 
 /* Form Controls & Focus Rings */
@@ -131,6 +146,12 @@ body {
   font-weight: 500;
 }
 
+.zg-readonly-panel {
+  background-color: var(--zg-readonly-field);
+  border: 1px solid var(--zg-border);
+  border-radius: 6px;
+}
+
 /* Badges */
 .badge-zen-new {
   background-color: var(--zg-pale);
@@ -139,7 +160,8 @@ body {
   border: 1px solid rgba(0, 107, 60, 0.2);
 }
 
-.badge-zen-low {
+.badge-zen-low,
+.badge-zen-removed {
   background-color: #F0F2F1;
   color: var(--zg-text-muted);
   font-weight: 500;
@@ -219,7 +241,7 @@ body {
 }
 
 .zg-action-link {
-  color: var(--zg-primary) !important;
+  color: var(--zg-secondary) !important;
   font-weight: 600 !important;
   text-decoration: none !important;
   background: transparent !important;
@@ -229,7 +251,7 @@ body {
 }
 
 .zg-action-link:hover {
-  color: var(--zg-secondary) !important;
+  color: var(--zg-primary) !important;
   text-decoration: underline !important;
 }
 

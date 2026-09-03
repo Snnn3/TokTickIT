@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
+import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
 
 export const ticketsRouter = Router();
 
@@ -28,6 +29,39 @@ const upload = multer({
 function hasValidExtension(filename: string): boolean {
   const lower = filename.toLowerCase();
   return ALLOWED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function handleMulterError(err: unknown, res: Response): boolean {
+  if (!err) return false;
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({
+        error: {
+          code: "FILE_TOO_LARGE",
+          message: "Attachment exceeds the maximum allowed size of 5 MB",
+        },
+      });
+      return true;
+    }
+    res.status(400).json({
+      error: {
+        code: "VALIDATION_FAILED",
+        message: err.message,
+      },
+    });
+    return true;
+  }
+  res.status(500).json({
+    error: {
+      code: "UNEXPECTED",
+      message: "Failed to process attachment upload",
+    },
+  });
+  return true;
+}
+
+function isValidAttachmentFile(file: Express.Multer.File): boolean {
+  return ALLOWED_MIME_TYPES.includes(file.mimetype) && hasValidExtension(file.originalname);
 }
 
 interface ValidationResult {
@@ -452,29 +486,7 @@ ticketsRouter.post(
   requireRequester,
   (req, res, next) => {
     upload.array("files")(req, res, (err: any) => {
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(413).json({
-            error: {
-              code: "FILE_TOO_LARGE",
-              message: "Attachment exceeds the maximum allowed size of 5 MB",
-            },
-          });
-        }
-        return res.status(400).json({
-          error: {
-            code: "VALIDATION_FAILED",
-            message: err.message,
-          },
-        });
-      } else if (err) {
-        return res.status(500).json({
-          error: {
-            code: "UNEXPECTED",
-            message: "Failed to process multipart upload",
-          },
-        });
-      }
+      if (handleMulterError(err, res)) return;
       next();
     });
   },
@@ -495,10 +507,7 @@ ticketsRouter.post(
 
     // Check MIME types and safe extensions [BR-13, AC-07]
     for (const file of files) {
-      if (
-        !ALLOWED_MIME_TYPES.includes(file.mimetype) ||
-        !hasValidExtension(file.originalname)
-      ) {
+      if (!isValidAttachmentFile(file)) {
         return res.status(415).json({
           error: {
             code: "UNSUPPORTED_TYPE",
@@ -547,6 +556,197 @@ ticketsRouter.post(
         error: {
           code: "UNEXPECTED",
           message: "An unexpected error occurred while creating the ticket",
+        },
+      });
+    }
+  },
+);
+
+/**
+ * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
+ */
+async function getOwnedTicket<T extends Prisma.TicketDefaultArgs>(
+  ticketId: number,
+  requesterId: number,
+  options?: Prisma.Exact<T, Prisma.TicketDefaultArgs>,
+) {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    ...(options as any),
+  });
+
+  if (!ticket) {
+    return { status: 404 as const, error: { code: "NOT_FOUND", message: "Ticket not found" }, ticket: null };
+  }
+
+  if (ticket.requesterId !== requesterId) {
+    return { status: 403 as const, error: { code: "FORBIDDEN", message: "Access denied" }, ticket: null };
+  }
+
+  return { status: 200 as const, error: null, ticket: ticket as Prisma.TicketGetPayload<T> };
+}
+
+// GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
+ticketsRouter.get(
+  "/:id",
+  requireRequester,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    try {
+      const owned = await getOwnedTicket(ticketId, requester.id, {
+        include: {
+          requester: { select: { id: true, name: true } },
+          attachments: {
+            orderBy: { uploadedAt: "asc" },
+            select: {
+              id: true,
+              ticketId: true,
+              filename: true,
+              mimeType: true,
+              sizeBytes: true,
+              uploadedAt: true,
+              removedAt: true,
+              removedReason: true,
+            },
+          },
+        },
+      });
+
+      if (owned.status !== 200 || !owned.ticket) {
+        return res.status(owned.status).json({ error: owned.error });
+      }
+
+      const ticket = owned.ticket;
+
+      // Canonical ticket shape matching POST response plus attachments array [api-spec.md:104, 56-60, ui-spec.md:122-123]
+      return res.status(200).json({
+        ticket: {
+          id: ticket.id,
+          number: ticket.number,
+          ticketDate: ticket.ticketDate,
+          status: ticket.status,
+          requestedPriority: ticket.requestedPriority,
+          summary: ticket.summary,
+          description: ticket.description,
+          categoryId: ticket.categoryId,
+          systemId: ticket.systemId,
+          requester: {
+            id: ticket.requester?.id ?? ticket.requesterId,
+            name: ticket.requester?.name ?? "Unknown",
+          },
+          createdAt: ticket.createdAt,
+          updatedAt: ticket.updatedAt,
+          attachments: (ticket.attachments || []).map((a) => serializeAttachment(a)),
+        },
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to retrieve ticket",
+        },
+      });
+    }
+  },
+);
+
+// POST /api/tickets/:id/attachments [FR-10, BR-13, BR-14, BR-15, AC-07..AC-09]
+ticketsRouter.post(
+  "/:id/attachments",
+  requireRequester,
+  (req, res, next) => {
+    upload.single("file")(req, res, (err: any) => {
+      if (handleMulterError(err, res)) return;
+      next();
+    });
+  },
+  async (req: AuthenticatedRequest, res: Response) => {
+    const requester = req.requester!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "File is required",
+          details: [{ field: "file", issue: "Attachment file is required" }],
+        },
+      });
+    }
+
+    // Check MIME type and extension
+    if (!isValidAttachmentFile(file)) {
+      return res.status(415).json({
+        error: {
+          code: "UNSUPPORTED_TYPE",
+          message: `Unsupported file type for "${file.originalname}". Allowed types: JPG, PNG, WEBP, PDF`,
+        },
+      });
+    }
+
+    try {
+      const owned = await getOwnedTicket(ticketId, requester.id, {
+        select: { id: true, requesterId: true },
+      });
+
+      if (owned.status !== 200 || !owned.ticket) {
+        return res.status(owned.status).json({ error: owned.error });
+      }
+
+      const activeAttachmentsCount = await prisma.attachment.count({
+        where: {
+          ticketId,
+          removedAt: null,
+        },
+      });
+
+      if (activeAttachmentsCount >= 5) {
+        return res.status(409).json({
+          error: {
+            code: "LIMIT_REACHED",
+            message: "Ticket already has maximum 5 active attachments",
+          },
+        });
+      }
+
+      const attachment = await prisma.attachment.create({
+        data: {
+          ticketId,
+          filename: file.originalname,
+          mimeType: file.mimetype,
+          sizeBytes: file.size,
+          data: Buffer.from(file.buffer),
+        },
+      });
+
+      // Response per api-spec.md:114 (- 201: attachment metadata object)
+      return res.status(201).json(serializeAttachment(attachment));
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to upload attachment",
         },
       });
     }

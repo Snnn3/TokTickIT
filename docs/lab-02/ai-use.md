@@ -899,8 +899,404 @@ in the pr wirte how to test too
 
 ---
 
-<!-- Prompts 41..n appended during the sprint -->
+## Prompt 41 — Create reviewer.md with peer review records for Lab 2 (2026-09-02)
+
+**Outcome:** Created `docs/lab-02/reviewer.md` documenting all Pull Requests authored on `Snnn3/TokTickIT` (PRs #25, #26, #27, #28, #29) and reviewed on `YummieGG/toktickit` (PRs #19, #20, #21), including verdicts, exact review comments, and partner responses.
+
+**Prompt (verbatim):**
+
+```text
+add reviewer.md at docs/lab-02 comment in my https://github.com/Snnn3/TokTickIT/pulls and i was review is in https://github.com/YummieGG/toktickit/pulls
+```
+
+---
+
+## Prompt 42 — Implement Issue #20: Ticket Detail and Attachment Lifecycle (2026-09-02)
+
+**Outcome:** Created branch `feature/lab2-6-detail-attachments`. Implemented `GET /api/tickets/:id`, `POST /api/tickets/:id/attachments`, `GET /api/attachments/:id`, `GET /api/attachments/:id/download`, and `DELETE /api/attachments/:id` with strict ownership checks, 410 REMOVED enforcement, confirmation dialog for soft removal, and responsive read-only Ticket Detail UI with AttachmentSection.
+
+**Prompt (verbatim):**
+
+```text
+/implement issue#20 dont open the pr
+```
+
+---
+
+## Prompt 43 — Resolve Code Review Findings for Issue #20 (2026-09-02)
+
+**Outcome:** Refactored `.btn-zen-destructive` styling and `.badge-zen-removed` tokens across `AttachmentSection.tsx`, applied `.zg-readonly-panel` shading to all read-only containers in `RequesterTicketDetail.tsx`, extracted `parsePositiveIntParam` and `serializeAttachment` helpers in `attachments.ts`, aligned soft-remove DELETE 200 payload with `api-spec.md`, and removed unrequested header counter badge.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+
+  ### 1. Documented Standards Violations (Hard)
+
+  • AttachmentSection.tsx:403-486 — Destructive Button Styling
+      • Standard: ui-spec.md:43 (Button hierarchy: Destructive #B3261E bg, white text).
+      • Violation: Uses Bootstrap's btn btn-outline-danger (attachment list Remove) and btn btn-danger (modal action) instead of the Zen Green
+      token class .btn-zen-destructive.
+  • AttachmentSection.tsx:337 — Removed Attachment Badge Styling
+      • Standard: ui-spec.md:58 (Badges: Removed attachment fill #F0F2F1, text #5B6B62).
+      • Violation: Uses standard Bootstrap badge bg-secondary (#6c757d) instead of the Zen token fill/text (.badge-zen-low or token-styled badge).
+  • RequesterTicketDetail.tsx:99-231 — Read-only Group Background
+      • Standard: ui-spec.md:16-122 (All read-only ticket info cards/values shaded #EEF3EF / readonly-field).
+      • Violation: Uses Bootstrap bg-light (#f8f9fa) and bg-white rather than --zg-readonly-field / .zg-readonly-field (#EEF3EF).
+
+  ### 2. Baseline Code Smells (Judgement Calls)
+
+  • Duplicated Code — attachments.ts:49-153
+    if (isNaN(attachmentId) || attachmentId <= 0) {
+      return res.status(400).json({
+        error: { code: "INVALID_ID", message: "Attachment ID must be a positive integer" },
+      });
+    }
+  Param ID parsing & validation repeated across all 3 attachment route handlers; extract into a shared parameter validation helper/middleware.
+  • Duplicated Code — attachments.ts:66-209
+  Attachment DTO response serialization ({ id, ticketId, filename, mimeType, sizeBytes, uploadedAt, removedAt, removedReason }) is manually
+  reconstructed in multiple route responses instead of a reusable serializer function.
+  • Duplicated Code / Data Clump — AttachmentSection.tsx:5-6 & tickets.ts:17-18
+  ALLOWED_EXTENSIONS and MAX_FILE_SIZE constants and mime-validation logic are declared independently across client components and server route
+  files without a shared type/constant definition.
+  ──────
+  ## Spec
+
+  ### (a) Requirements Missing or Partial
+
+  1. Removed Attachment Badge Token:
+  │ ui-spec.md:58: "| Removed attachment | #F0F2F1 | #5B6B62 + strikethrough filename | disabled actions |"
+
+      • AttachmentSection.tsx:337 uses Bootstrap's badge bg-secondary (dark gray #6c757d) instead of Zen Green #F0F2F1 / #5B6B62 (badge-zen-low).
+  2. Destructive Button Styling:
+  │ ui-spec.md:43: "| Destructive | #B3261E bg, white text (attachment Remove) |"
+
+      • AttachmentSection.tsx:403 styles the row Remove button as btn-outline-danger instead of using the repository's .btn-zen-destructive token
+      class.
+  3. Read-only Shading on Description:
+  │ ui-spec.md:121-122: "Read-only ticket info grouped in cards, all values readonly-shaded: ... Description (preserved whitespace)"
+
+      • RequesterTicketDetail.tsx:231 applies bg-white to the description container rather than the readonly token shade #EEF3EF (.zg-readonly-
+      field).
+
+
+  ### (b) Unasked Behaviour (Scope Creep)
+
+  1. Extra Payload in Soft-Remove Response:
+  │ api-spec.md:140: "- 200: { \"removed\": true, \"removedAt\": \"<ts>\" }"
+
+      • attachments.ts:200-209 includes an extra full attachment metadata object in the 200 response alongside removed and removedAt. (Benign
+      client convenience).
+  2. Active Attachments Counter Badge:
+  │ ui-spec.md:126: "Attachment Section (separate card): header + Add attachment button (hidden/disabled at limit)."
+
+      • AttachmentSection.tsx:254-256 adds an unrequested "{activeCount} / 5 active" counter pill badge in the card header.
+
+
+  ### (c) Requirements Implemented but Look Wrong
+
+  • None Identified: Core specifications are correctly implemented:
+      • Ownership & Status Codes: X-Requester-Id ownership check strictly enforces 403 on foreign ticket/attachment access (BR-06, AC-03); 401 on
+      missing/inactive (BR-22); 404 on absent (AC-03); 410 on downloading removed items (FR-11, AC-11); 409 on duplicate removal or exceeding 5
+      active attachments (AC-09); 413/415 on file limits (AC-07, AC-08).
+      • Soft Removal & Dialog: Mandatory 1–300 char trimmed reason with Escape key and focus-trapped confirmation modal (FR-12, BR-16, BR-17, AC-
+      12).
+      • Submission Lockout: Busy-disabled states prevent duplicate submits (BR-18, AC-21).
+      • Read-Only View: No edit controls rendered (FR-09, AC-23).
+```
+
+---
+
+## Prompt 44 — Implement Review Feedback on Attachment Row States, Shape Parity, and Responsive Layout (2026-09-03)
+
+**Outcome:** Implemented all 5 attachment row states (active, uploading with spinner, invalid with message/dismiss, removed with audit caption, and unavailable with retry), styled buttons and badges with Zen Green tokens, added tablet two-column layout (`col-md-6`) on Ticket Detail view, removed duplicated ticket header, aligned `GET /api/tickets/:id` payload shape parity with `POST /api/tickets`, and returned attachment metadata at root for `GET /api/attachments/:id`.
+
+**Prompt (verbatim):**
+
+```text
+/implement following this ## Standards
+
+  ### Documented Standards Breaches (Hard)
+  1. Button Hierarchy (ui-spec.md:36-46):
+      • AttachmentSection.tsx:300: The retry button uses raw Bootstrap <button type="button" className="btn btn-sm btn-outline-dark" ...
+      >Retry</button> instead of adhering to the Zen Green button tokens (Secondary or Tertiary/link).
+  2. Attachment Row States (ui-spec.md:128-130):
+      • AttachmentSection.tsx:294-308: Spec specifies "States per row: active | uploading | invalid | removed | unavailable (download failed -
+      retry)". Download retry is rendered as a global card-level alert banner above the list rather than an inline per-row state.
+  3. Color Tokens & Reason Caption (ui-spec.md:7-21):
+      • AttachmentSection.tsx:359: Uses Bootstrap utility classes (text-danger, border-danger) for audit reason captions rather than the Zen Green
+      token (text-muted #5B6B62). Removal audit reasons are historical metadata, not validation errors.
+      • AttachmentSection.tsx:426: The modal title uses Bootstrap text-danger instead of Zen Green design tokens.
+  4. Busy Button State (ui-spec.md:45):
+      • AttachmentSection.tsx:485: {isRemoving ? "Removing..." : "Remove Attachment"} replaces text but omits the required spinner element ("Busy:
+      spinner replaces label area, stays disabled until settled").
+  ### Baseline Code Smells (Judgement Calls)
+
+  1. Duplicated Code:
+      • tickets.ts:688-698: Manually constructs the attachment response object, duplicating attachments.ts:14-34 from attachments.ts.
+      • tickets.ts:561: Duplicates integer parameter validation with looser semantics (parseInt) instead of reusing attachments.ts:7-12.
+  2. Primitive Obsession:
+      • AttachmentSection.tsx:5-6 & tickets.ts:31-40: File limits and allowed types are declared as disjoint primitive constants across frontend
+      and backend.
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  1. Attachment Row States Incomplete:
+      • Spec Quote: ui-spec.md:128 & ui-spec.md:153: "States per row: active | uploading (busy) | invalid (message) | removed (badge Removed,
+      strikethrough, actions disabled, reason tooltip/caption) | unavailable (download failed - retry)."
+      • Finding: In AttachmentSection.tsx:286-366, only active and removed are rendered as in-row states. The uploading state is only represented
+      on the header button, while invalid files and download failures (unavailable) are presented as card-level banners rather than per-row states.
+  2. Tablet Two-Column Layout Incomplete:
+      • Spec Quote: ui-spec.md:145: "Tablet 768-991px: Two-column where practical; Summary/Description keep width"
+      • Finding: In RequesterTicketDetail.tsx:173-197, System and Classification groups use col-12 col-lg-6, which collapses into a single column
+      on tablet viewports (768–991px), unlike the loading skeleton which correctly applied col-md-6.
+
+
+  ### (b) Scope Creep
+
+  1. Unrequested Outer Envelope on Attachment Metadata:
+      • Spec Quote: api-spec.md:123: 200: { "id", "ticketId", "filename", "mimeType", "sizeBytes", "uploadedAt", "removedAt", "removedReason" }
+      • Finding: In attachments.ts:86-88, GET /api/attachments/:id wraps the metadata payload in an unrequested { "attachment": { ... } } object
+      rather than returning the metadata object at the root.
+  2. Duplicated Ticket Header Summary:
+      • Spec Quote: ui-spec.md:121-124: "Read-only ticket info grouped in cards, all values readonly-shaded: System group (Number, Date, Status
+      badge, Requester) | Classification ... | Description ... | meta footer ..."
+      • Finding: In RequesterTicketDetail.tsx:157-166, an extra header card banner duplicates Ticket Number, Status badge, Ticket Date, and
+      Requester directly above the System group card that contains identical fields.
+
+
+  ### (c) Incorrect Implementation
+
+  1. GET Ticket Detail Payload Shape Discrepancy:
+      • Spec Quote: api-spec.md:104: 200: ticket shape as POST response plus "attachments" array...
+      • Finding: POST /api/tickets specifies systemId and nested requester: { id, name } (api-spec.md lines 58-59), whereas GET /api/tickets/:id in
+      tickets.ts:622-627 returns flattened fields (relatedSystemId, relatedSystemName, requesterId, requesterName), breaking shape parity.
+```
+
+---
+
+## Prompt 45 — Address Review Findings on Tokens, Live Regions, Upload Handlers, and Canonical Payloads (2026-09-03)
+
+**Outcome:** Fixed conflicting read-only shading in Ticket Detail Description container by removing `.bg-white` and relying on `.zg-readonly-panel`, added `.badge-zen-error` design token, added `title="Close"` tooltip to modal close button, reused centralized `validateFile` in `AttachmentSection.tsx`, consolidated upload error and validation handling into shared helpers (`handleMulterError`, `isValidAttachmentFile`) in `tickets.ts`, added `aria-live="polite"` to status messages, unwrapped `POST /api/tickets/:id/attachments` 201 response, and standardized `TicketDetail` to canonical POST-parity domain model.
+
+**Prompt (verbatim):**
+
+```text
+/implement ## Standards
+  ### Hard Violations (Documented Standards)
+  1. Conflicting Read-Only Shading (ui-spec.md:17):
+      • Location: RequesterTicketDetail.tsx:230-236
+      • Violation: The Description container combines className="... bg-white ..." with style={{ backgroundColor: "var(--zg-readonly-field)" }}.
+      Bootstrap’s .bg-white rule carries !important, overriding the inline token and preventing the field from rendering with the required #EEF3EF
+      gray-green read-only shading.
+  2. Non-Standard Badge Token (ui-spec.md:18):
+      • Location: AttachmentSection.tsx:381-383
+      • Violation: Uses Bootstrap's bg-danger (#dc3545) for the invalid state badge instead of Zen Green error token #B3261E (var(--zg-error)).
+  3. Icon-Only Control Missing Tooltip (ui-spec.md:136):
+      • Location: AttachmentSection.tsx:494-501
+      • Violation: The modal close button <button className="btn-close" aria-label="Close" /> provides an aria-label but omits a title tooltip
+      ("icon-only controls carry aria-label AND tooltip").
+
+
+  ### Judgement Calls (Baseline Smells)
+  1. Duplicated Code (File validation & limits):
+      • Location: AttachmentSection.tsx:5-6
+      • Re-implements file size and extension checks rather than reusing validation.ts:55-69 and shared constants from client/src/utils/validation.
+      ts.
+  2. Duplicated Code (Upload handling boilerplate):
+      • Location: tickets.ts:654-680
+      • Multer error handling (LIMIT_FILE_SIZE, VALIDATION_FAILED) and ALLOWED_MIME_TYPES validation in POST /:id/attachments duplicate existing
+      logic from POST /api/tickets (lines 454–480, 500–510).
+  3. Data Clumps / Speculative Generality (Property Aliasing):
+      • Location: ticket.ts:37-60 & tickets.ts:622-630
+      • Aliased pairs (systemId/relatedSystemId, systemName/relatedSystemName, requester/requesterName) are bundled together across interfaces and
+      endpoint responses rather than standardizing on a single domain model structure.
+  ──────
+  ## Spec
+
+  ### (a) Missing or Partial Requirements
+
+  1. Live Region Status Announcements:
+      • Spec Quote: ui-spec.md:137: "status messages announced politely (live region)"
+      • Finding: In AttachmentSection.tsx, dynamic error/status alerts (staged-error-message, unavailable-state, and dialog errors) lack aria-
+      live="polite" containers for accessibility.
+  ### (b) Behaviour Not Asked For (Scope Creep)
+  1. Denormalized & Alias Fields in Ticket Detail Response:
+      • Spec Quote: api-spec.md:104: "200: ticket shape as POST response plus "attachments" array where each item includes {id, filename, mimeType,
+      sizeBytes, uploadedAt, removedAt: null | ts, removedReason: null | string}."
+      • Finding: In tickets.ts:616-639, GET /api/tickets/:id returns redundant convenience aliases and timestamps (categoryName, systemName,
+      relatedSystemId, relatedSystemName, requesterId, requesterName, createdAt, updatedAt) beyond the canonical POST /api/tickets response shape
+      (api-spec.md:56-60).
+  2. Wrapped Envelope on Attachment Upload:
+      • Spec Quote: api-spec.md:114: "- 201: attachment metadata object."
+      • Finding: In tickets.ts:771-773, POST /api/tickets/:id/attachments wraps the response in { attachment: ... } rather than returning the root
+      metadata object directly (in contrast to GET /api/attachments/:id).
+
+
+  ### (c) Requirements Implemented but Look Wrong
+
+  • None Identified: Core Issue #20 requirements are fully implemented and verified by tests:
+      • Strict ownership access control returning 403 on cross-requester access (specification.md:94, specification.md:202), 401 on missing auth
+      (specification.md:114), and 404 on absent entities.
+      • Maximum 5 active attachments cap enforced with 409 LIMIT_REACHED and UI button disablement (specification.md:102, specification.md:214).
+      • Byte-stream download blocking returning 410 on soft-removed items (specification.md:67, specification.md:106, specification.md:218).
+      • Soft removal requiring mandatory 1–300 character trimmed reason with Escape key and focus-trapped confirmation modal (specification.md:68,
+      specification.md:107, specification.md:220).
+      • All 5 attachment row states (active, uploading with spinner, invalid with inline message/dismiss, removed with audit caption, and
+      unavailable with retry) conform to ui-spec.md:128-130.
+      • Ticket detail layout renders read-only fields with preserved whitespace and two-column layout on tablet viewports (specification.md:65,
+      specification.md:241, specification.md:243, ui-spec.md:145).
+```
+
+---
+
+## Prompt 46 — Fix Meta Footer Timestamps, Focus Ring, Invalid Row Markup, and Requester Switching (2026-09-03)
+
+**Outcome:** Rendered `Created:` and `Last Updated:` timestamps in Ticket Detail meta footer per `ui-spec.md:122-123`, corrected `.btn-zen-destructive` focus ring to `var(--zg-secondary)` outline per `ui-spec.md:32-33`, removed unauthorized `.badge-zen-error` in favor of inline error message on invalid staged rows per `ui-spec.md §9`, removed unused Prisma relations from `GET /api/tickets/:id`, reset `selectedTicketId` upon requester switch/clearing per `specification.md FR-03, BR-05, AC-18`, and prevented modal dismissal (Escape & close button) during in-flight attachment removal per `specification.md BR-18`.
+
+**Prompt (verbatim):**
+
+```text
+/implement ### (a) Documented Standards Violations (Hard Violations)
+  1. Missing Meta Footer Timestamps
+      • File: RequesterTicketDetail.tsx:247-249
+      • Standard: ui-spec.md:122-123 §9 ("meta footer (created/updated timestamps)")
+      • Violation: The card footer renders only Date: {formatDateTime(ticket.ticketDate)}. It omits both the createdAt and updatedAt timestamps
+      mandated by UI spec §9.
+  2. Destructive Button Focus Ring Color
+      • File: index.css:124-130
+      • Standard: ui-spec.md:32-33 §3 ("focus (2px secondary-green outline, offset 1px, never removed)")
+      • Violation: .btn-zen-destructive:focus-visible, .btn-zen-destructive:focus sets outline: 2px solid var(--zg-error) instead of the required
+      secondary-green outline (var(--zg-secondary)).
+  3. Unauthorized Badge Variant
+      • File: AttachmentSection.tsx:366-368 & index.css:182-186
+      • Standard: ui-spec.md:52-59 §4 & §9 ("States per row: ... invalid (message)")
+      • Violation: Introduces an undocumented badge-zen-error ("Invalid" badge) on invalid staged rows, whereas §4 defines a closed set of badge
+      tokens and §9 dictates that invalid rows show an inline message rather than a badge.  Requirements Missing or Partial
+
+  1. Missing Created/Updated Timestamps in Meta Footer
+      • Spec Quote: ui-spec.md:122-123: "meta footer (created/updated timestamps)"
+      • Finding: In RequesterTicketDetail.tsx:247-249, the meta footer only renders ticketDate. Both createdAt and updatedAt are omitted from the
+      UI and excluded from GET /api/tickets/:id in tickets.ts:623-638.
+
+  ──────
+  ### (b) Behaviour Not Asked For (Scope Creep)
+
+  1. Unused Prisma Relations Fetched in Ticket Detail
+      • Spec Quote: api-spec.md:104: "200: ticket shape as POST response plus "attachments" array..."
+      • Finding: In tickets.ts:579-580, prisma.ticket.findUnique queries category: { select: { name: true } } and system: { select: { name: true }
+      }, which are never serialized into the response payload.
+  2. Unspecified Status Badge for Invalid Staged Attachments
+      • Spec Quote: ui-spec.md:128: "States per row: active | uploading (busy) | invalid (message) | removed (badge Removed, strikethrough, actions
+      disabled, reason tooltip/caption) | unavailable (download failed - retry)."
+      • Finding: In AttachmentSection.tsx:366-368 and index.css:182-186, an extra "Invalid" badge (.badge-zen-error) was introduced, whereas the
+      specification dictates an inline message for invalid rows.
+
+  ──────
+  ### (c) Requirements Implemented but Look Wrong
+
+  1. Ticket Detail State Persists Across Requester Switch
+      • Spec Quote: specification.md:54: "FR-03 A Change Requester action clears context-bound data and returns to Selection; switching reloads all
+      requester-specific data." (also BR-05, AC-18)
+      • Finding: In App.tsx:13-35, selectedTicketId is not reset when selectedRequester changes or is cleared. Switching to another requester
+      immediately attempts to fetch the previous requester's ticket, causing an unexpected 403 Forbidden error screen instead of returning to
+      MyTickets.
+  2. Modal Close & Escape Allowed During In-Flight Removal
+      • Spec Quote: specification.md:107: "BR-18 Duplicate-submission prevention: while a create/add/remove request is in flight the triggering
+      control is busy-disabled; further submits are impossible from the UI."
+      • Finding: In AttachmentSection.tsx:57-59, the modal header close button and the Escape key listener remain active while isRemoving is in
+      flight, allowing the user to dismiss the modal mid-flight and immediately re-trigger removal.
+```
+
+---
+
+## Prompt 47 — Fix Attachment Link Tokens, Simplify Lookups, and Extract Shared Ownership & Utility Helpers (2026-09-03)
+
+**Outcome:** Styled active attachment filename button using `.zg-action-link` (`var(--zg-secondary)` / `#0B7A46`) per `ui-spec.md:10`, pruned vestigial casts for category/system names in `RequesterTicketDetail.tsx`, removed deprecated `data.attachment` response wrapper fallback in `AttachmentSection.tsx`, extracted shared `parsePositiveIntParam` and `serializeAttachment` into `server/src/utils/attachment.ts` decoupling routes, and introduced shared `getOwnedTicket` helper in `tickets.ts` unifying ticket lookup and ownership enforcement.
+
+**Prompt (verbatim):**
+
+```text
+/implement ### (a) Documented Standards Violations (Hard Violations)
+
+  1. Active Attachment Link Color Token Mismatch
+      • File: AttachmentSection.tsx:425-433
+      • Standard: ui-spec.md:10 (secondary-green | #0B7A46 | active tabs, focus accents, links, hover states)
+      • Violation: The active attachment filename button uses class text-zen-primary (#006B3C) instead of the documented link token secondary-green
+      (#0B7A46 / .zg-action-link).
+
+  ──────
+  ### (b) Baseline Smells (Judgement Calls)
+  1. Speculative Generality (Vestigial Property Checking)
+      • File: RequesterTicketDetail.tsx:142-151
+      • Hunk:
+        const categoryDisplayName = categories.find((c) => c.id === ticket.categoryId)?.name ||
+          (ticket as unknown as { categoryName?: string }).categoryName || "Unknown";
+        const systemDisplayName = systems.find((s) => s.id === ticket.systemId)?.name ||
+          (ticket as unknown as { relatedSystemName?: string }).relatedSystemName || "Unknown";
+      • Judgement Call: Casting ticket through unknown to read categoryName and relatedSystemName anticipates properties already pruned from the
+      backend response. The reference data arrays already resolve categoryId and systemId.
+  2. Speculative Generality (Deprecated Response Envelope Fallback)
+      • File: AttachmentSection.tsx:165
+      • Hunk:
+        const uploadedAtt: AttachmentMetadata = data.id ? data : data.attachment;
+
+      • Judgement Call: The data.attachment fallback handles an obsolete nested wrapper; tickets.ts:756 now returns the canonical root metadata
+      object directly.
+  3. Duplicated Code (Ticket Ownership Validation)
+      • File: tickets.ts:590-608 and tickets.ts:701-719
+      • Hunk:
+        const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, ... });
+        if (!ticket) return res.status(404).json({ error: { code: "NOT_FOUND", message: "Ticket not found" } });
+        if (ticket.requesterId !== requester.id) return res.status(403).json({ error: { code: "FORBIDDEN", message: "Access denied" } });
+      • Judgement Call: Repeated in GET /:id and POST /:id/attachments. Extracting a shared getOwnedTicket helper would unify ownership checks,
+      mirroring getOwnedAttachment in attachments.ts:14-44.
+  4. Middle Man / Cross-Route Coupling
+      • File: tickets.ts:6
+      • Hunk:
+        import { parsePositiveIntParam, serializeAttachment } from "./attachments";
+
+      • Judgement Call: Route module tickets.ts imports parsing and serialization helpers from sibling route attachments.ts. Placing shared logic
+      in a shared utility module (e.g. server/src/utils/) avoids inter-route module coupling.
+```
+
+---
+
+## Prompt 48 — Open Pull Request for Issue #20 (2026-09-03)
+
+**Outcome:** Created Pull Request for Issue #20 targeting `lab2-staging` with comprehensive description covering features implemented, standards compliance, architecture changes, and detailed test instructions ("How to test").
+
+**Prompt (verbatim):**
+
+```text
+let open the pr
+```
+
+---
+
+## Prompt 49 — Update Reviewer Record with Partner Review on PR #22 (2026-09-03)
+
+**Outcome:** Updated `docs/lab-02/reviewer.md` with PR #22 from partner repository (`https://github.com/YummieGG/toktickit/pull/22`), recording the `Changes requested` review with detailed findings regarding foreign key validation, ticket number generation race conditions, and response payload parity.
+
+**Prompt (verbatim):**
+
+```text
+dont forgot to update the reviewer.md
+```
+
+---
+
+<!-- Prompts 50..n appended during the sprint -->
 
 ## My Reflection
 
 *(To be completed at sprint end.)*
+
+
+
+
+
+
