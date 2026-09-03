@@ -38,7 +38,3 @@ plan.md
 
 # Local-only agent review notes (never commit)
 .reviews/
-
-.agents/
-
-opencode.json
