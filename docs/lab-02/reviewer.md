@@ -14,6 +14,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/27 | feature/lab2-3-requester-context | Approved |
 | https://github.com/Snnn3/TokTickIT/pull/28 | feature/lab2-4-create-ticket | Approved |
 | https://github.com/Snnn3/TokTickIT/pull/29 | feature/lab2-5-my-tickets | Approved |
+| https://github.com/Snnn3/TokTickIT/pull/30 | feature/lab2-6-detail-attachments | Pending Review |
 
 ### Reviewer comments I received and how I responded
 
