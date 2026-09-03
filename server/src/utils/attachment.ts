@@ -1,5 +1,6 @@
-export function parsePositiveIntParam(paramValue: string | undefined): number | null {
-  const trimmed = String(paramValue || "").trim();
+export function parsePositiveIntParam(paramValue: string | string[] | undefined): number | null {
+  const raw = Array.isArray(paramValue) ? paramValue[0] : paramValue;
+  const trimmed = String(raw || "").trim();
   if (!/^\d+$/.test(trimmed)) return null;
   const id = parseInt(trimmed, 10);
   return id > 0 ? id : null;

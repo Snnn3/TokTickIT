@@ -565,15 +565,14 @@ ticketsRouter.post(
 /**
  * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
  */
-async function getOwnedTicket<T extends { include?: Prisma.TicketInclude; select?: Prisma.TicketSelect }>(
+async function getOwnedTicket<T extends Prisma.TicketDefaultArgs>(
   ticketId: number,
   requesterId: number,
-  options?: T,
+  options?: Prisma.Exact<T, Prisma.TicketDefaultArgs>,
 ) {
   const ticket = await prisma.ticket.findUnique({
     where: { id: ticketId },
-    ...(options?.include ? { include: options.include } : {}),
-    ...(options?.select ? { select: options.select } : {}),
+    ...(options as any),
   });
 
   if (!ticket) {
@@ -584,7 +583,7 @@ async function getOwnedTicket<T extends { include?: Prisma.TicketInclude; select
     return { status: 403 as const, error: { code: "FORBIDDEN", message: "Access denied" }, ticket: null };
   }
 
-  return { status: 200 as const, error: null, ticket };
+  return { status: 200 as const, error: null, ticket: ticket as Prisma.TicketGetPayload<T> };
 }
 
 // GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
