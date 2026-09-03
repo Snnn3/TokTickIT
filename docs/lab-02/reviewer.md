@@ -46,6 +46,7 @@
 | https://github.com/YummieGG/toktickit/pull/19 | docs/lab2-specification | Approved |
 | https://github.com/YummieGG/toktickit/pull/20 | feature/lab2-database | Approved |
 | https://github.com/YummieGG/toktickit/pull/21 | feature/lab2-3-requester-context | Approved |
+| https://github.com/YummieGG/toktickit/pull/22 | feature/lab2-4-ticket-creation | Changes requested |
 
 ### My comments and partner's responses
 
@@ -60,3 +61,14 @@
 **PR #21 — feature/lab2-3-requester-context**
 - **My comment:** "Great job! The Development Requester Selection and App Shell:\n- `GET /api/requesters` returns active requesters sorted alphabetically.\n- Session persists in `sessionStorage` and clears properly on \"Change Requester\".\n- UI adheres to Zen Green `#006B3C` styling and includes the mandatory test-mode warning banner.\n- Both server API tests and client component tests pass.\nLGTM!."
 - **Partner's response:** *(Merged upon approval)*
+
+**PR #22 — feature/lab2-4-ticket-creation**
+- **My comment:** "Great progress on implementing the Create Ticket fullstack slice! Before merging into lab2-staging, there are a few blocking contract & concurrency items to address:
+  1. Foreign Key Existence & isActive Validation (BR-05, BR-24, BR-25): Verify existence and isActive: true before inserting to avoid 500 DB constraint errors.
+  2. Race Hazard in Ticket Number Generation (BR-01): Atomic sequence / transaction needed for sequential ticket numbers.
+  3. API Response Contract Mismatch (POST /api/tickets): Response must include expanded category, relatedSystem, and requester objects.
+  4. Hardcoded localhost:3000 API origin in CreateTicket.tsx: Use relative endpoints / Vite proxy.
+  5. UI/Spec refinements: Field-level error formats, Zen Green focus rings/badges, and submission busy states.
+  Verdict: Changes requested."
+- **Partner's response:** *(Pending partner updates)*
+
