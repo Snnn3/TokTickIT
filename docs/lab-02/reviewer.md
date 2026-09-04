@@ -14,7 +14,8 @@
 | https://github.com/Snnn3/TokTickIT/pull/27 | feature/lab2-3-requester-context | Approved |
 | https://github.com/Snnn3/TokTickIT/pull/28 | feature/lab2-4-create-ticket | Approved |
 | https://github.com/Snnn3/TokTickIT/pull/29 | feature/lab2-5-my-tickets | Approved |
-| https://github.com/Snnn3/TokTickIT/pull/30 | feature/lab2-6-detail-attachments | Pending Review |
+| https://github.com/Snnn3/TokTickIT/pull/30 | feature/lab2-6-detail-attachments | Approved |
+| https://github.com/Snnn3/TokTickIT/pull/31 | feature/lab2-7-e2e-visual | Pending Review |
 
 ### Reviewer comments I received and how I responded
 
@@ -37,6 +38,10 @@
 **PR #29 — feature/lab2-5-my-tickets**
 - **Reviewer comment:** "Great job on this one! The API query validation is solid, and the 300ms debounce on the search input is a great UX touch. I also love how you separated the Empty state from the No-results state perfectly. Approved!"
 - **How I responded:** "Thank you for aproving and merging my PR."
+
+**PR #30 — feature/lab2-6-detail-attachments**
+- **Reviewer comment:** "Great work on Issue #20! The read-only Ticket Detail layout perfectly adheres to the Zen Green design system and spec. The attachment lifecycle is robust, cleanly handling all 5 row states along with the soft-removal modal dialog. API security scoping, error handling, and status codes (403, 409, 410) are spot on. Verified that the TypeScript build fix resolved all compiler errors, and all 76 test cases (server & client) pass cleanly."
+- **How I responded:** "Thank you for the thorough review and approval! Really appreciate you spotting the TypeScript build issue earlier and verifying the test suite."
 ---
 
 ## Pull Requests I reviewed for my partner

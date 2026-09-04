@@ -229,7 +229,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
             <div className="row g-3 align-items-center">
               <div className="col-12 col-md-6 border-end-md">
                 <div className="small text-muted mb-1">Official Ticket Number</div>
-                <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }}>
+                <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }} data-testid="success-ticket-number">
                   {successResult.number}
                 </div>
               </div>

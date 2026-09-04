@@ -8,10 +8,12 @@
     "test": "npm test --prefix server && npm test --prefix client",
     "test:server": "npm test --prefix server",
     "test:client": "npm test --prefix client",
+    "test:e2e": "playwright test",
     "db:seed": "npm run db:seed --prefix server",
     "seed": "npm run seed --prefix server"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "concurrently": "^9.1.0"
   }
 }
