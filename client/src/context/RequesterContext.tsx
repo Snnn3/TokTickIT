@@ -1,10 +1,9 @@
-import { createContext, useContext, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
-import type { RequesterUser, RequesterContextType } from "../types/requester";
+import type { RequesterUser } from "../types/requester";
+import { RequesterContext, STORAGE_KEY } from "./requester-context";
 
-const STORAGE_KEY = "toktickit_selected_requester";
-
-const RequesterContext = createContext<RequesterContextType | undefined>(undefined);
+export { useRequester } from "./useRequester";
 
 export function RequesterProvider({ children }: { children: ReactNode }) {
   const [selectedRequester, setSelectedRequesterState] = useState<RequesterUser | null>(() => {
@@ -47,11 +46,3 @@ export function RequesterProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function useRequester(): RequesterContextType {
-  const context = useContext(RequesterContext);
-  if (!context) {
-    throw new Error("useRequester must be used within a RequesterProvider");
-  }
-  return context;
-}
