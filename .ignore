@@ -1,0 +1,4 @@
+# Re-include course material for opencode picker/search only.
+# Git still ignores material/ via .gitignore — this file changes nothing for git.
+!material/
+!material/**
