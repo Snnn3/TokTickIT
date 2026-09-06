@@ -103,4 +103,4 @@ let improve the plan to make it perfect. i will give this to another agent and s
 
 ## My Reflection
 
-*(To be completed at sprint end.)*
+In this lab I tried using agent skills (`/implement`, `/code-review`, grill skills) instead of plain prompting, and it worked better for me. Writing the plan, spec contract, and explicit instructions down let the agent work through Issues #16–#21 on its own branches with an implement → verify → review loop that caught real bugs early (e.g. the PR #30 build errors).

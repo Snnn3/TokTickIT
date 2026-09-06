@@ -172,7 +172,7 @@ Upload rules: jpeg/png/webp/pdf only, each max 5 MB, max 5 files per ticket; cre
 - My Tickets (search, category/priority/status filters, sort, pagination, empty vs no-results states)
 - Ticket Detail + Attachment section (read-only ticket card, add/download/soft-remove with reason)
 
-Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/{desktop,tablet,mobile}.png` (viewports 1366x768, 768x1024, 375x667); manual captures in `artifacts/lab-02/evidence/`.
+Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/{desktop,tablet,mobile}.png` (viewports 1366x768, 768x1024, 375x667); selector states in `artifacts/lab-02/screenshots/requester-selection/`; submission proofs (Parts 6/7/8) in `artifacts/lab-02/evidence/`.
 
 ### Test
 
@@ -182,6 +182,7 @@ cd server && npx vitest run tests/lab-02 # Lab 2 only: 31 tests, 6 files
 cd client && npm test                    # 42 tests, 11 files
 npx playwright install chromium          # first time only
 npx playwright test e2e/lab-02           # 3 tests (E-01, E-02, R-01 & E-03)
+npx playwright test e2e/evidence         # submission evidence captures (report figures)
 ```
 
 Seed precondition: rebuild the dev DB with `npx prisma migrate reset --force` plus `npm run db:seed` (from `server/`, container `toktickit-db` running) before API/E2E runs. Lab 1 `API-02.categories` fails only when this seed step is skipped, which is a documented precondition, not a code defect.

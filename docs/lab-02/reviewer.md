@@ -33,7 +33,6 @@
 
 **PR #28 — feature/lab2-4-create-ticket** (MERGED)
 - **Reviewer review (YummieGG, APPROVED, 2026-09-01):** "Great job! The implementation of ticket_number_seq within a database transaction is a very solid approach. The file upload validation rules (size, count, MIME types) and the UI states align perfectly with our specifications. Test coverage is also spot on. Looks great to me, Approved!"
-- **My comment:** *(No reply comment on GitHub — merged on approval.)*
 
 **PR #29 — feature/lab2-5-my-tickets** (MERGED)
 - **Reviewer review (YummieGG, APPROVED, 2026-09-01):** "Great job on this one! The API query validation is solid, and the 300ms debounce on the search input is a great UX touch. I also love how you separated the Empty state from the No-results state perfectly. Approved!"
@@ -57,7 +56,7 @@
 | https://github.com/YummieGG/toktickit/pull/19 | docs/lab2-specification | Approved |
 | https://github.com/YummieGG/toktickit/pull/20 | feature/lab2-database | Approved |
 | https://github.com/YummieGG/toktickit/pull/21 | feature/lab2-3-requester-context | Approved |
-| https://github.com/YummieGG/toktickit/pull/22 | feature/lab2-4-ticket-creation | Changes requested (R1–R3, still OPEN) |
+| https://github.com/YummieGG/toktickit/pull/22 | feature/lab2-4-ticket-creation | Approved (Round 5) — MERGED 2026-09-05 |
 
 ### My comments and partner's responses
 
@@ -73,7 +72,7 @@
 - **My review (Snnn3, APPROVED, 2026-09-01):** "Great job! The Development Requester Selection and App Shell: GET /api/requesters returns active requesters sorted alphabetically. Session persists in sessionStorage and clears properly on Change Requester. UI adheres to Zen Green #006B3C styling and includes the mandatory test-mode warning banner. Both server API tests and client component tests pass. LGTM!."
 - **Partner's comment (2026-09-02):** Quoted my review, then replied: "Thanks Bro."
 
-**PR #22 — feature/lab2-4-ticket-creation** (OPEN, all 4 Changes-requested rounds + all partner replies kept)
+**PR #22 — feature/lab2-4-ticket-creation** (MERGED 2026-09-05, all rounds + all partner replies kept)
 - **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-09-03):** Full blocking review — (1) FK existence & isActive validation (BR-05/BR-24/BR-25) returning 400 not 500; (2) ticket-number race hazard (BR-01), needs atomic sequence/transaction; (3) POST /api/tickets 201 must include expanded category/relatedSystem/requester; (4) hardcoded http://localhost:3000 → relative /api + Vite proxy; plus refinements: { error, details[] } envelope, #0B7A46 focus rings + Zen Green badge tokens, busy Submitting lock, View My Tickets + Create Another actions, selectable -- None -- system, desktop breakpoint. Verdict: Changes requested. (Full text on the PR thread.)
 - **Partner's comment Round 1 (2026-09-04):** Quoted my Round 1 review, then replied: addressed FK/isActive 400 checks, advisory-lock transaction, expanded 201 response, standardized error envelope, relative endpoints + proxy, Zen Green focus/badges, busy Submitting state, Create Another action, selectable None, col-lg-6 breakpoint. Server 10/10 + client 7/7 green, ready for re-review.
 - **My review Round 2 (Snnn3, CHANGES_REQUESTED, 2026-09-04):** "(1) Advisory Lock Error Swallowing in ticket-number.ts — empty catch around pg_advisory_xact_lock(888334) silently continues unlocked, re-introducing the BR-01 race; remove try/catch, mock $executeRaw in tests, name the constant. (2) Missing Loading State on master-data fetch — empty dropdowns submittable, violates ui-spec 7.2; add isLoading spinner/disabled. (3) Tablet Layout Regression — col-lg-6 collapses to 1 column at 768–991px, ui-spec 8 needs 2-col on tablet; restore col-md-6. Verdict: Changes requested." (Full text on the PR thread.)
@@ -81,4 +80,9 @@
 - **My review Round 3 (Snnn3, CHANGES_REQUESTED, 2026-09-04):** "Critical Spec & Implementation Findings — (1) Contract Over-Exposure in GET /api/related-systems (server/src/routes/related-systems.ts:9-13): api-spec line 56 specifies only { id, name } items, implementation returns extra fields; plus further contract/spec discrepancies — see review thread (body as submitted, 633 chars). Verdict: Changes requested."
 - **Partner's comment Round 3 (YummieGG, 2026-09-04):** "Applied the suggested changes. The API now returns only id and name, and all unit tests have been updated accordingly. Thanks!"
 - **My review Round 4 (Snnn3, CHANGES_REQUESTED, 2026-09-04):** "Critical — Spec Failure: Ticket Number Generation & Concurrency — (1) Race/Collision Risk: parses lastTicket.ticketNumber from findFirst(orderBy id desc) instead of MAX(ticketNumber), collides on deleted/seeded-out-of-order rows; (2) Unhandled Unique Violation: $transaction lets Prisma P2002 bubble to catch-500, violating BR-01 (must never 500 on valid submit); (3) Unsafe Type Bypassing: dbClient: any hides that $executeRaw + findFirst must exist. Fix: sequence table / SELECT FOR UPDATE / nextval(), or catch P2002 and retry 2–3x; type dbClient as Prisma.TransactionClient. Verdict: Changes requested." (Full text on the PR thread.)
-- **Partner's response Round 4:** *(Pending — PR still OPEN as of 2026-09-04.)*
+- **Partner's comment follow-up 1 (YummieGG, 2026-09-05):** Shipped the missing attachment feature per Issue #14 (picker with format/size caption, 5 MB + type client checks, multipart submit), forced priority selection, fixed TK-9999 sequencing via length-ordered SQL + regex, added docker/env setup and new tests.
+- **Partner's comment follow-up 2 (YummieGG, 2026-09-05):** Resolved 5 spec-audit points with tests: spec badge tokens, green success banner, button busy style, MIME-type validation incl. spoofed files, and fs-writes moved outside the DB transaction plus a safe ticket-number fallback sort.
+- **Partner's comment follow-up 3 (YummieGG, 2026-09-05):** Tightened validation (positive-int IDs, `attachments`-only multipart, empty-MIME rejection), store-files-before-metadata with DB-failure cleanup, kept advisory-lock transaction, improved mixed-batch UX and error a11y, plus a how-to-test list.
+- **My review Round 5 (Snnn3, APPROVED, 2026-09-05):** "### PR Review: Approved! Great work!! All the critical items from the previous review iterations have been successfully resolved: - **Concurrency & Ticket Generation (BR-01)**: Advisory transaction lock (`pg_advisory_xact_lock`) and the 3-attempt `P2002` retry loop are properly implemented. - **Foreign Key & `isActive` Validation (BR-05, BR-24, BR-25)**: Accurately validates `requesterId`, `categoryId`, and optional `relatedSystemId`, returning client-friendly `400` errors with field details. - **API Contract Alignment**: `POST /api/tickets` 201 response includes expanded `category`, `relatedSystem`, `requester`, and `attachments`. - **Multipart Attachments**: Proper limits (max 5 files, 5MB, allowed formats) and atomic storage handling. - **Zen Green UI**: Reusable components, focus rings, disabled busy state, and responsive layout meet the specification. - **Test Suite**: All 30 server tests and 27 client tests pass without errors. LGTM!"
+- **Partner's comment Round 5 (YummieGG, 2026-09-05):** Quoted my Round 5 approval, then replied: "Thanks sososososososo much bros"
+- **Status:** PR #22 MERGED 2026-09-05 (verified via `gh pr view --repo YummieGG/toktickit`).
