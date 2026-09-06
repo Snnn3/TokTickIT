@@ -16,6 +16,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/29 | feature/lab2-5-my-tickets | Approved |
 | https://github.com/Snnn3/TokTickIT/pull/30 | feature/lab2-6-detail-attachments | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/31 | feature/lab2-7-e2e-visual | Approved |
+| https://github.com/Snnn3/TokTickIT/pull/33 | chore/32-hygiene-cleanup | OPEN (awaiting review) |
 
 ### Reviewer comments I received and how I responded
 
@@ -47,6 +48,8 @@
 **PR #31 — feature/lab2-7-e2e-visual** (MERGED)
 - **Reviewer review (YummieGG, APPROVED, 2026-09-04):** "Excellent work! The Playwright E2E suite (E-01, E-02, R-01 & E-03) runs cleanly and covers the happy path, multi-requester isolation, and attachment lifecycles thoroughly. Responsive layouts and visual evidence screenshots are complete across all 3 viewports with zero horizontal scrolling. Great refactoring on server/src/utils/ownership.ts for clean, DRY authorization handling. Verified that TypeScript builds, linter, unit/API tests (76 passed), and E2E tests all pass 100%. Verdict: Approved! LGTM"
 - **My comment (2026-09-04):** Quoted the review, then replied: "Thanks for merging and review."
+
+**PR #33 — chore/32-hygiene-cleanup** (OPEN, awaiting partner review)
 ---
 
 ## Pull Requests I reviewed for my partner
