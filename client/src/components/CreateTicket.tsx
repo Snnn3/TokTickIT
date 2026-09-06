@@ -298,7 +298,7 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={
                     successResult
                       ? successResult.number
-                      : `TKT-${new Date().getFullYear()}-XXXXX`
+                      : "(Auto-generated on submit)"
                   }
                   readOnly
                 />

@@ -38,3 +38,7 @@ plan.md
 
 # Local-only agent review notes (never commit)
 .reviews/
+
+# Local-only agent scaffolding (never commit)
+.agents/
+opencode.json
