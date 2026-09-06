@@ -28,3 +28,17 @@ server/prisma/*.db
 
 # Course reference PDFs
 *.pdf
+/material
+
+# Playwright output
+test-results/
+playwright-report/
+
+plan.md
+
+# Local-only agent review notes (never commit)
+.reviews/
+
+# Local-only agent scaffolding (never commit)
+.agents/
+opencode.json

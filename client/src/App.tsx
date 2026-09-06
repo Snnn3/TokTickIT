@@ -1,75 +1,75 @@
-import { useState } from 'react'
+import { useState, useEffect } from "react";
+import { RequesterProvider, useRequester } from "./context/RequesterContext";
+import { RequesterSelection } from "./components/RequesterSelection";
+import { AppHeader } from "./components/AppHeader";
+import type { TabType } from "./components/AppHeader";
+import { CreateTicket } from "./components/CreateTicket";
+import { MyTickets } from "./components/MyTickets";
+import { RequesterTicketDetail } from "./components/RequesterTicketDetail";
 
-type Category = { id: number; name: string }
-type SystemState = 'idle' | 'loading' | 'online' | 'offline'
+function MainApp() {
+  const { selectedRequester } = useRequester();
+  const [activeTab, setActiveTab] = useState<TabType>("my-tickets");
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
 
-function App() {
-  const [systemState, setSystemState] = useState<SystemState>('idle')
-  const [categories, setCategories] = useState<Category[]>([])
-  const [error, setError] = useState<string | null>(null)
+  // Clear context-bound data when requester changes or returns to selection [FR-03, BR-05, AC-18]
+  useEffect(() => {
+    setSelectedTicketId(null);
+    setActiveTab("my-tickets");
+  }, [selectedRequester?.id]);
 
-  async function checkSystem() {
-    setSystemState('loading')
-    setError(null)
-    setCategories([])
-    try {
-      const [healthRes, categoriesRes] = await Promise.all([
-        fetch('/api/health'),
-        fetch('/api/categories'),
-      ])
-      if (!healthRes.ok || !categoriesRes.ok) throw new Error(`HTTP error`)
-      const health = await healthRes.json()
-      if (health.status !== 'ok') throw new Error('API not ok')
-      setCategories(await categoriesRes.json())
-      setSystemState('online')
-    } catch {
-      setSystemState('offline')
-      setError('Unable to connect to TokTickIT API')
-    }
+  if (!selectedRequester) {
+    return <RequesterSelection />;
   }
 
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    setSelectedTicketId(null);
+  };
+
   return (
-    <div className="min-vh-100 d-flex flex-column">
-      <nav className="navbar navbar-dark bg-primary">
-        <div className="container">
-          <span className="navbar-brand fw-bold">TokTickIT IT Service Desk</span>
-        </div>
-      </nav>
-      <main className="container py-4 flex-grow-1">
-        <h1 className="h3">TokTickIT IT Service Desk</h1>
-        <button type="button" className="btn btn-primary" onClick={checkSystem}>
-          Check System
-        </button>
-
-        {systemState === 'loading' && (
-          <p className="mt-3 text-body-secondary">&#8987; loading&hellip;</p>
+    <div className="min-vh-100 d-flex flex-column bg-light">
+      <AppHeader activeTab={activeTab} onTabChange={handleTabChange} />
+      <main className="container py-4 flex-grow-1" style={{ maxWidth: "1100px" }}>
+        {activeTab === "my-tickets" && (
+          selectedTicketId ? (
+            <RequesterTicketDetail
+              ticketId={selectedTicketId}
+              requesterId={selectedRequester.id}
+              onBack={() => setSelectedTicketId(null)}
+            />
+          ) : (
+            <MyTickets
+              onCreateTicket={() => {
+                setActiveTab("create-ticket");
+                setSelectedTicketId(null);
+              }}
+              onSelectTicket={(id) => setSelectedTicketId(id)}
+            />
+          )
         )}
 
-        {systemState === 'online' && (
-          <div className="mt-3">
-            <p>
-              System Status: <span className="badge text-bg-success">Online</span>
-            </p>
-            <p className="mb-1">Supported Request Categories</p>
-            <ol className="mb-0">
-              {categories.map((category) => (
-                <li key={category.id}>{category.name}</li>
-              ))}
-            </ol>
-          </div>
-        )}
-
-        {systemState === 'offline' && (
-          <div className="mt-3">
-            <p>
-              System Status: <span className="badge text-bg-danger">Offline</span>
-            </p>
-            {error && <p className="alert alert-danger">{error}</p>}
-          </div>
+        {activeTab === "create-ticket" && (
+          <CreateTicket
+            onSuccessNavigate={() => {
+              setActiveTab("my-tickets");
+              setSelectedTicketId(null);
+            }}
+            onCancel={() => {
+              setActiveTab("my-tickets");
+              setSelectedTicketId(null);
+            }}
+          />
         )}
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <RequesterProvider>
+      <MainApp />
+    </RequesterProvider>
+  );
+}
