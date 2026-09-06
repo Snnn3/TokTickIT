@@ -116,7 +116,25 @@ test("selector state captures for report", async ({ page }) => {
   await shot("06-failure-state.png");
   await page.unroute("**/api/requesters");
 
-  // ---- 07 responsive: initial + shell at desktop/tablet/mobile ----
+  // ---- 07 keyboard-focus ring on dropdown (AC-24) ----
+  await gotoFreshSelector(page);
+  await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
+  await page.locator("#requester-select").focus();
+  await expect(page.locator("#requester-select")).toBeFocused();
+  await shot("07-focus-ring-dropdown.png");
+
+  // ---- 08 open-dropdown ordering proof (native popup never paints headless,
+  // so expand the select into a listbox to show active name-asc ordering) ----
+  await page.evaluate(() => {
+    const sel = document.querySelector("#requester-select") as HTMLSelectElement;
+    sel.size = sel.options.length;
+  });
+  const optionTexts = await page.locator("#requester-select option").allInnerTexts();
+  const names = optionTexts.slice(1);
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+  await shot("08-dropdown-open-ordering.png");
+
+  // ---- 09 responsive: initial + shell at desktop/tablet/mobile ----
   const viewports = [
     { name: "desktop", width: 1366, height: 768 },
     { name: "tablet", width: 768, height: 1024 },

@@ -304,4 +304,14 @@ test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, 
     await forbidRes.json(),
     "part8-403-cross-requester-proof.png",
   );
+
+  // UI proof: the API-added attachment renders as a live row in Ticket Detail.
+  await selectRequester(page, label);
+  await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+  await page.locator("#ticket-search").fill(ticket.number);
+  await expect(page.getByRole("button", { name: ticket.number }).first()).toBeVisible({ timeout: 15000 });
+  await page.getByRole("button", { name: ticket.number }).first().click();
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText("part8-proof.pdf")).toBeVisible();
+  await page.screenshot({ path: path.join(OUT, "part8-added-attachment-row.png") });
 });

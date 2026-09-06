@@ -125,16 +125,14 @@ npx playwright test e2e/lab-02
 
 ## 6. Final Results
 
-Run date: 2026-09-04 ~21:15–21:30 +07. Code under test: `chore/32-hygiene-cleanup @ 6ed51b8`
-(= `origin/lab2-staging @ f010deb` + local issue-#32 hygiene commit `86ca243`, plus uncommitted
-docs edits). No skipped, disabled, focused, or commented-out tests (grep for
+Run date: 2026-09-06 (fresh re-run; first run 2026-09-04 ~21:15–21:30 +07). Code under test: `chore/32-hygiene-cleanup @ c34702e` (= `origin/lab2-staging @ f010deb` + local commits through `c34702e`, plus uncommitted `e2e/evidence/*` additions only — no app-code changes since the 09-04 run). No skipped, disabled, focused, or commented-out tests (grep for
 `.skip(`/`.only(`/`xit(`/`xdescribe(`/`.fixme` returns zero matches).
 
 | Suite | Command | Result |
 |---|---|---|
-| Server unit + API (9 files) | `npm test --prefix server` | 34/34 passed (~4s) |
-| Client component/style (11 files) | `npm test --prefix client` | 42/42 passed (~12s; pre-existing jsdom `scrollTo` warnings only) |
-| Playwright E2E + responsive (chromium) | `npx playwright test e2e/lab-02` | 3/3 passed (8.8s: E-01 1.8s, E-02 2.3s, R-01 & E-03 3.5s); 9 screenshots regenerated under `artifacts/lab-02/screenshots/` |
+| Server unit + API (9 files) | `npm test --prefix server` | 34/34 passed (~8s, re-run 2026-09-06 on freshly seeded DB) |
+| Client component/style (11 files) | `npm test --prefix client` | 42/42 passed (re-run 2026-09-06; pre-existing jsdom `scrollTo` warnings only) |
+| Playwright E2E + responsive (chromium) | `npx playwright test e2e/lab-02` | 3/3 passed (16.3s re-run 2026-09-06: E-01 2.5s, E-02 2.5s, R-01 & E-03 4.4s); 9 screenshots regenerated under `artifacts/lab-02/screenshots/` |
 
 Seeded dev DB precondition (§5): docker `toktickit-db` was rebuilt with
 `prisma migrate reset --force` (repo's 3 migrations) + `npm run db:seed`
@@ -160,6 +158,10 @@ Honesty notes:
   alternative documented if time allows.
 - Route-abort alternative implemented: `e2e/evidence/evidence-captures.spec.ts`
   (`npx playwright test e2e/evidence`) captures the backend-down banner with preserved
-  values plus 14 other annotated states under `artifacts/lab-02/evidence/` (not part of
-  the graded `e2e/lab-02` suite).
+  values plus 14 other annotated states under `artifacts/lab-02/evidence/`; plus
+  `e2e/evidence/selector-captures.spec.ts` (14 selector state/responsive shots under
+  `artifacts/lab-02/screenshots/requester-selection/`) and
+  `e2e/evidence/report-gaps.spec.ts` (13 Part 6/7/8 proofs under
+  `artifacts/lab-02/evidence/part*`) — all green 2026-09-06, none part of
+  the graded `e2e/lab-02` suite.
 - Real authentication flows out of scope until Lab 3 (BR-25 evolution point).
