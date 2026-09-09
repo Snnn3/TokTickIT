@@ -11,12 +11,15 @@
 
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-| TBD | feature/lab3-1-contract | TBD |
-| TBD | feature/lab3-2-auth-foundation | TBD |
-| TBD | feature/lab3-3-staff-queue | TBD |
-| TBD | feature/lab3-4-staff-operations | TBD |
-| TBD | feature/lab3-5-user-management | TBD |
-| TBD | feature/lab3-6-e2e-visual | TBD |
+| PR #43 (closed unmerged) | feature/lab3-1-contract | Closed by author; superseded by the v1.1 contract PR below |
+| TBD | feature/lab3-1-contract (contract v1.1) | TBD |
+| TBD | feature/lab3-2-refactor | TBD |
+| TBD | feature/lab3-3-auth-foundation | TBD |
+| TBD | feature/lab3-4-requester-regression | TBD |
+| TBD | feature/lab3-5-staff-queue | TBD |
+| TBD | feature/lab3-6-staff-operations | TBD |
+| TBD | feature/lab3-7-user-management | TBD |
+| TBD | feature/lab3-8-e2e-visual | TBD |
 
 ### Reviewer comments I received and how I responded
 
