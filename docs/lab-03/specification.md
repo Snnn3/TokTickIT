@@ -1,12 +1,16 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: Approved contract for Sprint 3 | Version: 1.2 | Date: 2026-09-10
+Status: Approved contract for Sprint 3 | Version: 1.3 | Date: 2026-09-10
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder).
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
+
+**Identifier convention:** Lab 3 continues the FR sequence (FR-16 onward) but restarts BR and AC numbering at 01, so `BR-04` and `AC-17` name different rules in the two increments. Throughout the Lab 3 documents an unqualified `BR-nn` or `AC-nn` always means the Lab 3 rule; a Lab 2 rule is always written out as `Lab 2 BR-nn`.
 
 **Changes in v1.1** (resolving contradictions in the handout and gaps found in review): Administrator is now a superset of IT Staff (D2); `appearsResolved` boolean replaced by a clearable timestamp (D3); Requester may reopen their own Resolved ticket (D4); session invalidation via `tokenVersion` (D5); password complexity per the §8.1 mockup (D6); Resolution Summary required to resolve (D11); ticket filing opened to all roles with a self-service ban (D18); plus login throttling, CSRF posture, claim-auto-open, and the deactivation cascade.
 
 **Changes in v1.2** (addressing peer-review findings F1–F11 against v1.1): Public Comments moved off the `/api/staff/` prefix so a requester of any role can reach them; BR-25 narrowed to mutations so the staff detail of a self-filed ticket still loads; BR-28 added to retire — rather than skip — the Lab 2 tests that assert removed behaviour; BR-10 and BR-24 reconciled over terminal tickets; password trim made symmetric between set and verify; the untested server-side `confirm` flag dropped; a reset seam specified for the login throttle; AC-27 added so FR-19 is actually verified; the seeded-password source made single and authoritative; email case-normalisation added to the migration; and BR-19 given real content instead of a placeholder.
+
+**Changes in v1.3** (addressing second-round review findings F12–F24 against v1.2): the v1.2 BR-25 wording was itself wrong — "mutating endpoints only" would have let a staff member read the Internal Notes on a Ticket they filed, so the exemption is now scoped to the staff-detail read alone. The BR-28 retirement list was incomplete and is replaced by a three-group disposition (retired / adapted / unchanged) covering every Lab 2 file. A `GET /api/staff/assignees` endpoint is added, without which IT Staff had no way to populate the Owner select, since the user list is Administrator-only. Case-insensitive email uniqueness is now enforced on the write paths rather than only during migration. `AUTH_REQUIRED` is pinned as the unauthenticated error code so the adapted Lab 2 suites keep passing. `ownedOpenTicketCount` is added to the user list so the deactivation dialog can name a count before the change. The stray `confirm?` field is removed from the §8 summary, the queue index is corrected to match the unfiltered default, the Requester landing route is defined, and an identifier convention resolves the Lab 2 / Lab 3 `BR`/`AC` numbering collision.
 
 ## 1. Sprint Goal
 
@@ -61,7 +65,7 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 * **BR-06** Passwords hashed with bcrypt (cost 10–12), never stored nor returned in plaintext; initial/reset passwords set `mustChangePassword=true`.
 * **BR-07** A password must be **at least 8 characters and at most 72 bytes** after trim and must contain at least one uppercase letter, one lowercase letter, one digit, and one non-alphanumeric character; confirmation must match. The same policy applies to initial passwords set by an Administrator. The 72-byte ceiling is the bcrypt input limit. The **identical trim is applied when verifying a password at login**, so a password stored with surrounding whitespace stripped can never lock its owner out at sign-in.
 * **BR-08** JWT in httpOnly cookie (`SameSite=Lax`, `Secure` in prod), ~8h expiry, secret from server env only, never exposed to client or repo. Logout clears the cookie **and** invalidates the token per BR-20.
-* **BR-09** Duplicate email rejected (`409 EMAIL_TAKEN`); email uniqueness case-insensitive; invalid role rejected (`400`).
+* **BR-09** Duplicate email rejected (`409 EMAIL_TAKEN`); invalid role rejected (`400`). Email uniqueness is case-insensitive, which a plain unique index on Postgres text does not give: every write path lower-cases the address before storing and the uniqueness constraint is enforced on that lower-cased value. Without this, `Foo@x.com` would insert alongside `foo@x.com`, no conflict would be raised, and the case-insensitive login lookup would then match two rows.
 * **BR-10** Each Ticket has zero or one owner, who must be an **active** IT Staff or Administrator user **at the moment of assignment**. A Ticket may start unassigned. The active-owner invariant is asserted for non-terminal Tickets only: a Closed or Cancelled Ticket keeps its historical owner for the record even after that user is deactivated, since BR-24 releases only non-terminal work.
 * **BR-11** Requested Priority is immutable after creation. IT Priority is initialized as a copy of Requested Priority at creation and migration; editable only by IT Staff or Administrator.
 * **BR-12** Required statuses: New, Open, In Progress, Waiting for Requester, Resolved, Closed, Reopened, Cancelled. **Closed and Cancelled are terminal.**
@@ -94,7 +98,7 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 * **BR-25** No user may perform IT Staff operations — claim, assign, IT Priority, status transition, Internal Notes — on a Ticket where they are the Requester; such attempts return `403 SELF_SERVICE_FORBIDDEN`. They retain the ordinary Requester capabilities on that Ticket, including Public Comments, appears-resolved and reopen. **Reading is not restricted**: a staff user may open the staff detail screen for a Ticket they filed and sees it with the operational controls disabled and Internal Notes omitted, so that the Open action on a queue that defaults to all tickets never leads to a dead end.
 * **BR-26** A transition to Resolved requires a non-empty trimmed Resolution Summary (1–2000 chars), supplied with the transition or already stored; a missing summary returns `400 RESOLUTION_SUMMARY_REQUIRED`. The summary is visible to the Requester.
 * **BR-27** Users migrated from `RequesterUser` are created with role REQUESTER, a hashed shared local-development password documented in the README and seed, and `mustChangePassword=true`, so no migrated account can be used without an immediate password change. The password is a documented lab convenience, never a real secret, and never a value used outside this repository. **The README is the single authoritative source for its value**; the seed reads `SEED_INITIAL_PASSWORD` when set and otherwise falls back to that documented constant, so a fresh clone with no local environment file still produces the credentials the E2E specs sign in with.
-* **BR-28** Lab 2 tests that assert removed behaviour are **retired**, not repaired: the development-requester listing endpoint, the Requester Selection screen and its context, and any browser spec driving the selector or the `X-Requester-Id` header. Retirement is recorded in `tests.md` with the reason, and the retired specs are deleted rather than skipped so that the "no skipped or disabled tests" rule in §10 stays literally true. Every other Lab 2 test must pass unchanged under cookie authentication, which is what AC-17 asserts.
+* **BR-28** Lab 2 tests fall into three groups under this migration. **Retired** tests assert behaviour the sprint deletes outright — the development-requester listing endpoint and the Requester Selection screen — and are themselves deleted rather than skipped, so the "no skipped or disabled tests" rule in §10 stays literally true. **Adapted** tests keep their subject and their assertions but need a mechanical edit because the identity mechanism beneath them changed: the Lab 2 server suites swap the `X-Requester-Id` header for the session cookie, and the Lab 2 client suites swap the requester provider for the authentication provider. **Unchanged** tests are everything else. AC-17 asserts all three: every retired test is gone, every adapted test passes after its mechanical edit, and every unchanged test passes untouched. `tests.md` records which file sits in which group and why.
 
 ### Authorization matrix
 
@@ -131,7 +135,7 @@ PostgreSQL via Prisma, additive migration preserving Ticket and Attachment data:
 | Model | Key fields |
 |---|---|
 | User *(new)* | id PK, name VarChar(120), email VarChar(255) unique (case-insensitive), passwordHash text, role enum, isActive bool default true, mustChangePassword bool default true, **tokenVersion int default 0**, createdAt, updatedAt |
-| Ticket *(evolved)* | += ownerId FK→User? (nullable), itPriority enum, **appearsResolvedAt DateTime?**, **resolutionSummary text?**, status enum expanded to 8 values; index on (status, updatedAt desc) for the queue |
+| Ticket *(evolved)* | += ownerId FK→User? (nullable), itPriority enum, **appearsResolvedAt DateTime?**, **resolutionSummary text?**, status enum expanded to 8 values; index on (updatedAt desc) for the queue, because D12 makes the default queue unfiltered and a composite index leading with `status` cannot serve an unpredicated `ORDER BY updatedAt DESC` |
 | PublicComment *(new)* | id PK, ticketId FK→Ticket cascade, authorId FK→User, body text (1..2000), createdAt; index (ticketId, createdAt) |
 | InternalNote *(new)* | same shape as PublicComment; index (ticketId, createdAt) |
 | Category, RelatedSystem, Attachment | unchanged; bytea rationale carried from Lab 2 |
@@ -165,9 +169,10 @@ POST /api/tickets/:id/reopen              own ticket, Resolved only -> Reopened
 
 GET  /api/staff/tickets                   queue ?search&status&categoryId&requestedPriority&itPriority&owner&sort&order&page&pageSize
 GET  /api/staff/tickets/:id               full detail incl. internal notes
+GET  /api/staff/assignees                 active IT Staff + Admin users, to populate the Owner select
 PATCH /api/staff/tickets/:id/owner        {ownerId|null}   claim of a New unowned ticket also sets Open
 PATCH /api/staff/tickets/:id/priority     {itPriority}
-PATCH /api/staff/tickets/:id/status       {status, resolutionSummary?, confirm?}  matrix-enforced
+PATCH /api/staff/tickets/:id/status       {status, resolutionSummary?}  matrix-enforced; confirmation is client-side only
 GET|POST /api/tickets/:id/comments        public (the ticket's requester, any role + Staff/Admin all)
 GET|POST /api/staff/tickets/:id/notes     Staff/Admin only, never the ticket's own requester
 
@@ -177,7 +182,7 @@ PATCH /api/admin/users/:id                {name,email,role,isActive}   deactivat
 POST /api/admin/users/:id/reset-password  {newPassword} -> sets flag + bumps tokenVersion
 ```
 
-All `/api/staff/*` endpoints require IT Staff or Administrator. The **mutating** ones additionally enforce BR-25; reading the staff detail of a Ticket you filed is permitted, with Internal Notes omitted. Public Comments deliberately live under `/api/tickets/` rather than `/api/staff/`, because the ticket's own requester uses them whatever their role. Auth: JWT httpOnly cookie required except on login; `401` missing/invalid/expired/version-mismatch/inactive, `403` forbidden or change-required. Statuses include `400 VALIDATION_FAILED`, `400 INVALID_QUERY`, `400 RESOLUTION_SUMMARY_REQUIRED`, `422 INVALID_TRANSITION`, `409 EMAIL_TAKEN / LAST_ADMIN / SELF_DEACTIVATION / ALREADY_SIGNALLED`, `429 TOO_MANY_ATTEMPTS`, `410 REMOVED` (attachments preserved).
+All `/api/staff/*` endpoints require IT Staff or Administrator and enforce BR-25, with **exactly one read exemption**: `GET /api/staff/tickets/:id` succeeds for a Ticket you filed and returns it with Internal Notes omitted. Every other `/api/staff/*` route, the Internal Notes read included, still refuses that Ticket's own requester. Public Comments deliberately live under `/api/tickets/` rather than `/api/staff/`, because the ticket's own requester uses them whatever their role. Auth: JWT httpOnly cookie required except on login; `401` missing/invalid/expired/version-mismatch/inactive, `403` forbidden or change-required. Statuses include `400 VALIDATION_FAILED`, `400 INVALID_QUERY`, `400 RESOLUTION_SUMMARY_REQUIRED`, `422 INVALID_TRANSITION`, `409 EMAIL_TAKEN / LAST_ADMIN / SELF_DEACTIVATION / ALREADY_SIGNALLED`, `429 TOO_MANY_ATTEMPTS`, `410 REMOVED` (attachments preserved).
 
 ## 9. Acceptance Criteria
 

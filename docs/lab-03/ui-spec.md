@@ -1,6 +1,6 @@
 # Lab 3 UI Specification — Zen Green Extensions
 
-Version: 1.2 | Date: 2026-09-10 | Companion to `specification.md`.
+Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md`.
 
 ## 1. Tokens and rules (reused from Lab 2, extended)
 
@@ -37,7 +37,7 @@ Client routing uses **react-router** (D8). Every screen has a real URL so it is 
 
 Guards are convenience only — the identical checks are enforced by the server on every request, so a hand-typed URL still fails with `403`/`401` (handout §4.3: hiding a control is not authorization). While `mustChangePassword=true` every route other than `/change-password` redirects to it. An unauthenticated user reaching any protected route is redirected to `/login`. A permitted-but-wrong-role route renders a forbidden panel with a back action rather than a blank page.
 
-Header: primary-green bar with the brand `TokTickIT` at left; centre navigation filtered by role (all roles: My Tickets, Create Ticket; IT Staff and Administrator additionally: Ticket Queue; Administrator additionally: Users); right chip `Signed in as <name>` with a role badge plus a Logout button. The Administrator's default landing screen is `/admin/users`, and IT Staff land on `/staff/queue` — this is the only sense in which the roles are "separate", since permissions are shared (D2). Active link gets a pale underline. Below 768px the nav collapses to a hamburger with stacked links and Logout. Content is centred at max-width 1100px.
+Header: primary-green bar with the brand `TokTickIT` at left; centre navigation filtered by role (all roles: My Tickets, Create Ticket; IT Staff and Administrator additionally: Ticket Queue; Administrator additionally: Users); right chip `Signed in as <name>` with a role badge plus a Logout button. A Requester lands on `/tickets`, IT Staff on `/staff/queue`, and an Administrator on `/admin/users`; the `/login` guard sends an already-authenticated user to that same landing route. Differing landing routes are the only sense in which the roles are "separate", since ticket permissions are shared (D2). Active link gets a pale underline. Below 768px the nav collapses to a hamburger with stacked links and Logout. Content is centred at max-width 1100px.
 
 ## 3. Login
 
@@ -91,7 +91,7 @@ A single screen: header with a Create User primary button; toolbar with a search
 
 Create and Edit dialogs carry Name, Email, a single Role select, an Active toggle, and — on create and reset only — a password field with the same live checklist as §4. Inline validation covers duplicate email, invalid role and every unmet password rule. A Reset Password dialog from the row action sets the change-required flag and confirms success while stating that the user must change it at next login.
 
-Guard feedback: attempting to deactivate your own account or to remove the last active Administrator shows a blocking error and leaves the state unchanged. Deactivating a user who owns tickets shows a confirmation naming the count first, and the success message reports how many tickets were returned to the unassigned pool (BR-24). States: loading | empty (`No users yet`) | no-results | forbidden for non-Administrators | failure with Retry.
+Guard feedback: attempting to deactivate your own account or to remove the last active Administrator shows a blocking error and leaves the state unchanged. Deactivating a user who owns tickets shows a confirmation naming the count first (taken from `ownedOpenTicketCount` on the user list, which is why that field exists), and the success message reports how many tickets were returned to the unassigned pool (BR-24). States: loading | empty (`No users yet`) | no-results | forbidden for non-Administrators | failure with Retry.
 
 ## 9. Screen modes and feedback
 

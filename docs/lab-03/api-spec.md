@@ -1,6 +1,6 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.2 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
@@ -11,6 +11,7 @@ Version: 1.2 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs
 * Error envelope (all non-2xx): `{ "error": { "code", "message", "details"? } }`. Safe messages only, no stack traces or internals.
 * Change-password gate: if `user.mustChangePassword=true`, every endpoint except `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` returns `403 PASSWORD_CHANGE_REQUIRED`.
 * CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. No CSRF token is issued.
+* The code for an unauthenticated request is **`AUTH_REQUIRED`**, carried over unchanged from Lab 2 so that the adapted Lab 2 suites keep asserting the same value; `INVALID_CREDENTIALS` is reserved for a failed login attempt specifically.
 * Status summary: `200` retrieve/update, `201` created, `204` logout, `400` validation/query, `401` unauthenticated, `403` forbidden or change-required, `404` missing, `409` conflict, `410` removed attachment, `413` too large, `415` unsupported type, `422` illegal transition or invalid owner, `429` throttled, `500` safe generic.
 
 ## 2. Authentication
@@ -75,7 +76,7 @@ DELETE /api/attachments/:id          {reason 1..300}
 
 ## 4. Staff queue and detail (IT_STAFF and ADMINISTRATOR)
 
-Administrator is a superset of IT Staff here (D2). Every **mutating** endpoint in this section additionally enforces BR-25: if the authenticated user is the ticket's own requester, the request fails with `403 SELF_SERVICE_FORBIDDEN`. Reading is deliberately exempt — the queue defaults to every ticket, so a staff member's own filed ticket appears there and its Open action must lead somewhere useful rather than to a forbidden page.
+Administrator is a superset of IT Staff here (D2). Every endpoint in this section enforces BR-25 — if the authenticated user is the ticket's own requester the request fails with `403 SELF_SERVICE_FORBIDDEN` — with **one exemption only**: `GET /api/staff/tickets/:id` succeeds and returns the ticket without its internal notes. That single exemption exists because the queue defaults to every ticket, so a staff member's own filed ticket appears there and its Open action must lead somewhere useful rather than to a forbidden page. The internal-notes read is **not** exempt.
 
 ### GET /api/staff/tickets [FR-22, BR-16]
 
@@ -104,6 +105,12 @@ Query params:
 * Response `200`: full ticket + `requester{id,name}` + `owner{id,name}|null` + `itPriority` + `appearsResolvedAt` + `resolutionSummary` + `attachments[]` metadata + `publicComments[]` + `internalNotes[]`.
 * When the caller is the ticket's own requester, the response is still `200` but `internalNotes` is omitted entirely and the payload carries `"selfService": true` so the client can render the read-only explanation panel instead of the operational card.
 * Errors: `400 INVALID_ID`; `403` Requester role; `404`.
+
+### GET /api/staff/assignees [FR-24, BR-10]
+
+* Returns the users who may legally be set as a Ticket Owner: `{ "assignees": [{id, name, role}] }`, active IT Staff and Administrators only, name-ascending.
+* Exists because the Owner select on the staff detail screen is used by IT Staff, who cannot call `GET /api/admin/users` — that route is Administrator-only, so without this endpoint FR-24's reassign flow would be unimplementable for the very role that performs it.
+* `403` for a Requester-role user.
 
 ### PATCH /api/staff/tickets/:id/owner [FR-24, BR-10, BR-23]
 
@@ -148,11 +155,13 @@ All endpoints require the ADMINISTRATOR role; any other role → `403`.
 ### GET /api/admin/users
 
 * Query: `?search=<name-or-email substring>&role=REQUESTER|IT_STAFF|ADMINISTRATOR` (both optional, case-insensitive search).
-* Response `200`: `{ "users": [{id, name, email, role, isActive}] }` sorted name-ascending. No pagination in Lab 3 (excluded by §8.5).
+* Response `200`: `{ "users": [{id, name, email, role, isActive, ownedOpenTicketCount}] }` sorted name-ascending. No pagination in Lab 3 (excluded by §8.5).
+* `ownedOpenTicketCount` is the number of non-terminal Tickets that user currently owns. It is present so the deactivation confirmation dialog can name the count **before** the change is made (`ui-spec.md` §8); the post-cascade `unassignedTicketCount` below reports what actually happened.
 
 ### POST /api/admin/users
 
 * Request: `{ "name": "1..120", "email": "valid", "role": "one of 3", "isActive": bool default true, "initialPassword": "per BR-07" }`.
+* The email is trimmed and lower-cased before storage and before the uniqueness check (BR-09), so `Foo@x.com` collides with an existing `foo@x.com` and returns `409 EMAIL_TAKEN` rather than creating a second row the case-insensitive login lookup would then match twice.
 * Creates the user with `mustChangePassword=true` and `tokenVersion=0`. Response `201`: the user shape plus the flag. The password is never echoed.
 * Errors: `400 VALIDATION_FAILED` (including each unmet password rule); `409 EMAIL_TAKEN`.
 

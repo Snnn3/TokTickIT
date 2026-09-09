@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.2 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -14,7 +14,7 @@ Lab 3 reuses the seams already established in Lab 2 rather than introducing new 
 |---|---|---|
 | Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every API, authorization and regression test — no live database required, so the suite runs anywhere |
 | React Testing Library rendering a component with `fetch` mocked | `client/src/__tests__/lab-02/MyTickets.test.tsx`, `CreateTicket.test.tsx` | every UI component and style test |
-| Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` | the three end-to-end specs and responsive assertions |
+| Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` (retired by BR-28 — the pattern is carried forward, the file is not) | the three end-to-end specs and responsive assertions |
 
 Tests assert externally observable behaviour — status codes, response bodies, cookies, rendered text and roles — never internal call shapes. Two helpers are pure enough to test directly as units: the password policy validator and the status-transition matrix.
 
@@ -41,7 +41,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-09 | API | AC-05 | Staff and Admin note access | 200 with content for both roles (D2) | server/tests/lab-03/comments-notes.api.test.ts | TBD |
 | API-10 | API | AC-08 | Queue search, filter, sort, page | Correct slice + metadata; unfiltered default includes unassigned | server/tests/lab-03/staff-queue.api.test.ts | TBD |
 | API-11 | API | AC-08 | Queue invalid params | 400 INVALID_QUERY with per-param details | server/tests/lab-03/staff-queue.api.test.ts | TBD |
-| API-12 | API | AC-09 | Claim, assign, reassign owner | Valid persists; inactive or wrong-role target 422 INVALID_OWNER | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
+| API-12 | API | AC-09 | Claim, assign, reassign owner | Assignee list returns only active staff and admins and is reachable by IT Staff; valid assignment persists; inactive or wrong-role target 422 INVALID_OWNER | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-13 | API | AC-09, BR-23 | Claim of an unowned New ticket | Status also becomes Open; claim from other statuses leaves status unchanged | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-14 | API | AC-10 | IT Priority update | Staff persists; Requester 403; Requested Priority never writable | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-15 | API | AC-11 | Status transitions | Legal 200; illegal 422; out of Closed/Cancelled 422; Requester Resolved/Closed 403 | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
@@ -56,7 +56,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-24 | API | AC-24, BR-25 | Self-service prevention | Staff acting on a ticket they filed → 403 SELF_SERVICE_FORBIDDEN for claim, priority, status and notes; their own comment and appears-resolved still succeed | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-25 | API | AC-25, FR-27 | Any role may file a ticket | IT Staff and Admin create succeeds and appears in their own list | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-26 | API | AC-26, BR-27 | Migrated requester behaviour | Migrated user logs in with the documented initial password, is gated, and still owns their Lab 2 tickets | server/tests/lab-03/migration.api.test.ts | TBD |
-| API-27 | API | AC-17 | Lab 2 regression under auth | Every Lab 2 test **not retired under BR-28** re-runs green with cookie auth substituted for X-Requester-Id | server/tests/lab-02/* + client/src/\_\_tests\_\_/lab-02/* (re-run) | TBD |
+| API-27 | API | AC-17 | Lab 2 regression under auth | Per BR-28: retired tests are gone, adapted tests pass after their mechanical identity swap, unchanged tests pass untouched | server/tests/lab-02/* + client/src/\_\_tests\_\_/lab-02/* (re-run) | TBD |
 | C-01 | UI | AC-01, AC-02 | Login form | Inline errors; no submit when invalid; one identical safe banner for 401 and 429 | client/src/\_\_tests\_\_/lab-03/Login.test.tsx | TBD |
 | C-02 | UI | AC-03, AC-19 | Change-password gate | Gate renders; live checklist ticks per rule; Save disabled until all rules and confirm pass | client/src/\_\_tests\_\_/lab-03/ChangePassword.test.tsx | TBD |
 | C-03 | UI | AC-08 | Queue wiring | Debounced search, filters, pagination rendered; owner filter defaults to All | client/src/\_\_tests\_\_/lab-03/StaffTicketQueue.test.tsx | TBD |
@@ -73,17 +73,29 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 
 Server tests live in `server/tests/lab-03/`. Client tests live in `client/src/__tests__/lab-03/` (normalised per Lab 2 A9). E2E specs live in `e2e/lab-03/`. All file names in the handout §12 tree are present; `RequesterTicketDetail.test.tsx` and `AppShell.test.tsx` are additions, which §12 permits since it specifies a *minimum* structure.
 
-### Retired Lab 2 tests (BR-28)
+### Lab 2 test disposition (BR-28)
 
-Three Lab 2 test groups assert behaviour this sprint deliberately removes, so they are **deleted, not skipped** — skipping them would violate the "no skipped or disabled tests" rule in the Definition of Done, and they cannot be repaired because the thing they test is gone:
+Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled — that would violate the Definition of Done — so a test whose subject is gone is deleted outright, and a test whose subject survives is edited only where the identity mechanism beneath it changed.
 
-| Retired | Why it cannot survive |
+**Retired (deleted).** The behaviour under test no longer exists:
+
+| File | Why it cannot survive |
 |---|---|
-| `server/tests/lab-02/requesters.api.test.ts` | Asserts `GET /api/requesters` returns 200 and stubs `prisma.requesterUser`; that endpoint is removed and that model is dropped, so the stub target no longer exists and the file cannot even load |
-| `client/src/__tests__/lab-02/RequesterSelection.test.tsx` | Imports the Requester Selection component and its context, both deleted; the client suite would fail to compile |
-| Selector-driven browser specs in `e2e/lab-02/` and `e2e/evidence/` | Drive the selector UI and the `X-Requester-Id` header; their coverage is replaced by `e2e/lab-03/authentication.spec.ts` |
+| `server/tests/lab-02/requesters.api.test.ts` | Asserts `GET /api/requesters` returns 200 and stubs `prisma.requesterUser`; the endpoint is removed and the model dropped, so the stub target does not exist and the file cannot load |
+| `client/src/__tests__/lab-02/RequesterSelection.test.tsx` | Imports the Requester Selection component and its context, both deleted |
+| `e2e/lab-02/requester-ticket-flow.spec.ts` | Selector-driven throughout; this empties `e2e/lab-02/`, and E2E regression is carried entirely by `e2e/lab-03/` from here on |
 
-Every other Lab 2 test must pass unchanged under cookie authentication. The retirement list, with before/after counts, is recorded in §6 as part of the regression evidence.
+**Adapted (mechanically edited, assertions unchanged).** The subject survives; only how identity reaches it changes:
+
+| File(s) | Edit |
+|---|---|
+| `server/tests/lab-02/{attachments,create-ticket,my-tickets,ticket-detail}.api.test.ts` | 30 `X-Requester-Id` header calls become authenticated session cookies. The `AUTH_REQUIRED` assertion in `my-tickets` stays valid because `api-spec.md` §1 pins that same code for unauthenticated requests |
+| `client/src/__tests__/lab-02/{CreateTicket,MyTickets}.test.tsx` | The `RequesterProvider` test wrapper becomes the auth provider; the component assertions are untouched |
+| `client/src/__tests__/lab-02/{App,AppHeader}.test.tsx` | Shell assertions move from selector and Change Requester to authenticated identity and Logout — the heaviest of the adaptations, since the shell's whole premise changes |
+
+**Unchanged.** Everything else, including all Lab 1 tests and `ticket-number.unit.test.ts`.
+
+The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence.
 
 ## 3. Acceptance-Criterion Traceability
 
