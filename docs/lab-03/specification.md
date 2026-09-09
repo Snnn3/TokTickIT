@@ -1,7 +1,7 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
 Status: Approved contract draft for Sprint 3 | Version: 1.0 | Date: 2026-09-08
-Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md` (same folder).
+Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder).
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
 ## 1. Sprint Goal
@@ -31,7 +31,7 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 
 ## 4. Functional Requirements
 
-* **FR-16** The app provides Login (email, password, validation, busy, safe failure) and rejects inactive accounts without enumeration detail.
+* **FR-16** The app provides Login (email, password, validation, busy, safe failure) and rejects inactive accounts with the same generic failure (no enumeration detail).
 * **FR-17** A user with `mustChangePassword=true` cannot enter normal screens until a valid new password is saved via Change Password (rules, confirmation, continuation).
 * **FR-18** The app shell shows authenticated name + role, provides Logout that removes access, and blocks direct access after logout.
 * **FR-19** Navigation shows only destinations permitted for the current role; unauthorized routes render forbidden feedback.
@@ -45,7 +45,7 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 
 ## 5. Business Rules
 
-* **BR-01** Only an active user with valid credentials may authenticate; failures return generic `401 INVALID_CREDENTIALS` without distinguishing email vs password vs existence.
+* **BR-01** Only an active user with valid credentials may authenticate; failures — including inactive accounts — return generic `401 INVALID_CREDENTIALS` without distinguishing email vs password vs existence vs active status.
 * **BR-02** A user with `mustChangePassword=true` is blocked from all normal APIs (`403 PASSWORD_CHANGE_REQUIRED`) except current-user, change-password, logout.
 * **BR-03** Authenticated identity, never client-supplied identity, determines ownership of Requester operations.
 * **BR-04** Public Comments visible to Requester, IT Staff, Administrator. Internal Notes visible only to IT Staff and Administrator; Requester access returns `403` with no content.
@@ -81,8 +81,8 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 | Create/list/own tickets + attachments | yes (own only) | no (use staff endpoints) | no |
 | Public Comments read/create | yes (own tickets) | yes (all) | yes (all) |
 | Internal Notes read/create | no (403) | yes | yes |
-| Queue list / staff detail | no (403) | yes | only if matrix permits; default no ticket ops |
-| Claim/assign owner, IT Priority, status | no | yes | yes (owner must be Staff/Admin) |
+| Queue list / staff detail | no (403) | yes | no — Administrators do not perform IT Staff ticket operations by default |
+| Claim/assign owner, IT Priority, status | no | yes | only where explicitly noted (assignable as owner per BR-10; IT Priority per BR-11) — not default ops |
 | Appears-resolved signal | yes (own) | no (Staff confirms via status) | no |
 | Admin user CRUD + reset-password | no (403) | no (403) | yes (+ BR-15 guards) |
 
@@ -139,16 +139,18 @@ GET  /api/admin/users?search&role     Admin only
 POST /api/admin/users                 {name,email,role,isActive,initialPassword}
 PATCH /api/admin/users/:id            {name,email,role,isActive}
 POST /api/admin/users/:id/reset-password {newPassword} -> sets flag
+GET  /api/reference/categories|systems (auth; Lab 2 unchanged)
+POST /api/tickets/:id/attachments + GET|DELETE /api/attachments/:id(+/download) (auth, Requester own; Lab 2 limits/atomicity/410 preserved)
 ```
 
-Auth: JWT httpOnly cookie required (except login); `401` missing/invalid/expired, `403` inactive/forbidden/change-required. Statuses include `400 VALIDATION_FAILED`, `400 INVALID_QUERY`, `422 INVALID_TRANSITION`, `409 EMAIL_TAKEN/LIMIT_REACHED/ALREADY_REMOVED/LAST_ADMIN/SELF_DEACTIVATION`, `410 REMOVED` (attachments preserved).
+Auth: JWT httpOnly cookie required (except login); `401` missing/invalid/expired/inactive, `403` forbidden/change-required. Statuses include `400 VALIDATION_FAILED`, `400 INVALID_QUERY`, `422 INVALID_TRANSITION`, `409 EMAIL_TAKEN/LIMIT_REACHED/ALREADY_REMOVED/LAST_ADMIN/SELF_DEACTIVATION`, `410 REMOVED` (attachments preserved).
 
 ## 9. Acceptance Criteria
 
 Every AC maps to ≥1 test in `tests.md`.
 
 * **AC-01** Given active credentials, when login succeeds, then httpOnly cookie is set and permitted identity + role returned.
-* **AC-02** Given invalid credentials or inactive account, when login attempted, then generic safe failure with no enumeration.
+* **AC-02** Given invalid credentials or inactive account, when login attempted, then generic `401 INVALID_CREDENTIALS` safe failure with no enumeration.
 * **AC-03** Given `mustChangePassword=true`, when login succeeds, then normal screens/APIs stay blocked until valid new password saved.
 * **AC-04** Given authenticated Requester, when client supplies another identity, then backend still applies auth identity and never returns another's data.
 * **AC-05** Given Requester, when Internal Note endpoint requested, then `403` with no note content.

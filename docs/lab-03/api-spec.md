@@ -17,7 +17,7 @@ Version: 1.0 | Date: 2026-09-08 | Companion to `specification.md` (FR/BR/AC refs
 
 * Request: `{ "email": "a@b.com", "password": "secret..." }` (email trimmed, case-insensitive lookup).
 * Response `200`: `{ "user": { "id", "name", "email", "role": "REQUESTER|IT_STAFF|ADMINISTRATOR", "isActive", "mustChangePassword" } }` + `Set-Cookie: toktickit_session=<jwt>; HttpOnly; SameSite=Lax; Path=/`.
-* Errors: `400 VALIDATION_FAILED` missing fields; `401 INVALID_CREDENTIALS` bad credentials (same message for unknown email, wrong password); `403 INACTIVE` inactive account (no extra detail); `500 UNEXPECTED`.
+* Errors: `400 VALIDATION_FAILED` missing fields; `401 INVALID_CREDENTIALS` bad credentials or inactive account (same generic message for unknown email, wrong password, or inactive account — no enumeration); `500 UNEXPECTED`.
 
 ### POST /api/auth/logout [FR-18]
 
@@ -59,7 +59,9 @@ DELETE /api/attachments/:id          {reason 1..300}
 * Response `200`: `{ "appearsResolved": true, "appearsResolvedAt": "<ts>" }`.
 * Errors: `403` not owner/wrong role; `404`; `409 ALREADY_SIGNALLED` repeat; Staff/Admin use status endpoints instead.
 
-## 4. Staff queue and detail (IT_STAFF + ADMINISTRATOR where noted)
+## 4. Staff queue and detail (IT_STAFF; ADMINISTRATOR only where explicitly noted — Administrators do not perform IT Staff ticket operations by default)
+
+Administrators do not perform IT Staff ticket operations by default; Admin access applies only where explicitly noted below (owner/priority/status, comments/notes).
 
 ### GET /api/staff/tickets [FR-22, BR-16]
 

@@ -4,7 +4,7 @@ Version: 1.0 | Date: 2026-09-08 | Companion to `specification.md` (AC refs) and 
 
 ## 1. Test Strategy
 
-Test DD first: this plan authored with the specification BEFORE implementation; red tests per issue, minimal implementation to green (TDD). Levels: Unit, API/integration (Supertest + test DB), UI component/style (Vitest + Testing Library + jsdom), Responsive (viewport assertions), Security/authorization (direct API + route guards), Migration/regression (seed counts + Lab 2 suite still green), E2E (Playwright chromium). Covers valid/invalid login, inactive, password boundaries, logout, role nav, queue queries, ownership, IT Priority, status matrix, comments/notes visibility, admin safety, and safe failures. Final statuses filled during execution.
+TDD-first: this plan authored with the specification BEFORE implementation; red tests per issue, minimal implementation to green (TDD). Levels: Unit, API/integration (Supertest + test DB), UI component/style (Vitest + Testing Library + jsdom), Responsive (viewport assertions), Security/authorization (direct API + route guards), Migration/regression (seed counts + Lab 2 suite still green), E2E (Playwright chromium). Covers valid/invalid login, inactive, password boundaries, logout, role nav, queue queries, ownership, IT Priority, status matrix, comments/notes visibility, admin safety, and safe failures. Final statuses filled during execution.
 
 ## 2. Planned Tests
 
@@ -14,7 +14,7 @@ Test DD first: this plan authored with the specification BEFORE implementation; 
 | U-02 | Unit | BR-13 | Transition matrix helper | Legal pass, illegal rejected | server/tests/lab-03/staff-ticket-detail.api.test.ts (helpers) | TBD |
 | API-01 | API | AC-01 | Valid login | 200 user + httpOnly cookie set | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-02 | API | AC-02 | Invalid credentials | 401 INVALID_CREDENTIALS generic | server/tests/lab-03/auth.api.test.ts | TBD |
-| API-03 | API | AC-02 | Inactive account login | 403 safe, no enumeration | server/tests/lab-03/auth.api.test.ts | TBD |
+| API-03 | API | AC-02 | Inactive account login | 401 INVALID_CREDENTIALS generic, no enumeration | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-04 | API | AC-03 | Change-required gate | Normal API 403 PASSWORD_CHANGE_REQUIRED until change | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-05 | API | AC-03 | Password change boundaries | Short/mismatch 400; valid clears flag | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-06 | API | AC-06 | Logout + me | Logout 204 clears; me 401 after | server/tests/lab-03/auth.api.test.ts | TBD |
@@ -30,14 +30,14 @@ Test DD first: this plan authored with the specification BEFORE implementation; 
 | API-16 | API | AC-12 | Comment/note validation | Empty/over-limit 400; author/time server-set | server/tests/lab-03/comments-notes.api.test.ts | TBD |
 | API-17 | API | AC-13/14 | Admin list/search/filter + create | Correct subset; dup email 409 | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-18 | API | AC-15/16 | Admin guards + reset | Self/last-admin 409; reset sets flag | server/tests/lab-03/users-admin.api.test.ts | TBD |
-| API-19 | API | AC-17 | Migration + regression | Counts preserved; Lab 2 suite green | server/tests/lab-03/authorization.api.test.ts + lab-02 rerun | TBD |
-| C-01 | UI | AC-01/02 | Login form | Inline errors; no submit when invalid; safe banner on 401 | client/.../lab-03/Login.test.tsx | TBD |
-| C-02 | UI | AC-03 | Change-password gate | Gate renders; mismatch blocked; success continues | client/.../lab-03/ChangePassword.test.tsx | TBD |
-| C-03 | UI | AC-08 | Queue wiring | Debounced search, filters, pagination rendered | client/.../lab-03/StaffTicketQueue.test.tsx | TBD |
-| C-04 | UI | AC-09/10/11 | Detail ops | Owner/priority/status controls call PATCH; illegal shows message | client/.../lab-03/StaffTicketDetail.test.tsx | TBD |
-| C-05 | UI | AC-12 | Comments vs notes styling | Distinct surfaces; notes hidden for Requester | client/.../lab-03/StaffTicketDetail.test.tsx | TBD |
-| C-06 | UI | AC-13/14/15 | UserManagement | Search/filter/create/edit/reset + guard messages | client/.../lab-03/UserManagement.test.tsx | TBD |
-| S-01 | Style | ui-spec 1 | Zen Green + badges | Tokens, focus, badge labels present | client/.../lab-03/*.test.tsx | TBD |
+| API-19 | API | AC-17 | Migration + regression | Counts preserved; Lab 2 suite green | server/tests/lab-03/migration.api.test.ts + Lab 2 suite rerun (regression evidence) | TBD |
+| C-01 | UI | AC-01/02 | Login form | Inline errors; no submit when invalid; safe banner on 401 | client/src/__tests__/lab-03/Login.test.tsx | TBD |
+| C-02 | UI | AC-03 | Change-password gate | Gate renders; mismatch blocked; success continues | client/src/__tests__/lab-03/ChangePassword.test.tsx | TBD |
+| C-03 | UI | AC-08 | Queue wiring | Debounced search, filters, pagination rendered | client/src/__tests__/lab-03/StaffTicketQueue.test.tsx | TBD |
+| C-04 | UI | AC-09/10/11 | Detail ops | Owner/priority/status controls call PATCH; illegal shows message | client/src/__tests__/lab-03/StaffTicketDetail.test.tsx | TBD |
+| C-05 | UI | AC-12 | Comments vs notes styling | Distinct surfaces; notes hidden for Requester | client/src/__tests__/lab-03/StaffTicketDetail.test.tsx | TBD |
+| C-06 | UI | AC-13/14/15 | UserManagement | Search/filter/create/edit/reset + guard messages | client/src/__tests__/lab-03/UserManagement.test.tsx | TBD |
+| S-01 | Style | AC-18 (ui-spec §1) | Zen Green + badges | Tokens, focus, badge labels present | client/src/__tests__/lab-03/*.test.tsx | TBD |
 | R-01 | Responsive | AC-18 | No mobile scroll | scrollWidth ≤ innerWidth at 1366/768/375 | e2e/lab-03/*.spec.ts | TBD |
 | E-01 | E2E | AC-01/03/06 | Auth + first-login + logout | Gate enforced; logout blocks direct access | e2e/lab-03/authentication.spec.ts | TBD |
 | E-02 | E2E | AC-07/08/09/10/11/12 | Staff flow end-to-end | Queue → detail → own/prioritize/advance/comment/note | e2e/lab-03/staff-ticket-flow.spec.ts | TBD |
