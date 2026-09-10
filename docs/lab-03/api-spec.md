@@ -1,13 +1,13 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.5 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
 * Base URL `/api`. JSON unless multipart is stated. Timestamps ISO-8601 UTC.
 * Auth: JWT in httpOnly cookie `toktickit_session` (`HttpOnly`, `SameSite=Lax`, `Secure` in prod, ~8h expiry). Sent automatically by the browser through the Vite proxy; no `Authorization` header, no `X-Requester-Id` (removed).
 * JWT claims: `sub` (user id), `role`, `tv` (tokenVersion), `iat`, `exp`. On every authenticated request the middleware loads the user and rejects with `401` if the user is missing, inactive, or `tv` ≠ stored `tokenVersion` (BR-20).
-* Password hashing: bcryptjs cost 10–12. Secret `JWT_SECRET` from `server/.env` only, never committed or exposed. `server/.env.example` documents `JWT_SECRET` and `SEED_INITIAL_PASSWORD`. The README holds the authoritative initial-password value (BR-27); the seed uses `SEED_INITIAL_PASSWORD` when present and otherwise that documented constant, so a fresh clone still yields the credentials the E2E specs use.
+* Password hashing: bcryptjs cost 10–12. Secret `JWT_SECRET` from `server/.env` only, never committed or exposed. `server/.env.example` documents `JWT_SECRET` and `SEED_INITIAL_PASSWORD`, and the README documents the seeded initial password itself, which is the authoritative value (BR-27); the seed uses `SEED_INITIAL_PASSWORD` when present and otherwise that documented constant, so a fresh clone still yields the credentials the E2E specs use.
 * Error envelope (all non-2xx): `{ "error": { "code", "message", "details"? } }`. Safe messages only, no stack traces or internals.
 * Change-password gate: if `user.mustChangePassword=true`, every endpoint except `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` returns `403 PASSWORD_CHANGE_REQUIRED`.
 * CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint **that carries a body** requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. Requests with no body at all — logout and appears-resolved — are exempt from the content-type check, because a browser sends no `Content-Type` for a body-less `fetch` and requiring one would make logout impossible. No CSRF token is issued.

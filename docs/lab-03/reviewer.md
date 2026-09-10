@@ -11,8 +11,8 @@
 
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-| PR #43 (closed unmerged) | feature/lab3-1-contract | Closed by author; superseded by the v1.3 contract PR below |
-| TBD | feature/lab3-1-contract (contract v1.3) | TBD |
+| PR #43 (closed unmerged) | feature/lab3-1-contract | Closed by author; superseded by the v1.5 contract PR below |
+| PR #44 | feature/lab3-1-contract (contract v1.5) | CHANGES_REQUESTED x2 by @YummieGG, both rounds addressed; awaiting re-review |
 | TBD | feature/lab3-2-refactor | TBD |
 | TBD | feature/lab3-3-auth-foundation | TBD |
 | TBD | feature/lab3-4-requester-regression | TBD |

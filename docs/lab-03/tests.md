@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.5 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -18,7 +18,7 @@ Lab 3 reuses the seams already established in Lab 2 rather than introducing new 
 
 Tests assert externally observable behaviour — status codes, response bodies, cookies, rendered text and roles — never internal call shapes. Two helpers are pure enough to test directly as units: the password policy validator and the status-transition matrix.
 
-**Migration evidence is deliberately not a mocked test.** Asserting a migration against a stubbed Prisma client would prove nothing, so `migration.api.test.ts` covers the *behavioural* consequences of migration (a migrated requester can log in, is gated, and still owns their tickets), while the row-count preservation evidence is captured by running the migration against the real development database and recording before/after counts in §6, alongside a full re-run of the Lab 2 suite as regression.
+**Migration evidence is deliberately not a mocked test.** Asserting a migration against a stubbed Prisma client would prove nothing, so `migration.api.test.ts` covers the *behavioural* consequences of migration (a migrated requester can log in, is gated, and still owns their tickets), while **M-01** captures the preservation evidence by running the migration against the real development database and recording before/after row counts, ticket-number equality and attachment byte checksums in §6, alongside a re-run of the Lab 2 suite as regression. The split is deliberate: no mocked test may claim to prove preservation, and AC-17 traces to M-01 rather than to a stubbed row.
 
 ### Levels covered
 
@@ -55,7 +55,8 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-23 | API | AC-23, BR-26 | Resolution Summary required | Resolve without a summary → 400 RESOLUTION_SUMMARY_REQUIRED; with one it persists and is visible to the requester | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-24 | API | AC-24, BR-25 | Self-service prevention | Staff acting on a ticket they filed → 403 SELF_SERVICE_FORBIDDEN for claim, priority, status and notes; their own comment and appears-resolved still succeed | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-25 | API | AC-25, FR-27 | Any role may file a ticket | IT Staff and Admin create succeeds and appears in their own list | server/tests/lab-03/authorization.api.test.ts | TBD |
-| API-26 | API | AC-26, AC-17, BR-27 | Migrated requester behaviour | Migrated user logs in with the documented initial password, is gated, and still owns their Lab 2 tickets. **Ticket numbers are byte-identical to their pre-migration values and every attachment's stored bytes and size round-trip unchanged**, since ownership alone would not prove the data survived | server/tests/lab-03/migration.api.test.ts | TBD |
+| API-26 | API | AC-26, BR-27 | Migrated requester behaviour (post-migration only) | Migrated user logs in with the documented initial password, is gated, and still owns their Lab 2 tickets. Scoped deliberately to behaviour **after** migration, because a stubbed Prisma client cannot prove anything about what the migration did to real rows | server/tests/lab-03/migration.api.test.ts | TBD |
+| M-01 | Migration | AC-17 | Real-database preservation evidence | Run against the development database, not a stub. Capture row counts for User, Ticket and Attachment before and after; assert every ticket number is byte-identical to its pre-migration value; assert every attachment's `sizeBytes` and a checksum of its `data` column round-trip unchanged; assert every ticket's requester still resolves to the same person. Procedure and captured output recorded in §6 | server/prisma/migration-evidence (script + recorded output) | TBD |
 | API-27 | API | AC-17 | Lab 2 regression under auth | Per BR-28: retired tests are gone, adapted tests pass after their mechanical identity swap, unchanged tests pass untouched | server/tests/lab-02/* + client/src/\_\_tests\_\_/lab-02/* (re-run) | TBD |
 | C-01 | UI | AC-01, AC-02 | Login form | Inline errors; no submit when invalid; one identical safe banner for 401 and 429 | client/src/\_\_tests\_\_/lab-03/Login.test.tsx | TBD |
 | C-02 | UI | AC-03, AC-19 | Change-password gate | Gate renders; live checklist ticks per rule; Save disabled until all rules and confirm pass | client/src/\_\_tests\_\_/lab-03/ChangePassword.test.tsx | TBD |
@@ -119,7 +120,7 @@ The disposition list, with before/after counts per group, is recorded in §6 as 
 | AC-14 | API-18, C-06 |
 | AC-15 | API-19, C-06, E-03 |
 | AC-16 | API-19, E-03 |
-| AC-17 | API-26, API-27 |
+| AC-17 | M-01, API-27 |
 | AC-18 | S-01, S-02, R-01, E-01, E-02, E-03 |
 | AC-19 | U-01, API-05, C-02 |
 | AC-20 | API-20, C-01 |
@@ -152,7 +153,7 @@ E2E and migration-evidence precondition: `docker compose up -d db`, then from `s
 
 ## 6. Final Results
 
-TBD — to be filled after implementation from the final `main` branch, including the migration row counts before and after and the full passing output. No skipped or disabled tests are permitted.
+TBD — to be filled after implementation from the final `main` branch. Must include: the full passing output of every suite; the M-01 evidence block (before/after row counts for User, Ticket and Attachment, ticket-number equality result, attachment checksum result); and the Lab 2 disposition counts per group from §2. No skipped or disabled tests are permitted.
 
 ## 7. Known Limitations
 
