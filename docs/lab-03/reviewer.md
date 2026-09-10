@@ -12,7 +12,7 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
 | [#43](https://github.com/Snnn3/TokTickIT/pull/43) (closed unmerged) | feature/lab3-1-contract | Closed by me before review; superseded by #44 on the same branch and base |
-| [#44](https://github.com/Snnn3/TokTickIT/pull/44) | feature/lab3-1-contract (contract v1.7) | **CHANGES_REQUESTED ×2** by @YummieGG; both rounds addressed, awaiting re-review |
+| [#44](https://github.com/Snnn3/TokTickIT/pull/44) | feature/lab3-1-contract (contract v1.8) | **CHANGES_REQUESTED ×3** by @YummieGG; all three rounds addressed, awaiting re-review |
 | TBD | feature/lab3-2-refactor | TBD |
 | TBD | feature/lab3-3-auth-foundation | TBD |
 | TBD | feature/lab3-4-requester-regression | TBD |
@@ -48,6 +48,20 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 *Response — fix commit `98249e6` (contract v1.6).* All three accepted. `server/.env.example` gained non-secret placeholders for both keys, and the README gained a Lab 3 status block naming the seeded initial password, marking the Lab 2 REST and E2E sections superseded. One deviation was raised for the reviewer to judge: Lab 3 run/test commands were **not** added to the README, because those slices are unimplemented and documenting them would replace one false claim with another; #42 already carries the DoD item requiring the README be current before release. The migration point was self-inflicted — v1.5 attached byte-preservation assertions to API-26, a test the strategy section itself says runs against a stub — so preservation became **M-01**, a real-database procedure, with API-26 rescoped to post-migration behaviour and AC-17 tracing to M-01. PR title, description and this file were brought up to date.
 
 **Internal consistency audit (self-initiated, not a peer round) — fix commit `b614162` (contract v1.7).** A cross-document sweep asking whether any two normative documents disagree, rather than whether each is correct alone, found ten contradictions. Two were half-applied fixes from earlier rounds: BR-22 still demanded a JSON content type on every state-changing request while `api-spec.md` exempted body-less ones, and only the requester-facing reopen cleared the Resolution Summary while a staff reopen through the status PATCH did not. Recorded here because it explains the v1.7 bump between peer rounds.
+
+**PR #44 — round 3 — @YummieGG, `CHANGES_REQUESTED`**
+
+> **Contract approval status and required evidence are not complete** — `specification.md:3` says `Status: Approved contract`, while `reviewer.md:15` says PR #44 has `CHANGES_REQUESTED ×2` and is awaiting re-review. GitHub still has no approval after the current head. In addition, `ai-use.md:62` leaves `My Reflection` as `TBD`. The contract is labelled approved before the required peer approval is recorded.
+>
+> **Authenticated reference endpoints are missing from the authorization matrix** — `api-spec.md:44-50` defines `GET /api/reference/categories` and `GET /api/reference/systems` as authenticated endpoints, but the matrix has no row for either.
+>
+> **PR description is stale relative to the submitted head** — the body still says `Current revision: v1.6` and `head 98249e6`, while the branch is v1.7.
+>
+> **Logout contract is internally contradictory** — `api-spec.md:26-30` says logout "requires a cookie" but also that it is "idempotent (clears even if absent)", so the implementation cannot determine whether a request without a session returns `401` or a successful clear.
+
+*Response — fix commit `e105a48` (contract v1.8).* All four accepted. The approval point was the most serious: the contract asserted its own approval while this PR carried two unresolved rounds and no recorded approval, which makes the label worthless as evidence. Status is now **Draft — pending peer approval on PR #44**, and the Definition of Done gained an item stating it may only change once an approval is *recorded*, since the reviewer's verdict is the authority and the header is not. `My Reflection` was written, marked as drafted from the session record pending the author's final wording. The reference endpoints gained a matrix row, and a wider gap found while fixing it was closed too — the matrix had never stated unauthenticated behaviour for *any* row, so it now says an unauthenticated caller receives `401 AUTH_REQUIRED` everywhere except login. Logout was pinned to the reviewer's suggested behaviour: no cookie required, always `204`, always a cleared `Set-Cookie`, with API-06 asserting the no-cookie case, because a client whose session has already expired must still be able to reach a clean signed-out state. PR title and description were updated to v1.8 at the current head.
+
+*One point contested rather than accepted.* The review described `docs/lab-03/plan.md` as "a required contract file". Handout §12 lists six required files — `specification.md`, `tests.md`, `ui-spec.md`, `api-spec.md`, `reviewer.md`, `ai-use.md` — all of which are present and tracked; the plan is a local working document untracked deliberately in `34b7763`, and no tracked document references it. This was raised on the PR for the reviewer to settle rather than silently actioned either way.
 
 ## Pull Requests I reviewed for my partner
 
