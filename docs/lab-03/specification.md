@@ -1,7 +1,7 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
 Status: **Draft — pending peer approval on PR #44** | Version: 1.8 | Date: 2026-09-10
-Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder).
+Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder). **All documents in `docs/lab-03/` carry the same version number and bump together**, so any file whose header differs from the others is out of date by definition — three review rounds each caught a stale version stamp somewhere in the set, and a single shared number makes that failure visible at a glance instead of requiring a cross-check.
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
 **Identifier convention:** Lab 3 continues the FR sequence (FR-16 onward) but restarts BR and AC numbering at 01, so `BR-04` and `AC-17` name different rules in the two increments. Throughout the Lab 3 documents an unqualified `BR-nn` or `AC-nn` always means the Lab 3 rule; a Lab 2 rule is always written out as `Lab 2 BR-nn`.

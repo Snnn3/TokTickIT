@@ -1,5 +1,7 @@
 # Lab 3 — Peer Review Record
 
+Version: 1.8 | Date: 2026-09-10 | Companion to `specification.md`.
+
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
 | Author | Chanon Lhumsa-ard | 67070501059 | [@Snnn3](https://github.com/Snnn3) |
