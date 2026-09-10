@@ -1,6 +1,6 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
@@ -10,7 +10,7 @@ Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs
 * Password hashing: bcryptjs cost 10–12. Secret `JWT_SECRET` from `server/.env` only, never committed or exposed. `server/.env.example` documents `JWT_SECRET` and `SEED_INITIAL_PASSWORD`, and the README documents the seeded initial password itself, which is the authoritative value (BR-27); the seed uses `SEED_INITIAL_PASSWORD` when present and otherwise that documented constant, so a fresh clone still yields the credentials the E2E specs use.
 * Error envelope (all non-2xx): `{ "error": { "code", "message", "details"? } }`. Safe messages only, no stack traces or internals.
 * Change-password gate: if `user.mustChangePassword=true`, every endpoint except `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` returns `403 PASSWORD_CHANGE_REQUIRED`.
-* CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint **that carries a body** requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. Requests with no body at all — logout and appears-resolved — are exempt from the content-type check, because a browser sends no `Content-Type` for a body-less `fetch` and requiring one would make logout impossible. No CSRF token is issued.
+* CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint **that carries a body** requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. Requests that carry **no body at all** are exempt from the content-type check, because a browser sends no `Content-Type` for a body-less `fetch` and requiring one would make logout unreachable. The rule is stated by shape rather than by an endpoint list, so it stays correct as endpoints are added: if there is no body there is nothing for a cross-origin form post to smuggle. Endpoints documented with an empty JSON object body (`{}`) may be called either way — with `{}` and a JSON content type, or with no body at all. No CSRF token is issued.
 * The code for an unauthenticated request is **`AUTH_REQUIRED`**, carried over unchanged from Lab 2 so that the adapted Lab 2 suites keep asserting the same value; `INVALID_CREDENTIALS` is reserved for a failed login attempt specifically.
 * Status summary: `200` retrieve/update, `201` created, `204` logout, `400` validation/query, `401` unauthenticated, `403` forbidden or change-required, `404` missing, `409` conflict, `410` removed attachment, `413` too large, `415` unsupported type, `422` illegal transition or invalid owner, `429` throttled, `500` safe generic.
 
@@ -50,7 +50,7 @@ GET    /api/reference/categories
 GET    /api/reference/systems
 POST   /api/tickets                 multipart, atomic, 201 + TKT-{year}-{seq}
 GET    /api/tickets                 own list ?search&categoryId&priority&status&sort&order&page&pageSize
-GET    /api/tickets/:id             own detail + public comments + resolutionSummary (never notes)
+GET    /api/tickets/:id             own detail + public comments + resolutionSummary + appearsResolvedAt (never notes)
 POST   /api/tickets/:id/attachments multipart single file
 GET    /api/attachments/:id
 GET    /api/attachments/:id/download  410 once removed
@@ -76,7 +76,7 @@ DELETE /api/attachments/:id          {reason 1..300}
 
 ## 4. Staff queue and detail (IT_STAFF and ADMINISTRATOR)
 
-Administrator is a superset of IT Staff here (D2). Every endpoint in this section enforces BR-25 — if the authenticated user is the ticket's own requester the request fails with `403 SELF_SERVICE_FORBIDDEN` — with **one exemption only**: `GET /api/staff/tickets/:id` succeeds and returns the ticket without its internal notes. That single exemption exists because the queue defaults to every ticket, so a staff member's own filed ticket appears there and its Open action must lead somewhere useful rather than to a forbidden page. The internal-notes read is **not** exempt.
+Administrator is a superset of IT Staff here (D2). BR-25 applies to every **ticket-addressed** endpoint in this section — if the authenticated user is that ticket's own requester the request fails with `403 SELF_SERVICE_FORBIDDEN` — with **one exemption**: `GET /api/staff/tickets/:id` succeeds and returns the ticket without its internal notes. It does not apply to the two endpoints that address no single ticket: the queue (`GET /api/staff/tickets`), which BR-16 and D12 require to return every ticket including ones the caller filed, and `GET /api/staff/assignees`, which is not ticket-scoped at all. That single exemption exists because the queue defaults to every ticket, so a staff member's own filed ticket appears there and its Open action must lead somewhere useful rather than to a forbidden page. The internal-notes read is **not** exempt.
 
 ### GET /api/staff/tickets [FR-22, BR-16]
 
@@ -129,7 +129,7 @@ Query params:
 * Request: `{ "status": "<one of 8>", "resolutionSummary"?: "1..2000" }`.
 * Enforces the transition matrix in `specification.md` BR-13. Confirmation for `CLOSED` and `CANCELLED` is a **client-side dialog only** (`ui-spec.md` §7) — the server takes no `confirm` field, because a server-side flag with no business rule, acceptance criterion or test behind it would fail requests no test predicted.
 * A transition to `RESOLVED` requires a non-empty trimmed `resolutionSummary`, either supplied in this request or already stored on the ticket.
-* Any successful status transition clears `appearsResolvedAt`.
+* Any successful status transition clears `appearsResolvedAt`. A transition **into `REOPENED`** additionally clears `resolutionSummary`, exactly as the requester-facing reopen does (BR-26) — without this a staff reopen followed by a re-resolve with no summary in the body would silently serve the previous cycle's explanation as the new answer.
 * Response `200`: `{ "status": "...", "resolutionSummary": "..."|null }`.
 * Errors: `422 INVALID_TRANSITION` illegal target or a transition out of a terminal status; `400 RESOLUTION_SUMMARY_REQUIRED`; `403` Requester role, or own-requested ticket per BR-25; `404`.
 
@@ -168,7 +168,7 @@ All endpoints require the ADMINISTRATOR role; any other role → `403`.
 ### PATCH /api/admin/users/:id
 
 * Request: `{ "name"?, "email"?, "role"?, "isActive"? }`.
-* **Deactivation cascade (BR-24):** setting `isActive:false` unassigns that user from every non-terminal ticket they own and increments their `tokenVersion`, ending their sessions immediately.
+* **Cascade (BR-24):** setting `isActive:false` **or changing `role` out of `IT_STAFF`/`ADMINISTRATOR`** unassigns that user from every non-terminal ticket they own and increments their `tokenVersion`, ending their sessions immediately. Both triggers matter: a demoted owner is as ineligible under BR-10 as a deactivated one, disappears from `GET /api/staff/assignees`, and would otherwise be refused on the staff routes for work still assigned to them.
 * Guards: `409 SELF_DEACTIVATION` deactivating your own account; `409 LAST_ADMIN` deactivating or role-changing the last active Administrator; `409 EMAIL_TAKEN`.
 * Response `200`: the updated user shape plus `{ "unassignedTicketCount": n }` when a cascade occurred.
 

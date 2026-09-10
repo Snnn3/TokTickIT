@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -50,7 +50,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-18 | API | AC-13, AC-14 | Admin list, search, filter, create | Correct subset; duplicate email 409; email differing only in case also 409; invalid role 400; **a successfully created user comes back with `mustChangePassword` true and no password echoed** | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-19 | API | AC-15, AC-16 | Admin guards and reset | Self-deactivation checked before last-admin, both 409; reset sets the flag **and the reset user's next login is then refused entry to any normal endpoint until a new password is saved**, proving the gate actually engages rather than just the flag being written | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-20 | API | AC-20, BR-21 | Login throttling | 6th failure inside the window → 429 with wording identical to 401; success resets the counter. Uses the throttle's test-only reset in `beforeEach` so it cannot pollute API-02, API-03 and API-05, which share this file and also drive failed logins | server/tests/lab-03/auth.api.test.ts | TBD |
-| API-21 | API | AC-21, BR-24 | Deactivation cascade | Deactivated user's next request 401; their non-terminal tickets become unassigned; count reported | server/tests/lab-03/users-admin.api.test.ts | TBD |
+| API-21 | API | AC-21, BR-24 | Deactivation and demotion cascade | Deactivated user's next request 401; their non-terminal tickets become unassigned; count reported. **The same assertions run for a role change out of a staff role**, which BR-24 treats identically and which would otherwise strand tickets on an owner absent from the assignee list | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-22 | API | AC-22, BR-13 | Requester reopen | Own Resolved → Reopened 200; another user's → 403; from Closed → 422 | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-23 | API | AC-23, BR-26 | Resolution Summary required | Resolve without a summary → 400 RESOLUTION_SUMMARY_REQUIRED; with one it persists and is visible to the requester | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-24 | API | AC-24, BR-25 | Self-service prevention | Staff acting on a ticket they filed → 403 SELF_SERVICE_FORBIDDEN for claim, priority, status and notes; their own comment and appears-resolved still succeed | server/tests/lab-03/authorization.api.test.ts | TBD |
@@ -126,12 +126,12 @@ The disposition list, with before/after counts per group, is recorded in §6 as 
 | AC-20 | API-20, C-01 |
 | AC-21 | API-21, E-03 |
 | AC-22 | API-22, C-07, E-02 |
-| AC-27 | C-08, E-01 |
-| AC-28 | API-06 |
 | AC-23 | API-23, C-04, E-02 |
 | AC-24 | API-24, C-05 |
 | AC-25 | API-25, C-08 |
 | AC-26 | API-26, E-01 |
+| AC-27 | C-08, E-01 |
+| AC-28 | API-06 |
 
 Every AC maps to at least one test, and every test names at least one AC.
 

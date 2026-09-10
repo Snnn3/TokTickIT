@@ -1,6 +1,6 @@
 # Lab 3 UI Specification — Zen Green Extensions
 
-Version: 1.6 | Date: 2026-09-10 | Companion to `specification.md`.
+Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md`.
 
 ## 1. Tokens and rules (reused from Lab 2, extended)
 
@@ -69,7 +69,7 @@ The Internal Notes section is never rendered for a requester viewing their own t
 
 ## 6. Staff Ticket Queue
 
-Toolbar: search (`Search number or summary`, 300ms debounce) | Status, Category, Req Priority, IT Priority and Owner selects | Sort (Last Updated / Created / Number × asc/desc) | Clear filters tertiary | result-count caption. The Owner select offers `All owners` (default), `Assigned to me`, `Unassigned`, and the queue **loads unfiltered by default** so unclaimed work is the first thing visible (D12).
+Toolbar: search (`Search number or summary`, 300ms debounce) | Status, Category, Req Priority, IT Priority and Owner selects | Sort (Last Updated / Created / Number × asc/desc) | Clear filters tertiary | result-count caption. The Owner select offers `All owners` (default), `Assigned to anyone`, `Assigned to me`, `Unassigned` — four options covering the three documented `owner` values plus the unfiltered default, so no validated query value is unreachable from the UI, and the queue **loads unfiltered by default** so unclaimed work is the first thing visible (D12).
 
 Desktop ≥992px table: Number | Created | Summary | Category | Req Pri | IT Pri | Status | Owner | Updated | Open. Tablet 768–991px: the same minus Category. Mobile <768px: cards with a number-plus-badges header, summary, owner/updated caption, tappable to detail. Unassigned rows render `Unassigned` in muted text rather than an empty cell. A ticket carrying `appearsResolvedAt` shows the amber badge in the row.
 
