@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: Approved contract for Sprint 3 | Version: 1.7 | Date: 2026-09-10
+Status: **Draft — pending peer approval on PR #44** | Version: 1.8 | Date: 2026-09-10
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder).
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
@@ -19,6 +19,8 @@ Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24
 **Changes in v1.6** (addressing the second peer review by @YummieGG on PR #44): the contract claimed `server/.env.example` already documented the Lab 3 keys and that the README held the seeded credentials — neither was true, so both files are now updated and the seeded initial password is written down. v1.5 also introduced a contradiction while fixing an earlier point: it put byte-preservation assertions on API-26, a test the strategy section says runs against a stubbed Prisma client and therefore cannot prove anything about real rows. Preservation evidence is now **M-01**, a real-database procedure, API-26 is scoped to post-migration behaviour, and AC-17 traces to M-01. §6 now states exactly what evidence must be pasted in rather than a bare TBD.
 
 **Changes in v1.7** (internal-consistency audit across all six documents): ten contradictions between documents that each looked correct alone. Two were half-applied fixes from earlier rounds — BR-22 still demanded a JSON content type on every state-changing request while `api-spec.md` exempted body-less ones, and only the requester-facing reopen cleared the Resolution Summary while a staff reopen through the status PATCH did not. The CSRF exemption is now stated by request shape rather than an endpoint list that had already drifted. D10 no longer claims Cancelled is reachable from Resolved, which the BR-13 matrix forbids. BR-19 now permits all three fields the API actually returns instead of one. The BR-24 role-demotion cascade reaches the API contract, AC-21 and API-21 rather than existing only as a business rule. The BR-25 blanket claim is scoped to ticket-addressed routes, since the queue and the assignee list cannot obey it. The requester ticket detail now exposes `appearsResolvedAt`, without which the badge `ui-spec.md` requires could not survive a reload. The Owner filter exposes the `assigned` value it validates. AC-27 and AC-28 are back in order in both §9 and the traceability table.
+
+**Changes in v1.8** (addressing the third peer review by @YummieGG on PR #44): the header claimed **Approved** while the PR carried two unresolved `CHANGES_REQUESTED` rounds and no approval — the status is now Draft, and the Definition of Done gains an explicit item requiring a recorded peer approval before it changes, so the label can never again run ahead of the reviewer's verdict. The two authenticated reference endpoints had no authorization-matrix row, and the matrix never stated what an unauthenticated caller receives; both are fixed. The logout contract said a cookie was required *and* that it was idempotent when absent, which left the implementer unable to choose between `401` and `204`; it now pins `204` unconditionally, with the reason, and API-06 asserts it.
 
 ## 1. Sprint Goal
 
@@ -115,6 +117,7 @@ Administrator is a **superset** of IT Staff for Ticket operations. The handout's
 | Operation | Requester | IT Staff | Administrator |
 |---|---|---|---|
 | Login / me / change-password / logout | yes | yes | yes |
+| Reference data: `GET /api/reference/categories`, `GET /api/reference/systems` | yes | yes | yes |
 | Create Ticket + own list/detail/attachments | yes (own only) | yes (own only) | yes (own only) |
 | Public Comments read/create | own tickets | all | all |
 | Appears-resolved signal | own tickets | own tickets (as requester) | own tickets (as requester) |
@@ -125,6 +128,8 @@ Administrator is a **superset** of IT Staff for Ticket operations. The handout's
 | Claim / assign owner, IT Priority, status | no (`403`) | yes, except own-requested (BR-25) | yes, except own-requested (BR-25) |
 | Be assigned as Ticket Owner | no | yes (if active) | yes (if active) |
 | Admin user CRUD + reset-password | no (`403`) | no (`403`) | yes (+ BR-15 guards) |
+
+The matrix covers authenticated callers. **An unauthenticated caller receives `401 AUTH_REQUIRED` on every row above except login**, including the reference endpoints — those return active categories and systems, which are internal service-desk configuration rather than public data, so they are authenticated like everything else. Only `POST /api/auth/login` is reachable without a session.
 
 ## 6. UI Specification Summary
 
@@ -245,6 +250,7 @@ Delivery:
 * [ ] Issues tracked on the Kanban board Backlog → Specified → Started → PR Review → Fixing → Done.
 * [ ] Feature branches only; peer-reviewed PRs into `lab3-staging`; release PR to `main` approved.
 * [ ] Contract docs version-controlled and merged **before** implementation PRs (handout Part 2 evidence).
+* [ ] Peer approval recorded on PR #44 and this document's status changed from Draft to Approved. Until that happens the contract is not approved, whatever this file's header says — the reviewer's verdict on the PR is the authority, not the label.
 * [ ] `reviewer.md` complete with reviews given and received, links and approvals.
 * [ ] Submission PDF using the literal headings "Answer Part 1" through "Answer Part 9" with working links.
 

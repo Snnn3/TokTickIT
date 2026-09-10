@@ -1,6 +1,6 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 1.8 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
@@ -25,9 +25,9 @@ Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs
 
 ### POST /api/auth/logout [FR-18, FR-30, BR-20]
 
-* Requires a cookie; idempotent (clears even if absent).
-* Increments the user's `tokenVersion`, so any other outstanding cookie for that user is invalidated too.
-* Response `204` + cleared `Set-Cookie`. No body.
+* **No cookie is required.** Logout always returns `204` and always sends a cleared `Set-Cookie`, whether or not the caller presented a valid session. This is deliberate: a client whose cookie has already expired or been invalidated must still be able to complete a sign-out and reach a clean state, and returning `401` there would strand the user on a screen whose only escape is the action that just failed.
+* When the request *does* carry a valid session, the user's `tokenVersion` is incremented, invalidating any other outstanding cookie for that user. When it does not, there is no user to act on and the response is the same `204`.
+* Response `204` + cleared `Set-Cookie`. No body, in either case.
 
 ### GET /api/auth/me [FR-18]
 

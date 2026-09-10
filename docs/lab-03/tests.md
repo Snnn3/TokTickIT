@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.7 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.8 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -35,7 +35,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-03 | API | AC-02 | Inactive account login | 401 identical to API-02, no enumeration | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-04 | API | AC-03 | Change-required gate | Normal APIs 403 PASSWORD_CHANGE_REQUIRED; me/change-password/logout allowed | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-05 | API | AC-03, AC-19 | Password change boundaries and complexity | Short, mismatched, or missing a character class → 400 with details; valid clears the flag | server/tests/lab-03/auth.api.test.ts | TBD |
-| API-06 | API | AC-06, AC-28, FR-30 | Session invalidation | Logout 204; `me` 401 after; the pre-logout cookie replayed is also 401 (tokenVersion). A password change invalidates a second outstanding session for that user while the changing session stays valid | server/tests/lab-03/auth.api.test.ts | TBD |
+| API-06 | API | AC-06, AC-28, FR-30 | Session invalidation | Logout 204; `me` 401 after; the pre-logout cookie replayed is also 401 (tokenVersion). **Logout with no cookie at all also returns 204**, never 401, so a client with an expired session can still reach a clean signed-out state. A password change invalidates a second outstanding session for that user while the changing session stays valid | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-07 | API | AC-04 | Authenticated identity beats client-supplied id | Body/query requesterId ignored; own data only | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-08 | API | AC-04, AC-05 | Requester blocked from notes, staff and admin routes | 403 with no content leak; notes response reveals nothing about existence | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-09 | API | AC-05 | Staff and Admin note access | 200 with content for both roles (D2) | server/tests/lab-03/comments-notes.api.test.ts | TBD |

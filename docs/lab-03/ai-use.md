@@ -59,10 +59,12 @@ Asked that commits "not make you co-author", the agent rewrote the two unpushed 
 
 ## My Reflection
 
-TBD — reflect on specification-agent vs coding-agent use after implementation.
+> Drafted from this sprint's session record and pending my own final wording.
 
-Material to draw on when writing this:
-- How grilling sharpened the auth/session and status-matrix choices, and how putting decisions as multiple-choice with stated trade-offs changed the quality of the answers.
-- How contract-first caught ownership and notes-visibility problems before any code existed.
-- That agent review and human peer review caught **different classes** of defect: the agent rounds found unreachable flows and missing endpoints; the peer rounds found a Definition of Done gating on the wrong criterion range and documentation asserting repo facts that were untrue. Neither substituted for the other.
-- That reviewing the same artifact repeatedly showed diminishing returns per round, but changing the *question* asked (correctness → cross-document conflict) reset the yield.
+Using a specification agent and a coding agent turned out to be two different skills. The specification work went best when I stopped asking open questions and started asking the agent to put each decision to me as a choice with a recommendation and a stated trade-off. That one change produced seventeen locked decisions in five rounds, and it also exposed something I had not noticed on my own: the lab handout contradicts itself in four places. Section 4.3 says an Administrator is separate from IT Staff ticket work while 4.5 makes an Administrator a valid Ticket Owner; the Ticket Detail mockup shows a Service Actions tab that 4.2 explicitly excludes. My first contract draft had quietly picked one side of each without recording that a choice had even been made. Writing the reasoning down is what made those defensible.
+
+The most useful thing I learned is that reviewing is not one activity. Three agent review rounds asked "is each document correct?" and returned clean. When I then asked a different question — "do any two documents disagree?" — it found ten contradictions that every previous pass had approved, including two cases where a fix had been applied to one document and left un-applied in its twin, with a changelog entry claiming the fix had landed. Changing the question mattered more than running the same review again.
+
+My peer reviewer then found things all of that missed, and in a different category again. He caught a Definition of Done still gating on AC-01..AC-27 one revision after AC-28 was added, so completion could have been reported without ever verifying that requirement, and documentation asserting facts about `.env.example` and the README that simply were not true. Both of his rounds also found defects introduced by the previous round's fix. That is the part I want to remember: an agent is fast at finding what is wrong inside the frame you give it, and much weaker at noticing that the frame itself has drifted from reality. Human review is not a formality on top of AI review; it catches a different class of mistake.
+
+The contract-first order paid for itself. Ownership rules, internal-note visibility, and the fact that a staff member filing their own ticket needed a self-service ban were all settled before a line of Lab 3 code existed. The cost is that the contract went through eight revisions before approval, and I would rather spend that in documents than in migrations. What I would do differently is stop treating a clean review as evidence of correctness, and instead decide in advance which distinct question each review round is meant to answer.
