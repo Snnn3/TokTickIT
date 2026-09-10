@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.4 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.5 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -47,15 +47,15 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-15 | API | AC-11 | Status transitions | Legal 200; illegal 422; out of Closed/Cancelled 422; Requester Resolved/Closed 403 | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-16 | API | AC-07 | Appears-resolved signal | Sets appearsResolvedAt; repeat 409; cleared by the next staff transition | server/tests/lab-03/comments-notes.api.test.ts | TBD |
 | API-17 | API | AC-12 | Comment and note validation | Empty, whitespace-only and over-limit 400; author and time server-set | server/tests/lab-03/comments-notes.api.test.ts | TBD |
-| API-18 | API | AC-13, AC-14 | Admin list, search, filter, create | Correct subset; duplicate email 409; invalid role 400 | server/tests/lab-03/users-admin.api.test.ts | TBD |
-| API-19 | API | AC-15, AC-16 | Admin guards and reset | Self-deactivation and last-admin 409; reset sets the flag | server/tests/lab-03/users-admin.api.test.ts | TBD |
+| API-18 | API | AC-13, AC-14 | Admin list, search, filter, create | Correct subset; duplicate email 409; email differing only in case also 409; invalid role 400; **a successfully created user comes back with `mustChangePassword` true and no password echoed** | server/tests/lab-03/users-admin.api.test.ts | TBD |
+| API-19 | API | AC-15, AC-16 | Admin guards and reset | Self-deactivation checked before last-admin, both 409; reset sets the flag **and the reset user's next login is then refused entry to any normal endpoint until a new password is saved**, proving the gate actually engages rather than just the flag being written | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-20 | API | AC-20, BR-21 | Login throttling | 6th failure inside the window → 429 with wording identical to 401; success resets the counter. Uses the throttle's test-only reset in `beforeEach` so it cannot pollute API-02, API-03 and API-05, which share this file and also drive failed logins | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-21 | API | AC-21, BR-24 | Deactivation cascade | Deactivated user's next request 401; their non-terminal tickets become unassigned; count reported | server/tests/lab-03/users-admin.api.test.ts | TBD |
 | API-22 | API | AC-22, BR-13 | Requester reopen | Own Resolved → Reopened 200; another user's → 403; from Closed → 422 | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-23 | API | AC-23, BR-26 | Resolution Summary required | Resolve without a summary → 400 RESOLUTION_SUMMARY_REQUIRED; with one it persists and is visible to the requester | server/tests/lab-03/staff-ticket-detail.api.test.ts | TBD |
 | API-24 | API | AC-24, BR-25 | Self-service prevention | Staff acting on a ticket they filed → 403 SELF_SERVICE_FORBIDDEN for claim, priority, status and notes; their own comment and appears-resolved still succeed | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-25 | API | AC-25, FR-27 | Any role may file a ticket | IT Staff and Admin create succeeds and appears in their own list | server/tests/lab-03/authorization.api.test.ts | TBD |
-| API-26 | API | AC-26, BR-27 | Migrated requester behaviour | Migrated user logs in with the documented initial password, is gated, and still owns their Lab 2 tickets | server/tests/lab-03/migration.api.test.ts | TBD |
+| API-26 | API | AC-26, AC-17, BR-27 | Migrated requester behaviour | Migrated user logs in with the documented initial password, is gated, and still owns their Lab 2 tickets. **Ticket numbers are byte-identical to their pre-migration values and every attachment's stored bytes and size round-trip unchanged**, since ownership alone would not prove the data survived | server/tests/lab-03/migration.api.test.ts | TBD |
 | API-27 | API | AC-17 | Lab 2 regression under auth | Per BR-28: retired tests are gone, adapted tests pass after their mechanical identity swap, unchanged tests pass untouched | server/tests/lab-02/* + client/src/\_\_tests\_\_/lab-02/* (re-run) | TBD |
 | C-01 | UI | AC-01, AC-02 | Login form | Inline errors; no submit when invalid; one identical safe banner for 401 and 429 | client/src/\_\_tests\_\_/lab-03/Login.test.tsx | TBD |
 | C-02 | UI | AC-03, AC-19 | Change-password gate | Gate renders; live checklist ticks per rule; Save disabled until all rules and confirm pass | client/src/\_\_tests\_\_/lab-03/ChangePassword.test.tsx | TBD |
@@ -66,6 +66,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | C-07 | UI | AC-22, FR-21 | Requester detail additions | Reopen shown only on Resolved; appears-resolved confirmation; resolution summary read-only when present; notes section never rendered | client/src/\_\_tests\_\_/lab-03/RequesterTicketDetail.test.tsx | TBD |
 | C-08 | UI | AC-27, FR-19, FR-27 | Shell navigation and route guards | Each role sees only its permitted destinations; Create Ticket present for every role; a guarded route renders forbidden rather than the screen | client/src/\_\_tests\_\_/lab-03/AppShell.test.tsx | TBD |
 | S-01 | Style | AC-18 (ui-spec §1) | Zen Green tokens and badges | Tokens, focus rings and badge labels present; terminal statuses render neutral | client/src/\_\_tests\_\_/lab-03/\*.test.tsx | TBD |
+| S-02 | UI | AC-18 | Distinct screen states | For the queue, the staff detail and the users screen: loading, empty, no-results, forbidden and failure each render distinguishable content, and empty is never confused with no-results — the state coverage AC-18 requires, which tokens and scroll-width assertions do not reach | client/src/\_\_tests\_\_/lab-03/\*.test.tsx | TBD |
 | R-01 | Responsive | AC-18 | No horizontal scroll | scrollWidth ≤ innerWidth at 1366, 768 and 375 for all five screens | e2e/lab-03/\*.spec.ts | TBD |
 | E-01 | E2E | AC-01, AC-03, AC-06, AC-26 | Auth, first login, logout | Gate enforced; logout blocks direct navigation and cookie replay | e2e/lab-03/authentication.spec.ts | TBD |
 | E-02 | E2E | AC-07, AC-08..AC-12, AC-22, AC-23 | Staff flow end to end | Queue → detail → claim → prioritise → advance → resolve with summary → comment and note → requester reopens | e2e/lab-03/staff-ticket-flow.spec.ts | TBD |
@@ -118,8 +119,8 @@ The disposition list, with before/after counts per group, is recorded in §6 as 
 | AC-14 | API-18, C-06 |
 | AC-15 | API-19, C-06, E-03 |
 | AC-16 | API-19, E-03 |
-| AC-17 | API-27, API-26 |
-| AC-18 | S-01, R-01, E-01, E-02, E-03 |
+| AC-17 | API-26, API-27 |
+| AC-18 | S-01, S-02, R-01, E-01, E-02, E-03 |
 | AC-19 | U-01, API-05, C-02 |
 | AC-20 | API-20, C-01 |
 | AC-21 | API-21, E-03 |

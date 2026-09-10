@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: Approved contract for Sprint 3 | Version: 1.4 | Date: 2026-09-10
+Status: Approved contract for Sprint 3 | Version: 1.5 | Date: 2026-09-10
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder).
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
@@ -13,6 +13,8 @@ Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24
 **Changes in v1.3** (addressing second-round review findings F12–F24 against v1.2): the v1.2 BR-25 wording was itself wrong — "mutating endpoints only" would have let a staff member read the Internal Notes on a Ticket they filed, so the exemption is now scoped to the staff-detail read alone. The BR-28 retirement list was incomplete and is replaced by a three-group disposition (retired / adapted / unchanged) covering every Lab 2 file. A `GET /api/staff/assignees` endpoint is added, without which IT Staff had no way to populate the Owner select, since the user list is Administrator-only. Case-insensitive email uniqueness is now enforced on the write paths rather than only during migration. `AUTH_REQUIRED` is pinned as the unauthenticated error code so the adapted Lab 2 suites keep passing. `ownedOpenTicketCount` is added to the user list so the deactivation dialog can name a count before the change. The stray `confirm?` field is removed from the §8 summary, the queue index is corrected to match the unfiltered default, the Requester landing route is defined, and an identifier convention resolves the Lab 2 / Lab 3 `BR`/`AC` numbering collision.
 
 **Changes in v1.4** (addressing third-round review findings F25–F37 against v1.3): the BR-28 disposition was still wrong — two client tests that pass a `requesterId` prop were filed as unchanged, and the four adapted server suites also need 14 Prisma stubs re-pointed, which is the same failure that retires another file. The CSRF content-type rule is exempted for body-less requests, since it would otherwise have made logout impossible. Reopening now clears the Resolution Summary, so a second resolution cycle cannot reuse the explanation the Requester already rejected. Role demotion cascades like deactivation, since a demoted owner breaks the same invariant. A wrong current password returns `403` rather than `401`, which a client interceptor would read as an expired session. BR-19 carves out `ownedOpenTicketCount`, BR-15 gains an explicit check order and a second seeded Administrator so `LAST_ADMIN` is reachable at all, the change-password field names are reconciled between the two documents, the Users table gains its Reset action, the Internal Notes refusal keeps the error envelope while carrying no note data, and AC-28 closes the FR-30 clause that shipped unverified.
+
+**Changes in v1.5** (addressing peer review by @YummieGG on PR #44): the Definition of Done still gated on AC-01..AC-27 after v1.4 added AC-28, so completion could have been reported without verifying FR-30's password-change clause. `GET /api/staff/assignees` had no authorization-matrix row despite being a protected operation. The terminal-owner exception was buried in BR-10 with no decision justifying it, and is now **D22**. Four acceptance criteria were mapped to tests whose stated expectations did not actually reach the criterion: AC-14's `mustChangePassword` on create, AC-16's next-login gate after a reset, AC-17's preservation of ticket numbers and attachment bytes, and AC-18's distinct empty / no-results / forbidden / failure states, which now has its own test row S-02.
 
 ## 1. Sprint Goal
 
@@ -68,7 +70,7 @@ Email invitations, password-reset email, MFA, social login, SSO, self-registrati
 * **BR-07** A password must be **at least 8 characters and at most 72 bytes** after trim and must contain at least one uppercase letter, one lowercase letter, one digit, and one non-alphanumeric character; confirmation must match. The same policy applies to initial passwords set by an Administrator. The 72-byte ceiling is the bcrypt input limit. The **identical trim is applied when verifying a password at login**, so a password stored with surrounding whitespace stripped can never lock its owner out at sign-in.
 * **BR-08** JWT in httpOnly cookie (`SameSite=Lax`, `Secure` in prod), ~8h expiry, secret from server env only, never exposed to client or repo. Logout clears the cookie **and** invalidates the token per BR-20.
 * **BR-09** Duplicate email rejected (`409 EMAIL_TAKEN`); invalid role rejected (`400`). Email uniqueness is case-insensitive, which a plain unique index on Postgres text does not give: every write path lower-cases the address before storing and the uniqueness constraint is enforced on that lower-cased value. Without this, `Foo@x.com` would insert alongside `foo@x.com`, no conflict would be raised, and the case-insensitive login lookup would then match two rows.
-* **BR-10** Each Ticket has zero or one owner, who must be an **active** IT Staff or Administrator user **at the moment of assignment**. A Ticket may start unassigned. The active-owner invariant is asserted for non-terminal Tickets only: a Closed or Cancelled Ticket keeps its historical owner for the record even after that user is deactivated, since BR-24 releases only non-terminal work.
+* **BR-10** Each Ticket has zero or one owner, who must be an **active** IT Staff or Administrator user **at the moment of assignment**. A Ticket may start unassigned. The active-owner invariant is asserted for non-terminal Tickets only (**D22**): a Closed or Cancelled Ticket keeps its historical owner for the record even after that user is deactivated or demoted, since BR-24 releases only non-terminal work. This is a deliberate, documented departure from a literal reading of handout §4.5, justified in D22.
 * **BR-11** Requested Priority is immutable after creation. IT Priority is initialized as a copy of Requested Priority at creation and migration; editable only by IT Staff or Administrator.
 * **BR-12** Required statuses: New, Open, In Progress, Waiting for Requester, Resolved, Closed, Reopened, Cancelled. **Closed and Cancelled are terminal.**
 * **BR-13** Strict transition matrix enforced server-side; illegal transitions return `422 INVALID_TRANSITION`. "Staff" below means an IT Staff or Administrator user who is **not** the Ticket's Requester (BR-25):
@@ -115,6 +117,7 @@ Administrator is a **superset** of IT Staff for Ticket operations. The handout's
 | Reopen from Resolved | own tickets | yes | yes |
 | Internal Notes read/create | no (`403`) | yes, except own-requested (BR-25) | yes, except own-requested (BR-25) |
 | Queue list / staff detail | no (`403`) | yes | yes |
+| List assignable owners (`GET /api/staff/assignees`) | no (`403`) | yes | yes |
 | Claim / assign owner, IT Priority, status | no (`403`) | yes, except own-requested (BR-25) | yes, except own-requested (BR-25) |
 | Be assigned as Ticket Owner | no | yes (if active) | yes (if active) |
 | Admin user CRUD + reset-password | no (`403`) | no (`403`) | yes (+ BR-15 guards) |
@@ -224,7 +227,7 @@ Every AC maps to ≥1 test in `tests.md`.
 Product (checked before completion is reported):
 
 * [ ] All included scope implemented; no excluded feature present (specifically: no Service Actions tab, no user deletion, no admin pagination).
-* [ ] Every AC-01..AC-27 satisfied with passing automated evidence.
+* [ ] Every AC-01..AC-28 satisfied with passing automated evidence.
 * [ ] No test skipped or disabled; suite green from the documented commands on `main`.
 * [ ] Data model matches §7 (schema + applied migration + idempotent seed, ownership preserved, seed minimums met).
 * [ ] API conforms to `api-spec.md` (paths, shapes, cookies, authorization, safe errors).
@@ -266,3 +269,4 @@ Delivery:
 | D19 | bcryptjs rather than native bcrypt | Pure JS, no native build step on win32, course-friendly |
 | D20 | Two tables for comments and notes rather than one with a flag | Table-level authorization cannot leak through a forgotten filter predicate |
 | D21 | Timestamps UTC ISO-8601; seeds local-only | Consistent ordering; no secrets in the repository |
+| D22 | **A Closed or Cancelled Ticket keeps its owner even after that user is deactivated or demoted**, so the active-owner rule of handout §4.5 is asserted for non-terminal Tickets only | §4.5 describes ownership of *live* work. Scrubbing the owner from terminal Tickets would destroy the record of who actually handled them, which the Requester can still see on a Closed Ticket and which any later audit depends on. The alternative — blocking deactivation until every historical Ticket is reassigned — is an administrative dead end, since bulk operations are excluded (§4.2). D17's cascade therefore releases non-terminal work only, and BR-10, BR-24 and the migration all scope the invariant the same way |
