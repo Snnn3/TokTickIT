@@ -1,6 +1,6 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 1.4 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
@@ -10,7 +10,7 @@ Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs
 * Password hashing: bcryptjs cost 10–12. Secret `JWT_SECRET` from `server/.env` only, never committed or exposed. `server/.env.example` documents `JWT_SECRET` and `SEED_INITIAL_PASSWORD`. The README holds the authoritative initial-password value (BR-27); the seed uses `SEED_INITIAL_PASSWORD` when present and otherwise that documented constant, so a fresh clone still yields the credentials the E2E specs use.
 * Error envelope (all non-2xx): `{ "error": { "code", "message", "details"? } }`. Safe messages only, no stack traces or internals.
 * Change-password gate: if `user.mustChangePassword=true`, every endpoint except `GET /api/auth/me`, `POST /api/auth/change-password` and `POST /api/auth/logout` returns `403 PASSWORD_CHANGE_REQUIRED`.
-* CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. No CSRF token is issued.
+* CSRF (BR-22): `SameSite=Lax` blocks cross-site state-changing requests; CORS is configured **without** `credentials`, so no foreign origin can cause the cookie to be sent; and every non-GET endpoint **that carries a body** requires `Content-Type: application/json` (or `multipart/form-data` where stated), rejecting simple cross-origin form posts with `415`. Requests with no body at all — logout and appears-resolved — are exempt from the content-type check, because a browser sends no `Content-Type` for a body-less `fetch` and requiring one would make logout impossible. No CSRF token is issued.
 * The code for an unauthenticated request is **`AUTH_REQUIRED`**, carried over unchanged from Lab 2 so that the adapted Lab 2 suites keep asserting the same value; `INVALID_CREDENTIALS` is reserved for a failed login attempt specifically.
 * Status summary: `200` retrieve/update, `201` created, `204` logout, `400` validation/query, `401` unauthenticated, `403` forbidden or change-required, `404` missing, `409` conflict, `410` removed attachment, `413` too large, `415` unsupported type, `422` illegal transition or invalid owner, `429` throttled, `500` safe generic.
 
@@ -39,7 +39,7 @@ Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (FR/BR/AC refs
 * Rules (BR-07): trimmed, ≥8 characters, ≤72 bytes, at least one uppercase, one lowercase, one digit and one non-alphanumeric character; confirmation must match; the new password must differ from the current one.
 * On success clears `mustChangePassword`, increments `tokenVersion`, and issues a fresh cookie so the caller stays signed in while other sessions die.
 * Response `200`: `{ "changed": true, "mustChangePassword": false }`.
-* Errors: `400 VALIDATION_FAILED` with `details[]` naming each unmet rule; `400 PASSWORD_UNCHANGED`; `401` unauthenticated or wrong `currentPassword`; `500`.
+* Errors: `400 VALIDATION_FAILED` with `details[]` naming each unmet rule; `400 PASSWORD_UNCHANGED`; `403 CURRENT_PASSWORD_INVALID` when `currentPassword` is wrong — **not** `401`, which BR-18 reserves for an absent or invalid session and which any client interceptor would read as an expired login, bouncing the user out of the form mid-edit; `401` only when the cookie itself is missing or stale; `500`.
 
 ## 3. Ticket endpoints for the requesting user (any authenticated role) [FR-27]
 
@@ -70,7 +70,7 @@ DELETE /api/attachments/:id          {reason 1..300}
 ### POST /api/tickets/:id/reopen [FR-21, BR-13, D4]
 
 * The authenticated user must be the ticket's requester and the ticket must be `RESOLVED`.
-* Response `200`: `{ "status": "REOPENED" }`. Clears `appearsResolvedAt`.
+* Response `200`: `{ "status": "REOPENED" }`. Clears `appearsResolvedAt` **and `resolutionSummary`**, so the next resolution cycle cannot present the previous cycle's explanation as its answer.
 * Errors: `403` not the requester; `404`; `422 INVALID_TRANSITION` from any status other than Resolved — notably from Closed, which is terminal.
 * Staff reopen the same ticket through `PATCH /api/staff/tickets/:id/status`.
 
@@ -145,7 +145,7 @@ This route sits under `/api/tickets/`, **not** `/api/staff/`, because the ticket
 
 ### GET/POST /api/staff/tickets/:id/notes (internal, IT Staff and Administrator only)
 
-* Same shapes as comments. A Requester-role user receives `403` with **no body content whatsoever** — the response never reveals whether notes exist. A staff user who is the ticket's own requester also receives `403` per BR-25.
+* Same shapes as comments. A Requester-role user receives `403` carrying the standard error envelope and **no note data of any kind** — the envelope is still required (§1), but the body must never reveal whether notes exist, how many there are, or any fragment of their content. A staff user who is the ticket's own requester also receives `403` per BR-25.
 * Both collections are append-only; no PUT or DELETE exists in Lab 3.
 
 ## 6. Admin users [FR-26, BR-09, BR-15, BR-24]

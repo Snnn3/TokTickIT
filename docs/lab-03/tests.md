@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 1.4 | Date: 2026-09-10 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -35,7 +35,7 @@ Unit, API/integration, UI component, UI style, responsive, security/authorizatio
 | API-03 | API | AC-02 | Inactive account login | 401 identical to API-02, no enumeration | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-04 | API | AC-03 | Change-required gate | Normal APIs 403 PASSWORD_CHANGE_REQUIRED; me/change-password/logout allowed | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-05 | API | AC-03, AC-19 | Password change boundaries and complexity | Short, mismatched, or missing a character class → 400 with details; valid clears the flag | server/tests/lab-03/auth.api.test.ts | TBD |
-| API-06 | API | AC-06, FR-30 | Logout, then cookie replay | Logout 204; `me` 401 after; **the pre-logout cookie replayed is also 401** (tokenVersion) | server/tests/lab-03/auth.api.test.ts | TBD |
+| API-06 | API | AC-06, AC-28, FR-30 | Session invalidation | Logout 204; `me` 401 after; the pre-logout cookie replayed is also 401 (tokenVersion). A password change invalidates a second outstanding session for that user while the changing session stays valid | server/tests/lab-03/auth.api.test.ts | TBD |
 | API-07 | API | AC-04 | Authenticated identity beats client-supplied id | Body/query requesterId ignored; own data only | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-08 | API | AC-04, AC-05 | Requester blocked from notes, staff and admin routes | 403 with no content leak; notes response reveals nothing about existence | server/tests/lab-03/authorization.api.test.ts | TBD |
 | API-09 | API | AC-05 | Staff and Admin note access | 200 with content for both roles (D2) | server/tests/lab-03/comments-notes.api.test.ts | TBD |
@@ -89,13 +89,14 @@ Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled 
 
 | File(s) | Edit |
 |---|---|
-| `server/tests/lab-02/{attachments,create-ticket,my-tickets,ticket-detail}.api.test.ts` | 30 `X-Requester-Id` header calls become authenticated session cookies. The `AUTH_REQUIRED` assertion in `my-tickets` stays valid because `api-spec.md` §1 pins that same code for unauthenticated requests |
+| `server/tests/lab-02/{attachments,create-ticket,my-tickets,ticket-detail}.api.test.ts` | Two mechanical edits, not one. First, 30 `X-Requester-Id` header calls become authenticated session cookies. Second, **14 `prisma.requesterUser` stubs become `prisma.user` stubs** — the dropped model would otherwise be `undefined` and `vi.spyOn` would throw at module load, which is the same failure that retires `requesters.api.test.ts`. The difference is that these four files still have a surviving subject, so they are repaired rather than deleted. The `AUTH_REQUIRED` assertion in `my-tickets` stays valid because `api-spec.md` §1 pins that code |
 | `client/src/__tests__/lab-02/{CreateTicket,MyTickets}.test.tsx` | The `RequesterProvider` test wrapper becomes the auth provider; the component assertions are untouched |
+| `client/src/__tests__/lab-02/{AttachmentSection,RequesterTicketDetail}.test.tsx` | Both render their component with a `requesterId` prop, and both components use it to build `X-Requester-Id` headers on four fetch calls. FR-20 deletes that header, so the prop disappears and these tests must drop it and rely on the session instead |
 | `client/src/__tests__/lab-02/{App,AppHeader}.test.tsx` | Shell assertions move from selector and Change Requester to authenticated identity and Logout — the heaviest of the adaptations, since the shell's whole premise changes |
 
-**Unchanged.** Everything else, including all Lab 1 tests and `ticket-number.unit.test.ts`.
+**Unchanged.** Everything else, including all Lab 1 tests and `ticket-number.unit.test.ts`. Note that **every** Lab 2 file touching identity is now accounted for above; a file silently left in this bucket while depending on the selector or the identity header is the failure mode that broke earlier drafts of this plan twice.
 
-The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence.
+The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence. Retiring the Lab 2 browser spec also invalidates the `npx playwright test e2e/lab-02` command in the README and the evidence paths cited in `docs/lab-02/tests.md`; both must be annotated as superseded by `e2e/lab-03`, so the final `main` does not read as though graded Lab 2 evidence went missing.
 
 ## 3. Acceptance-Criterion Traceability
 
@@ -124,6 +125,7 @@ The disposition list, with before/after counts per group, is recorded in §6 as 
 | AC-21 | API-21, E-03 |
 | AC-22 | API-22, C-07, E-02 |
 | AC-27 | C-08, E-01 |
+| AC-28 | API-06 |
 | AC-23 | API-23, C-04, E-02 |
 | AC-24 | API-24, C-05 |
 | AC-25 | API-25, C-08 |

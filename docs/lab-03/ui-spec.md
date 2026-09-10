@@ -1,6 +1,6 @@
 # Lab 3 UI Specification — Zen Green Extensions
 
-Version: 1.3 | Date: 2026-09-10 | Companion to `specification.md`.
+Version: 1.4 | Date: 2026-09-10 | Companion to `specification.md`.
 
 ## 1. Tokens and rules (reused from Lab 2, extended)
 
@@ -87,7 +87,7 @@ Comments card (white) and Internal Notes card (amber, lock icon, `Private — ne
 
 ## 8. Administrator User Management
 
-A single screen: header with a Create User primary button; toolbar with a search input (`Search name or email`) and a role filter (`All roles` / Requester / IT Staff / Administrator); a desktop table of Name | Email | Role badge | Status badge | Edit action, becoming cards below 768px. There is no pagination and no multi-column sorting, both excluded by §8.5.
+A single screen: header with a Create User primary button; toolbar with a search input (`Search name or email`) and a role filter (`All roles` / Requester / IT Staff / Administrator); a desktop table of Name | Email | Role badge | Status badge | Actions (Edit and Reset password), becoming cards below 768px. There is no pagination and no multi-column sorting, both excluded by §8.5.
 
 Create and Edit dialogs carry Name, Email, a single Role select, an Active toggle, and — on create and reset only — a password field with the same live checklist as §4. Inline validation covers duplicate email, invalid role and every unmet password rule. A Reset Password dialog from the row action sets the change-required flag and confirms success while stating that the user must change it at next login.
 
