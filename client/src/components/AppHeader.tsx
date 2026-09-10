@@ -31,10 +31,16 @@ export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
           aria-label="Toggle navigation"
           onClick={() => setNavExpanded(!navExpanded)}
         >
-          <span className="navbar-toggler-icon" style={{ filter: "invert(1)" }}></span>
+          <span
+            className="navbar-toggler-icon"
+            style={{ filter: "invert(1)" }}
+          ></span>
         </button>
 
-        <div className={`collapse navbar-collapse ${navExpanded ? "show" : ""}`} id="navbarNav">
+        <div
+          className={`collapse navbar-collapse ${navExpanded ? "show" : ""}`}
+          id="navbarNav"
+        >
           <ul className="navbar-nav me-auto mb-2 mb-md-0 gap-1">
             <li className="nav-item">
               <button
@@ -69,7 +75,10 @@ export function AppHeader({ activeTab, onTabChange }: AppHeaderProps) {
           {selectedRequester && (
             <div className="d-flex flex-column flex-md-row align-items-md-center gap-2 mt-2 mt-md-0">
               <span className="zg-requester-chip" data-testid="requester-chip">
-                <span>Signed in as <strong>{selectedRequester.name}</strong> <span className="opacity-75">(dev)</span></span>
+                <span>
+                  Signed in as <strong>{selectedRequester.name}</strong>{" "}
+                  <span className="opacity-75">(dev)</span>
+                </span>
               </span>
               <button
                 type="button"

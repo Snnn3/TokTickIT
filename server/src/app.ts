@@ -61,7 +61,10 @@ app.get("/api/reference/categories", async (_req, res) => {
     res.status(200).json({ categories });
   } catch (error) {
     res.status(500).json({
-      error: { code: "UNEXPECTED", message: "Failed to load reference categories" },
+      error: {
+        code: "UNEXPECTED",
+        message: "Failed to load reference categories",
+      },
     });
   }
 });
@@ -76,7 +79,10 @@ app.get("/api/reference/systems", async (_req, res) => {
     res.status(200).json({ systems });
   } catch (error) {
     res.status(500).json({
-      error: { code: "UNEXPECTED", message: "Failed to load reference systems" },
+      error: {
+        code: "UNEXPECTED",
+        message: "Failed to load reference systems",
+      },
     });
   }
 });

@@ -67,7 +67,7 @@ async function main() {
     ]);
 
   console.log(
-    `Seed complete: ${categories} categories, ${systems} related systems, ${activeRequesters} active requesters, ${inactiveRequesters} inactive requesters`,
+    `Seed complete: ${categories} categories, ${systems} related systems, ${activeRequesters} active requesters, ${inactiveRequesters} inactive requesters`
   );
 }
 

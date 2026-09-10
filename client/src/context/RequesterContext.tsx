@@ -6,14 +6,15 @@ import { RequesterContext, STORAGE_KEY } from "./requester-context";
 export { useRequester } from "./useRequester";
 
 export function RequesterProvider({ children }: { children: ReactNode }) {
-  const [selectedRequester, setSelectedRequesterState] = useState<RequesterUser | null>(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [selectedRequester, setSelectedRequesterState] =
+    useState<RequesterUser | null>(() => {
+      try {
+        const stored = sessionStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : null;
+      } catch {
+        return null;
+      }
+    });
 
   const selectRequester = (requester: RequesterUser) => {
     setSelectedRequesterState(requester);
@@ -45,4 +46,3 @@ export function RequesterProvider({ children }: { children: ReactNode }) {
     </RequesterContext.Provider>
   );
 }
-

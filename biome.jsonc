@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["ultracite/biome/core"],
+  // Lab3-02 is a formatting-only pass, so Biome's linter stays off: it must
+  // never rewrite code for a lint rule. The client keeps oxlint as its linter.
+  "linter": { "enabled": false },
+  // Assist actions (import ordering, key/attribute sorting) reorder source and
+  // are therefore out of scope for a formatting-only pass.
+  "assist": { "enabled": false },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules/**",
+      "!**/dist/**",
+      "!**/package-lock.json",
+      "!artifacts/**",
+      "!e2e/evidence/**",
+      "!server/prisma/migrations/**"
+    ]
+  }
+}

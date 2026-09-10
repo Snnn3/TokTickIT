@@ -35,12 +35,16 @@ export function RequesterTicketDetail({
       });
 
       if (res.status === 404) {
-        setError("Ticket not found. It may have been deleted or the ID is incorrect.");
+        setError(
+          "Ticket not found. It may have been deleted or the ID is incorrect."
+        );
         return;
       }
 
       if (res.status === 403) {
-        setError("Access denied. You do not have permission to view this ticket.");
+        setError(
+          "Access denied. You do not have permission to view this ticket."
+        );
         return;
       }
 
@@ -80,8 +84,12 @@ export function RequesterTicketDetail({
         ...prev,
         attachments: prev.attachments.map((att) =>
           att.id === update.attachmentId
-            ? { ...att, removedReason: update.removedReason, removedAt: update.removedAt }
-            : att,
+            ? {
+                ...att,
+                removedReason: update.removedReason,
+                removedAt: update.removedAt,
+              }
+            : att
         ),
       };
     });
@@ -92,29 +100,56 @@ export function RequesterTicketDetail({
       <div className="my-2" data-testid="ticket-detail-loading">
         <div className="zg-card p-4 mb-4">
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <div className="skeleton-placeholder" style={{ width: "200px", height: "32px" }} />
-            <div className="skeleton-placeholder" style={{ width: "120px", height: "32px" }} />
+            <div
+              className="skeleton-placeholder"
+              style={{ width: "200px", height: "32px" }}
+            />
+            <div
+              className="skeleton-placeholder"
+              style={{ width: "120px", height: "32px" }}
+            />
           </div>
 
           <div className="row g-3 mb-4">
             <div className="col-12 col-md-6">
               <div className="p-3 bg-light rounded border">
-                <div className="skeleton-placeholder mb-2" style={{ width: "40%", height: "16px" }} />
-                <div className="skeleton-placeholder" style={{ width: "80%", height: "24px" }} />
+                <div
+                  className="skeleton-placeholder mb-2"
+                  style={{ width: "40%", height: "16px" }}
+                />
+                <div
+                  className="skeleton-placeholder"
+                  style={{ width: "80%", height: "24px" }}
+                />
               </div>
             </div>
             <div className="col-12 col-md-6">
               <div className="p-3 bg-light rounded border">
-                <div className="skeleton-placeholder mb-2" style={{ width: "40%", height: "16px" }} />
-                <div className="skeleton-placeholder" style={{ width: "80%", height: "24px" }} />
+                <div
+                  className="skeleton-placeholder mb-2"
+                  style={{ width: "40%", height: "16px" }}
+                />
+                <div
+                  className="skeleton-placeholder"
+                  style={{ width: "80%", height: "24px" }}
+                />
               </div>
             </div>
           </div>
 
           <div className="p-3 bg-light rounded border mb-4">
-            <div className="skeleton-placeholder mb-2" style={{ width: "25%", height: "16px" }} />
-            <div className="skeleton-placeholder mb-2" style={{ width: "100%", height: "20px" }} />
-            <div className="skeleton-placeholder" style={{ width: "70%", height: "20px" }} />
+            <div
+              className="skeleton-placeholder mb-2"
+              style={{ width: "25%", height: "16px" }}
+            />
+            <div
+              className="skeleton-placeholder mb-2"
+              style={{ width: "100%", height: "20px" }}
+            />
+            <div
+              className="skeleton-placeholder"
+              style={{ width: "70%", height: "20px" }}
+            />
           </div>
         </div>
       </div>
@@ -125,7 +160,9 @@ export function RequesterTicketDetail({
     return (
       <div className="my-2" data-testid="ticket-detail-error">
         <div className="zg-card p-4 text-center py-5">
-          <div className="alert alert-danger mb-4 text-start">{error || "Ticket not found"}</div>
+          <div className="alert alert-danger mb-4 text-start">
+            {error || "Ticket not found"}
+          </div>
           <button
             type="button"
             className="btn btn-zen-primary"
@@ -164,7 +201,10 @@ export function RequesterTicketDetail({
               <span>←</span>
               <span>Back to My Tickets</span>
             </button>
-            <h1 className="h4 fw-bold mb-0 text-zen-primary" data-testid="ticket-detail-number">
+            <h1
+              className="h4 fw-bold mb-0 text-zen-primary"
+              data-testid="ticket-detail-number"
+            >
               {ticket.number}
             </h1>
           </div>
@@ -174,19 +214,31 @@ export function RequesterTicketDetail({
         <div className="row g-3 mb-3">
           {/* System Group */}
           <div className="col-12 col-md-6">
-            <div className="zg-readonly-panel p-3 h-100" data-testid="system-metadata-group">
-              <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+            <div
+              className="zg-readonly-panel p-3 h-100"
+              data-testid="system-metadata-group"
+            >
+              <h2
+                className="small text-muted text-uppercase fw-bold mb-3"
+                style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
+              >
                 System Metadata
               </h2>
               <div className="row g-2 small">
                 <div className="col-6 text-muted">Ticket Number:</div>
-                <div className="col-6 fw-semibold text-zen-primary">{ticket.number}</div>
+                <div className="col-6 fw-semibold text-zen-primary">
+                  {ticket.number}
+                </div>
 
                 <div className="col-6 text-muted">Ticket Date:</div>
-                <div className="col-6 fw-medium text-zen-body">{formatDateOnly(ticket.ticketDate)}</div>
+                <div className="col-6 fw-medium text-zen-body">
+                  {formatDateOnly(ticket.ticketDate)}
+                </div>
 
                 <div className="col-6 text-muted">Requester:</div>
-                <div className="col-6 fw-medium text-zen-body">{requesterDisplayName}</div>
+                <div className="col-6 fw-medium text-zen-body">
+                  {requesterDisplayName}
+                </div>
 
                 <div className="col-6 text-muted">Status:</div>
                 <div className="col-6">
@@ -198,16 +250,26 @@ export function RequesterTicketDetail({
 
           {/* Classification Group */}
           <div className="col-12 col-md-6">
-            <div className="zg-readonly-panel p-3 h-100" data-testid="classification-group">
-              <h2 className="small text-muted text-uppercase fw-bold mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+            <div
+              className="zg-readonly-panel p-3 h-100"
+              data-testid="classification-group"
+            >
+              <h2
+                className="small text-muted text-uppercase fw-bold mb-3"
+                style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
+              >
                 Classification
               </h2>
               <div className="row g-2 small">
                 <div className="col-6 text-muted">Category:</div>
-                <div className="col-6 fw-medium text-zen-body">{categoryDisplayName}</div>
+                <div className="col-6 fw-medium text-zen-body">
+                  {categoryDisplayName}
+                </div>
 
                 <div className="col-6 text-muted">Related System:</div>
-                <div className="col-6 fw-medium text-zen-body">{systemDisplayName}</div>
+                <div className="col-6 fw-medium text-zen-body">
+                  {systemDisplayName}
+                </div>
 
                 <div className="col-6 text-muted">Requested Priority:</div>
                 <div className="col-6">
@@ -219,15 +281,27 @@ export function RequesterTicketDetail({
         </div>
 
         {/* Details Group (Summary & Description) */}
-        <div className="zg-readonly-panel p-3 mb-3" data-testid="ticket-details-group">
-          <h2 className="small text-muted text-uppercase fw-bold mb-2" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+        <div
+          className="zg-readonly-panel p-3 mb-3"
+          data-testid="ticket-details-group"
+        >
+          <h2
+            className="small text-muted text-uppercase fw-bold mb-2"
+            style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
+          >
             Summary
           </h2>
-          <div className="fw-semibold text-zen-primary mb-3" data-testid="ticket-detail-summary">
+          <div
+            className="fw-semibold text-zen-primary mb-3"
+            data-testid="ticket-detail-summary"
+          >
             {ticket.summary}
           </div>
 
-          <h2 className="small text-muted text-uppercase fw-bold mb-2" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+          <h2
+            className="small text-muted text-uppercase fw-bold mb-2"
+            style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
+          >
             Description
           </h2>
           <div
@@ -240,7 +314,10 @@ export function RequesterTicketDetail({
         </div>
 
         {/* Meta Footer [ui-spec §9, lines 122-123] */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pt-2 text-muted small border-top" data-testid="ticket-detail-meta-footer">
+        <div
+          className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center pt-2 text-muted small border-top"
+          data-testid="ticket-detail-meta-footer"
+        >
           <span>Created: {formatDateTime(ticket.createdAt)}</span>
           <span>Last Updated: {formatDateTime(ticket.updatedAt)}</span>
         </div>

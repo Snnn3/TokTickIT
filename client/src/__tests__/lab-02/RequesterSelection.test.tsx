@@ -2,7 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { RequesterSelection } from "../../components/RequesterSelection";
-import { RequesterProvider, useRequester } from "../../context/RequesterContext";
+import {
+  RequesterProvider,
+  useRequester,
+} from "../../context/RequesterContext";
 
 const mockRequesters = [
   { id: 1, name: "Anucha Wongchai", email: "anucha.wongchai@example.com" },
@@ -33,13 +36,21 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
 
     expect(screen.getByText("TokTickIT")).toBeInTheDocument();
     expect(
-      screen.getByText(/Select a Development Requester to test requester-specific ticket behavior/i)
+      screen.getByText(
+        /Select a Development Requester to test requester-specific ticket behavior/i
+      )
     ).toBeInTheDocument();
-    expect(screen.getByText(/Authentication and role-based access will be introduced in Lab 3/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Authentication and role-based access will be introduced in Lab 3/i
+      )
+    ).toBeInTheDocument();
   });
 
   it("shows loading state while fetching requesters", () => {
-    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() => new Promise(() => {}));
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () => new Promise(() => {})
+    );
 
     render(
       <TestWrapper>
@@ -91,11 +102,15 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("empty-state")).toBeInTheDocument();
     });
-    expect(screen.getByText("No active requesters available.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No active requesters available.")
+    ).toBeInTheDocument();
   });
 
   it("shows error state with retry when fetch fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("Network Error"));
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error("Network Error")
+    );
 
     render(
       <TestWrapper>
@@ -106,7 +121,9 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("error-state")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Unable to load development requesters/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Unable to load development requesters/i)
+    ).toBeInTheDocument();
   });
 
   it("supports keyboard submission via Enter on form (AC-24)", async () => {
@@ -120,7 +137,9 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
       return (
         <div>
           <RequesterSelection />
-          <div data-testid="selected-user">{selectedRequester?.name || "none"}</div>
+          <div data-testid="selected-user">
+            {selectedRequester?.name || "none"}
+          </div>
         </div>
       );
     }
@@ -132,7 +151,9 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/Development Requester/i)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(/Development Requester/i)
+      ).toBeInTheDocument();
     });
 
     const select = screen.getByLabelText(/Development Requester/i);
@@ -141,6 +162,8 @@ describe("RequesterSelection Component (Issue #24, AC-19, AC-24)", () => {
     const form = screen.getByTestId("requester-form");
     fireEvent.submit(form);
 
-    expect(screen.getByTestId("selected-user")).toHaveTextContent("Busaba Srisawat");
+    expect(screen.getByTestId("selected-user")).toHaveTextContent(
+      "Busaba Srisawat"
+    );
   });
 });

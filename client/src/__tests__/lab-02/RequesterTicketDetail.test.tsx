@@ -7,7 +7,8 @@ const mockTicketDetail: TicketDetail = {
   id: 42,
   number: "TKT-2026-00042",
   summary: "VPN disconnecting randomly",
-  description: "Every 10 minutes the VPN connection drops.\nPlease investigate firewall logs.",
+  description:
+    "Every 10 minutes the VPN connection drops.\nPlease investigate firewall logs.",
   categoryId: 4,
   systemId: 2,
   requestedPriority: "HIGH",
@@ -65,11 +66,7 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
     const onBack = vi.fn();
 
     render(
-      <RequesterTicketDetail
-        ticketId={42}
-        requesterId={1}
-        onBack={onBack}
-      />,
+      <RequesterTicketDetail ticketId={42} requesterId={1} onBack={onBack} />
     );
 
     // Initial loading skeleton state
@@ -81,20 +78,28 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
     });
 
     // Check header and metadata fields
-    expect(screen.getByTestId("ticket-detail-number")).toHaveTextContent("TKT-2026-00042");
+    expect(screen.getByTestId("ticket-detail-number")).toHaveTextContent(
+      "TKT-2026-00042"
+    );
     expect(screen.getByText("Network")).toBeInTheDocument();
     expect(screen.getByText("Corporate VPN")).toBeInTheDocument();
     expect(screen.getByText("HIGH")).toBeInTheDocument();
     expect(screen.getAllByText("NEW").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByTestId("ticket-detail-summary")).toHaveTextContent("VPN disconnecting randomly");
+    expect(screen.getByTestId("ticket-detail-summary")).toHaveTextContent(
+      "VPN disconnecting randomly"
+    );
 
     // Check whitespace preserved in description
     const descEl = screen.getByTestId("ticket-detail-description");
-    expect(descEl).toHaveTextContent("Every 10 minutes the VPN connection drops.");
+    expect(descEl).toHaveTextContent(
+      "Every 10 minutes the VPN connection drops."
+    );
     expect(descEl).toHaveStyle({ whiteSpace: "pre-wrap" });
 
     // Verify view mode only: no editable input or textarea for ticket fields
-    expect(screen.queryByRole("textbox", { name: /summary/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /summary/i })
+    ).not.toBeInTheDocument();
 
     // Verify meta footer created and updated timestamps (ui-spec §9)
     const metaFooter = screen.getByTestId("ticket-detail-meta-footer");
@@ -114,7 +119,9 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
         return {
           ok: false,
           status: 403,
-          json: async () => ({ error: { code: "FORBIDDEN", message: "Access denied" } }),
+          json: async () => ({
+            error: { code: "FORBIDDEN", message: "Access denied" },
+          }),
         } as Response;
       }
       return {
@@ -124,11 +131,7 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
     });
 
     render(
-      <RequesterTicketDetail
-        ticketId={99}
-        requesterId={1}
-        onBack={vi.fn()}
-      />,
+      <RequesterTicketDetail ticketId={99} requesterId={1} onBack={vi.fn()} />
     );
 
     await waitFor(() => {

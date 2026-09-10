@@ -69,7 +69,9 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
       updatedAt: new Date(),
     });
 
-    const findManySpy = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    const findManySpy = vi
+      .spyOn(prisma.ticket, "findMany")
+      .mockResolvedValue([]);
     vi.spyOn(prisma.ticket, "count").mockResolvedValue(0);
 
     const res = await request(app)
@@ -96,7 +98,9 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
       updatedAt: new Date(),
     });
 
-    const findManySpy = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    const findManySpy = vi
+      .spyOn(prisma.ticket, "findMany")
+      .mockResolvedValue([]);
     vi.spyOn(prisma.ticket, "count").mockResolvedValue(0);
 
     const res = await request(app)
@@ -127,7 +131,9 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
       updatedAt: new Date(),
     });
 
-    const findManySpy = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    const findManySpy = vi
+      .spyOn(prisma.ticket, "findMany")
+      .mockResolvedValue([]);
     vi.spyOn(prisma.ticket, "count").mockResolvedValue(0);
 
     const res = await request(app)
@@ -157,7 +163,9 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
       updatedAt: new Date(),
     });
 
-    const findManySpy = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    const findManySpy = vi
+      .spyOn(prisma.ticket, "findMany")
+      .mockResolvedValue([]);
     vi.spyOn(prisma.ticket, "count").mockResolvedValue(25);
 
     const res = await request(app)
@@ -190,7 +198,9 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
     });
 
     const res = await request(app)
-      .get("/api/tickets?pageSize=15&priority=INVALID&page=2.5&categoryId=1abc&sort=invalidField")
+      .get(
+        "/api/tickets?pageSize=15&priority=INVALID&page=2.5&categoryId=1abc&sort=invalidField"
+      )
       .set("X-Requester-Id", "1");
 
     expect(res.status).toBe(400);

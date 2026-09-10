@@ -21,7 +21,9 @@ export function RequesterSelection() {
       const data = await res.json();
       setRequesters(data.requesters || []);
     } catch {
-      setError("Unable to load development requesters. Please ensure the backend is running.");
+      setError(
+        "Unable to load development requesters. Please ensure the backend is running."
+      );
     } finally {
       setLoading(false);
     }
@@ -43,30 +45,50 @@ export function RequesterSelection() {
 
   return (
     <div className="d-flex align-items-center justify-content-center min-vh-100 p-3">
-      <div className="zg-card p-4 shadow-sm w-100" style={{ maxWidth: "440px" }}>
+      <div
+        className="zg-card p-4 shadow-sm w-100"
+        style={{ maxWidth: "440px" }}
+      >
         <div className="text-center mb-3">
-          <h1 className="h3 fw-bold text-success mb-1" style={{ color: "var(--zg-primary)" }}>
+          <h1
+            className="h3 fw-bold text-success mb-1"
+            style={{ color: "var(--zg-primary)" }}
+          >
             TokTickIT
           </h1>
           <p className="text-muted small mb-0">Development Session</p>
         </div>
 
-        <div className="alert alert-light border small text-muted mb-4" role="note">
-          Select a Development Requester to test requester-specific ticket behavior. This is not a
-          login screen. Authentication and role-based access will be introduced in Lab 3.
+        <div
+          className="alert alert-light border small text-muted mb-4"
+          role="note"
+        >
+          Select a Development Requester to test requester-specific ticket
+          behavior. This is not a login screen. Authentication and role-based
+          access will be introduced in Lab 3.
         </div>
 
         {loading && (
           <div className="text-center py-4" data-testid="loading-state">
-            <div className="spinner-border text-success" role="status" style={{ color: "var(--zg-primary)" }}>
+            <div
+              className="spinner-border text-success"
+              role="status"
+              style={{ color: "var(--zg-primary)" }}
+            >
               <span className="visually-hidden">Loading requesters...</span>
             </div>
-            <p className="text-muted small mt-2 mb-0">Loading development requesters...</p>
+            <p className="text-muted small mt-2 mb-0">
+              Loading development requesters...
+            </p>
           </div>
         )}
 
         {error && !loading && (
-          <div className="alert alert-warning py-3" role="alert" data-testid="error-state">
+          <div
+            className="alert alert-warning py-3"
+            role="alert"
+            data-testid="error-state"
+          >
             <p className="mb-2 small">{error}</p>
             <button
               type="button"
@@ -94,7 +116,10 @@ export function RequesterSelection() {
         {!loading && !error && requesters.length > 0 && (
           <form onSubmit={handleSubmit} data-testid="requester-form">
             <div className="mb-3">
-              <label htmlFor="requester-select" className="form-label fw-semibold small mb-1">
+              <label
+                htmlFor="requester-select"
+                className="form-label fw-semibold small mb-1"
+              >
                 Development Requester <span className="text-danger">*</span>
               </label>
               <select

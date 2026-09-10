@@ -103,6 +103,28 @@ npm run test         # runs server + client test suites
 
 See `docs/lab-01/tests.md` for the full test list (API-01, API-02, UI-01, UI-02, UI-03).
 
+## Formatting
+
+The whole repository - server, client, `e2e/` and the root config files - is formatted by
+[Ultracite](https://www.ultracite.ai/), a preset over the [Biome](https://biomejs.dev/)
+formatter. Configuration lives in `biome.jsonc` at the repository root.
+
+```bash
+npm run check   # verify formatting; fails if any file is unformatted
+npm run fix     # reformat in place
+```
+
+Biome is used as a formatter only. Its linter and its assist actions (import ordering, key and
+attribute sorting) are disabled in `biome.jsonc`, so the tool never rewrites code for a lint
+rule and never reorders source. The client keeps `oxlint` as its linter:
+
+```bash
+npm run lint --prefix client
+```
+
+Generated and binary paths are excluded from formatting: `node_modules/`, `dist/`, the npm
+lockfiles, `artifacts/`, `e2e/evidence/` and the Prisma migration SQL.
+
 ## Git Flow
 
 - `main` — stable release branch

@@ -30,9 +30,12 @@ function MainApp() {
   return (
     <div className="min-vh-100 d-flex flex-column bg-light">
       <AppHeader activeTab={activeTab} onTabChange={handleTabChange} />
-      <main className="container py-4 flex-grow-1" style={{ maxWidth: "1100px" }}>
-        {activeTab === "my-tickets" && (
-          selectedTicketId ? (
+      <main
+        className="container py-4 flex-grow-1"
+        style={{ maxWidth: "1100px" }}
+      >
+        {activeTab === "my-tickets" &&
+          (selectedTicketId ? (
             <RequesterTicketDetail
               ticketId={selectedTicketId}
               requesterId={selectedRequester.id}
@@ -46,8 +49,7 @@ function MainApp() {
               }}
               onSelectTicket={(id) => setSelectedTicketId(id)}
             />
-          )
-        )}
+          ))}
 
         {activeTab === "create-ticket" && (
           <CreateTicket
