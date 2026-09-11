@@ -5,7 +5,9 @@
   // never rewrite code for a lint rule. The client keeps oxlint as its linter.
   "linter": { "enabled": false },
   // Assist actions (import ordering, key/attribute sorting) reorder source and
-  // are therefore out of scope for a formatting-only pass.
+  // are therefore out of scope for a formatting-only pass. `ultracite init` did
+  // sort the three package.json files once, before this switch was set; nothing
+  // reorders source from here on.
   "assist": { "enabled": false },
   "vcs": {
     "enabled": true,
@@ -19,7 +21,7 @@
       "!**/dist/**",
       "!**/package-lock.json",
       "!artifacts/**",
-      "!e2e/evidence/**",
+      "!client/public/**",
       "!server/prisma/migrations/**"
     ]
   }

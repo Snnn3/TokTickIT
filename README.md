@@ -115,15 +115,22 @@ npm run fix     # reformat in place
 ```
 
 Biome is used as a formatter only. Its linter and its assist actions (import ordering, key and
-attribute sorting) are disabled in `biome.jsonc`, so the tool never rewrites code for a lint
-rule and never reorders source. The client keeps `oxlint` as its linter:
+attribute sorting) are disabled in `biome.jsonc`, so the tool does not rewrite code for a lint
+rule and does not reorder source. One exception is already in the history: `ultracite init`
+sorted the keys of the three `package.json` files during setup, before assist was switched off.
+Values are unchanged and npm ignores key order, but the sort is visible in the diff. The client
+keeps `oxlint` as its linter:
 
 ```bash
 npm run lint --prefix client
 ```
 
-Generated and binary paths are excluded from formatting: `node_modules/`, `dist/`, the npm
-lockfiles, `artifacts/`, `e2e/evidence/` and the Prisma migration SQL.
+Generated, vendored and binary paths are excluded from formatting: `node_modules/`, `dist/`,
+the npm lockfiles, `artifacts/`, `client/public/` and the Prisma migration SQL. Every
+hand-written file in a language Biome formats is inside the formatter, including the Playwright
+specs under `e2e/`. Biome formats neither Markdown nor the Prisma schema language, so the
+documents under `docs/`, this README and `server/prisma/schema.prisma` are outside it and are
+kept tidy by hand.
 
 ## Git Flow
 

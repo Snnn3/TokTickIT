@@ -1,4 +1,10 @@
-import { test, expect, type Page, type Route, type APIRequestContext } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Page,
+  type Route,
+  type APIRequestContext,
+} from "@playwright/test";
 import * as path from "path";
 import * as fs from "fs";
 
@@ -48,7 +54,7 @@ async function getRefIds(request: APIRequestContext, anuchaId: number) {
 async function createTicketApi(
   request: APIRequestContext,
   anuchaId: number,
-  summary: string,
+  summary: string
 ) {
   const { categoryId, systemId } = await getRefIds(request, anuchaId);
   const res = await request.post(`${API}/api/tickets`, {
@@ -81,7 +87,7 @@ async function envelope(
   subtitle: string,
   status: number,
   body: unknown,
-  outFile: string,
+  outFile: string
 ) {
   const pretty = JSON.stringify(body, null, 2).replace(/</g, "&lt;");
   await page.setContent(`<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -106,12 +112,16 @@ test("Part 6 gaps: initial form + 201 proof", async ({ page, request }) => {
   // Initial create form with reference data loaded (Category/System/Priority populated).
   await selectRequester(page, label);
   await page.getByRole("button", { name: "Create Ticket" }).first().click();
-  await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Create Support Ticket", level: 1 })
+  ).toBeVisible();
   const catOptions = await page.locator("#category-select option").count();
   const sysOptions = await page.locator("#system-select option").count();
   expect(catOptions).toBeGreaterThan(1);
   expect(sysOptions).toBeGreaterThan(1);
-  await page.screenshot({ path: path.join(OUT, "part6-initial-create-form.png") });
+  await page.screenshot({
+    path: path.join(OUT, "part6-initial-create-form.png"),
+  });
 
   // Backend proof: real 201 create, requester id echoed back.
   const summary = `Report Part6 proof - ${Date.now()}`;
@@ -135,11 +145,14 @@ test("Part 6 gaps: initial form + 201 proof", async ({ page, request }) => {
     `Official number issued by backend; ticket.requester.id = ${anucha.id} (${anucha.name}) proves ownership binding.`,
     201,
     created,
-    "part6-201-created-proof.png",
+    "part6-201-created-proof.png"
   );
 });
 
-test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({ page, request }) => {
+test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(240000);
   fs.mkdirSync(OUT, { recursive: true });
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -149,13 +162,21 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({ page, requ
   const h = await reqHeaders(anucha.id);
 
   // Ensure >= 6 tickets so pagination (pageSize 5 => 2 pages) is demonstrable.
-  const countRes = await request.get(`${API}/api/tickets?page=1&pageSize=20`, { headers: h });
+  const countRes = await request.get(`${API}/api/tickets?page=1&pageSize=20`, {
+    headers: h,
+  });
   const countJson = await countRes.json();
   const have: number = countJson.total ?? (countJson.tickets ?? []).length;
   for (let i = have; i < 6; i++) {
-    await createTicketApi(request, anucha.id, `Report Part7 pagination seed ${i} - ${Date.now()}`);
+    await createTicketApi(
+      request,
+      anucha.id,
+      `Report Part7 pagination seed ${i} - ${Date.now()}`
+    );
   }
-  const listRes = await request.get(`${API}/api/tickets?page=1&pageSize=20`, { headers: h });
+  const listRes = await request.get(`${API}/api/tickets?page=1&pageSize=20`, {
+    headers: h,
+  });
   const listJson = await listRes.json();
   const tickets = listJson.tickets as {
     id: number;
@@ -166,14 +187,21 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({ page, requ
   }[];
   expect(tickets.length).toBeGreaterThanOrEqual(6);
   const first = tickets[0];
-  const searchWord = first.summary.split(/\s+/).find((w) => w.replace(/[^A-Za-z]/g, "").length >= 4)!;
+  const searchWord = first.summary
+    .split(/\s+/)
+    .find((w) => w.replace(/[^A-Za-z]/g, "").length >= 4)!;
 
   await selectRequester(page, label);
-  await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "My Tickets", level: 1 })
+  ).toBeVisible();
 
   // Loading skeletons: delay list fetch, trigger via search keystroke.
   const slowList = async (route: Route) => {
-    if (route.request().method() === "GET" && route.request().url().includes("/api/tickets")) {
+    if (
+      route.request().method() === "GET" &&
+      route.request().url().includes("/api/tickets")
+    ) {
       await new Promise((r) => setTimeout(r, 2500));
     }
     await route.continue();
@@ -181,37 +209,61 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({ page, requ
   await page.route("**/api/tickets*", slowList);
   await page.locator("#ticket-search").fill("loading-probe-zzz");
   await expect(page.getByTestId("tickets-loading")).toBeVisible();
-  await page.screenshot({ path: path.join(OUT, "part7-loading-skeletons.png") });
+  await page.screenshot({
+    path: path.join(OUT, "part7-loading-skeletons.png"),
+  });
   await page.unroute("**/api/tickets*", slowList);
-  await expect(page.getByTestId("no-results-state")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("no-results-state")).toBeVisible({
+    timeout: 15000,
+  });
   await page.locator("#ticket-search").fill("");
 
   // Search in action.
   await page.locator("#ticket-search").fill(searchWord);
-  await expect(page.getByText(first.number).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText(first.number).first()).toBeVisible({
+    timeout: 15000,
+  });
   await page.screenshot({ path: path.join(OUT, "part7-search-in-action.png") });
   await page.locator("#ticket-search").fill("");
-  await expect(page.getByTestId("pagination-page-info")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("pagination-page-info")).toBeVisible({
+    timeout: 15000,
+  });
 
   // Filters in action (category + priority taken from a real ticket so results are non-empty).
   await page.locator("#category-filter").selectOption(String(first.categoryId));
   await page.locator("#priority-filter").selectOption(first.requestedPriority);
-  await expect(page.getByText(first.number).first()).toBeVisible({ timeout: 15000 });
-  await page.screenshot({ path: path.join(OUT, "part7-filters-in-action.png") });
+  await expect(page.getByText(first.number).first()).toBeVisible({
+    timeout: 15000,
+  });
+  await page.screenshot({
+    path: path.join(OUT, "part7-filters-in-action.png"),
+  });
   await page.getByRole("button", { name: "Clear filters" }).click();
 
   // Sorting in action (Number ascending).
   await page.locator("#sort-select").selectOption("number");
   await page.locator("#order-select").selectOption("asc");
-  await expect(page.getByTestId("pagination-page-info")).toBeVisible({ timeout: 15000 });
-  await page.screenshot({ path: path.join(OUT, "part7-sorting-in-action.png") });
+  await expect(page.getByTestId("pagination-page-info")).toBeVisible({
+    timeout: 15000,
+  });
+  await page.screenshot({
+    path: path.join(OUT, "part7-sorting-in-action.png"),
+  });
 
   // Pagination in action (5 per page, page 2).
   await page.locator("#page-size-select").selectOption("5");
-  await expect(page.getByTestId("pagination-page-info")).toContainText("Page 1 of 2", { timeout: 15000 });
+  await expect(page.getByTestId("pagination-page-info")).toContainText(
+    "Page 1 of 2",
+    { timeout: 15000 }
+  );
   await page.getByRole("button", { name: "Next" }).click();
-  await expect(page.getByTestId("pagination-page-info")).toContainText("Page 2 of 2", { timeout: 15000 });
-  await page.screenshot({ path: path.join(OUT, "part7-pagination-in-action.png") });
+  await expect(page.getByTestId("pagination-page-info")).toContainText(
+    "Page 2 of 2",
+    { timeout: 15000 }
+  );
+  await page.screenshot({
+    path: path.join(OUT, "part7-pagination-in-action.png"),
+  });
 
   // API failure + Retry (mock 500 on list fetch).
   await page.route("**/api/tickets*", (route) => {
@@ -219,18 +271,27 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({ page, requ
       return route.fulfill({
         status: 500,
         contentType: "application/json",
-        body: JSON.stringify({ error: { code: "UNEXPECTED", message: "Simulated outage" } }),
+        body: JSON.stringify({
+          error: { code: "UNEXPECTED", message: "Simulated outage" },
+        }),
       });
     }
     return route.continue();
   });
   await page.locator("#ticket-search").fill("failure-probe-zzz");
-  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible({ timeout: 15000 });
-  await page.screenshot({ path: path.join(OUT, "part7-api-failure-retry.png") });
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible({
+    timeout: 15000,
+  });
+  await page.screenshot({
+    path: path.join(OUT, "part7-api-failure-retry.png"),
+  });
   await page.unroute("**/api/tickets*");
 });
 
-test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, request }) => {
+test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(180000);
   fs.mkdirSync(OUT, { recursive: true });
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -239,25 +300,45 @@ test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, 
   const other = people.find((p) => p.id !== anucha.id)!;
   const label = `${anucha.name} (${anucha.email})`;
 
-  const ticket = await createTicketApi(request, anucha.id, `Report Part8 proof - ${Date.now()}`);
+  const ticket = await createTicketApi(
+    request,
+    anucha.id,
+    `Report Part8 proof - ${Date.now()}`
+  );
 
   // Owned detail full screenshot via UI.
   await selectRequester(page, label);
-  await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "My Tickets", level: 1 })
+  ).toBeVisible();
   await page.locator("#ticket-search").fill(ticket.number);
-  await expect(page.getByRole("button", { name: ticket.number }).first()).toBeVisible({ timeout: 15000 });
+  await expect(
+    page.getByRole("button", { name: ticket.number }).first()
+  ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: ticket.number }).first().click();
-  await expect(page.getByTestId("ticket-detail-view")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible({
+    timeout: 15000,
+  });
   await expect(page.getByText(ticket.number).first()).toBeVisible();
-  await page.screenshot({ path: path.join(OUT, "part8-owned-detail-full.png"), fullPage: true });
+  await page.screenshot({
+    path: path.join(OUT, "part8-owned-detail-full.png"),
+    fullPage: true,
+  });
 
   // Add attachment 201 proof (live API).
-  const addRes = await request.post(`${API}/api/tickets/${ticket.id}/attachments`, {
-    headers: await reqHeaders(anucha.id),
-    multipart: {
-      file: { name: "part8-proof.pdf", mimeType: "application/pdf", buffer: Buffer.from("part8-proof-payload") },
-    },
-  });
+  const addRes = await request.post(
+    `${API}/api/tickets/${ticket.id}/attachments`,
+    {
+      headers: await reqHeaders(anucha.id),
+      multipart: {
+        file: {
+          name: "part8-proof.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.from("part8-proof-payload"),
+        },
+      },
+    }
+  );
   expect(addRes.status()).toBe(201);
   const added = await addRes.json();
   const attachmentId: number = added.attachment?.id ?? added.id;
@@ -268,13 +349,16 @@ test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, 
     `Attachment #${attachmentId} on owned ticket #${ticket.id} (${ticket.number}).`,
     201,
     added,
-    "part8-add-attachment-201-proof.png",
+    "part8-add-attachment-201-proof.png"
   );
 
   // Download active 200 proof (headers + byte length, body is binary so envelope carries metadata).
-  const dlRes = await request.get(`${API}/api/attachments/${attachmentId}/download`, {
-    headers: await reqHeaders(anucha.id),
-  });
+  const dlRes = await request.get(
+    `${API}/api/attachments/${attachmentId}/download`,
+    {
+      headers: await reqHeaders(anucha.id),
+    }
+  );
   expect(dlRes.status()).toBe(200);
   const dlBody = await dlRes.body();
   await envelope(
@@ -288,7 +372,7 @@ test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, 
       contentLength: dlRes.headers()["content-length"],
       bytesReceived: dlBody.length,
     },
-    "part8-download-200-proof.png",
+    "part8-download-200-proof.png"
   );
 
   // Cross-requester 403 proof (live API).
@@ -302,16 +386,24 @@ test("Part 8 gaps: owned detail + add 201 + download 200 + 403", async ({ page, 
     `Requester ${other.name} (id ${other.id}) reads Requester ${anucha.name} ticket #${ticket.id}.`,
     403,
     await forbidRes.json(),
-    "part8-403-cross-requester-proof.png",
+    "part8-403-cross-requester-proof.png"
   );
 
   // UI proof: the API-added attachment renders as a live row in Ticket Detail.
   await selectRequester(page, label);
-  await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "My Tickets", level: 1 })
+  ).toBeVisible();
   await page.locator("#ticket-search").fill(ticket.number);
-  await expect(page.getByRole("button", { name: ticket.number }).first()).toBeVisible({ timeout: 15000 });
+  await expect(
+    page.getByRole("button", { name: ticket.number }).first()
+  ).toBeVisible({ timeout: 15000 });
   await page.getByRole("button", { name: ticket.number }).first().click();
-  await expect(page.getByTestId("ticket-detail-view")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible({
+    timeout: 15000,
+  });
   await expect(page.getByText("part8-proof.pdf")).toBeVisible();
-  await page.screenshot({ path: path.join(OUT, "part8-added-attachment-row.png") });
+  await page.screenshot({
+    path: path.join(OUT, "part8-added-attachment-row.png"),
+  });
 });
