@@ -186,6 +186,11 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({
     requestedPriority: string;
   }[];
   expect(tickets.length).toBeGreaterThanOrEqual(6);
+  // The loop above only sets a floor, and nothing ever deletes tickets, so this
+  // requester's count grows with every E2E run. Derive the expected page count
+  // instead of hard-coding it.
+  const total: number = listJson.total ?? tickets.length;
+  const expectedPages = Math.ceil(total / 5);
   const first = tickets[0];
   const searchWord = first.summary
     .split(/\s+/)
@@ -204,7 +209,12 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({
     ) {
       await new Promise((r) => setTimeout(r, 2500));
     }
-    await route.continue();
+    try {
+      await route.continue();
+    } catch {
+      // A request still in flight when the handler is removed by `unroute` is
+      // already handled by then, and continuing it throws. Nothing to do.
+    }
   };
   await page.route("**/api/tickets*", slowList);
   await page.locator("#ticket-search").fill("loading-probe-zzz");
@@ -253,12 +263,12 @@ test("Part 7 gaps: search/filter/sort/page/loading/failure", async ({
   // Pagination in action (5 per page, page 2).
   await page.locator("#page-size-select").selectOption("5");
   await expect(page.getByTestId("pagination-page-info")).toContainText(
-    "Page 1 of 2",
+    `Page 1 of ${expectedPages}`,
     { timeout: 15000 }
   );
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByTestId("pagination-page-info")).toContainText(
-    "Page 2 of 2",
+    `Page 2 of ${expectedPages}`,
     { timeout: 15000 }
   );
   await page.screenshot({
