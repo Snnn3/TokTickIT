@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 1.9 | Date: 2026-09-11 | Companion to `specification.md`.
+Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -15,7 +15,7 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 |----|--------|------------------|
 | [#43](https://github.com/Snnn3/TokTickIT/pull/43) (closed unmerged) | feature/lab3-1-contract | Closed by me before review; superseded by #44 on the same branch and base |
 | [#44](https://github.com/Snnn3/TokTickIT/pull/44) | feature/lab3-1-contract (contract v1.8) | **CHANGES_REQUESTED ×3** by @YummieGG, every round addressed; **APPROVED** 2026-09-10 16:01 at head `d09355b`, merged into `lab3-staging` 16:04 |
-| TBD | feature/lab3-2-refactor | TBD |
+| [#45](https://github.com/Snnn3/TokTickIT/pull/45) | feature/lab3-2-refactor (formatting pass) | **CHANGES_REQUESTED ×1** by @YummieGG at head `8c78ae5`, addressed; **APPROVED** 2026-09-12 12:07 at head `757038c`, merged into `lab3-staging` |
 | TBD | feature/lab3-3-auth-foundation | TBD |
 | TBD | feature/lab3-4-requester-regression | TBD |
 | TBD | feature/lab3-5-staff-queue | TBD |
@@ -82,6 +82,38 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 *Outcome — no fix commit; the approval landed on the unchanged head `d09355b` (contract v1.8).* The reviewer merged nothing new: rounds 1 to 3 had already been answered by `5734da0`, `98249e6` and `e105a48`, and this round confirmed that the v1.8 set holds together. PR #44 was merged into `lab3-staging` three minutes later, and issue #35 was closed by that merge, which unblocked #36 (the Lab3-02 formatting pass).
 
 This is the approval that the round-3 Definition of Done item was waiting for: the contract may only call itself approved once a peer approval is *recorded*, and the record is this row. The contested point from round 3 — whether `docs/lab-03/plan.md` is a required contract file — was not ruled on separately. The reviewer approved with no further comment on it, so the round-3 position stands by default rather than by decision: the handout's six required files are all tracked, and the plan remains a local working document.
+
+**PR #45 — round 1 — @YummieGG, `CHANGES_REQUESTED`, 2026-09-12 05:55**
+
+> Thank you for the thorough documentation and the transparent explanation regarding the formatting pass and the declared deviation in commit `8c78ae5`.
+>
+> Overall, the mechanical formatting pass across the 67 files is exceptionally clean: zero behaviour change on product code, verified under whitespace and syntax normalisation; `biome.jsonc` correctly disables both the linter and the assist actions, while `oxlint` remains intact for client linting; and the new Formatting section in `README.md` accurately describes the setup, exclusions and commands.
+>
+> **Blocking finding — test failure in `e2e/evidence/report-gaps.spec.ts`.** When executing `npx playwright test e2e/evidence`, the test `Part 6 gaps: initial form + 201 proof` fails at line 120:
+>
+> ```text
+> Error: expect(received).toBeGreaterThan(expected)
+> Expected: > 1
+> Received:   1
+>
+>   118 |   const catOptions = await page.locator("#category-select option").count();
+>   119 |   const sysOptions = await page.locator("#system-select option").count();
+> > 120 |   expect(catOptions).toBeGreaterThan(1);
+> ```
+
+*Response — fix commit `757038c`.* Accepted. The capture counted the Category and Related System options the moment the Create Ticket form mounted, which is before the reference fetch resolves, so it saw only the placeholder option. It passed on my machine and failed on the reviewer's purely on fetch timing, which makes it a race rather than a disagreement about what the screen should contain. The capture now waits for the reference data to arrive before counting. This is the second flaky evidence assertion the branch repaired — `8c78ae5` had already replaced a hard-coded `Page 1 of 2` with a count derived from the live `total` — and both share one cause: an evidence capture that asserted a value true only of one particular database state.
+
+The declared deviation in `8c78ae5` was accepted rather than split out. The reviewer judged the test-only change acceptable on a formatting branch, so the commit stayed where it was and issue #36 closed with it.
+
+**PR #45 — round 2 — @YummieGG, `APPROVED`, 2026-09-12 12:07**
+
+> All checks and test suites are passing green, and the mechanical formatting pass strictly maintains zero behavior change on product code.
+>
+> Documentation and tooling configurations conform to Issue #36 acceptance criteria. Ready to merge into `lab3-staging`.
+>
+> **Approved!**
+
+*Outcome.* Approved at head `757038c` and merged into `lab3-staging`, which closed issue #36 and unblocked #37 (the auth foundation). With #35 and #36 both merged, the ordering constraint that the contract and the format pass must land before any feature branch forks is satisfied, so `feature/lab3-3-auth-foundation` is the first implementation branch to fork from a formatted, contract-approved base.
 
 ## Pull Requests I reviewed for my partner
 

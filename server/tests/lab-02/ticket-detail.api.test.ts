@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
+import { sessionCookie, sessionUser } from "../helpers/session";
 
 describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
   beforeEach(() => {
@@ -10,14 +11,13 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
 
   it("A-14: enforces ownership: 200 for owner, 403 for other requester, 404 for missing (AC-03, BR-06)", async () => {
     // Authenticated user
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     // 1. Success path: Owner retrieves ticket
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValueOnce({
@@ -45,7 +45,7 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
 
     const resOwner = await request(app)
       .get("/api/tickets/10")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resOwner.status).toBe(200);
     expect(resOwner.body.ticket.id).toBe(10);
@@ -73,7 +73,7 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
 
     const resForbidden = await request(app)
       .get("/api/tickets/10")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resForbidden.status).toBe(403);
     expect(resForbidden.body.error.code).toBe("FORBIDDEN");
@@ -83,7 +83,7 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
 
     const resNotFound = await request(app)
       .get("/api/tickets/999")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resNotFound.status).toBe(404);
     expect(resNotFound.body.error.code).toBe("NOT_FOUND");
@@ -91,21 +91,20 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
     // 4. Invalid ID path
     const resInvalidId = await request(app)
       .get("/api/tickets/abc")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resInvalidId.status).toBe(400);
     expect(resInvalidId.body.error.code).toBe("INVALID_ID");
   });
 
   it("A-15: returns complete detail payload including read-only fields and attachment metadata (FR-09)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const mockDate = new Date("2026-08-30T10:00:00.000Z");
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValueOnce({
@@ -144,7 +143,7 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
 
     const res = await request(app)
       .get("/api/tickets/15")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(200);
     expect(res.body.ticket).toMatchObject({

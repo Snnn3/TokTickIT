@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import type { FormEvent, ChangeEvent } from "react";
-import { useRequester } from "../context/RequesterContext";
 import {
   validateSummary,
   validateDescription,
@@ -10,6 +9,7 @@ import {
   validateFile,
   MAX_ATTACHMENTS,
 } from "../utils/validation";
+import { useAuth } from "../context/AuthContext";
 import { useReferenceData } from "../hooks/useReferenceData";
 
 interface CreatedTicketResult {
@@ -28,7 +28,9 @@ export function CreateTicket({
   onSuccessNavigate,
   onCancel,
 }: CreateTicketProps) {
-  const { selectedRequester } = useRequester();
+  // Read-only, and only ever the signed-in user: the ticket's requester is
+  // decided by the session on the server, never by anything this form sends.
+  const { user } = useAuth();
 
   // Form inputs
   const [summary, setSummary] = useState("");
@@ -171,9 +173,6 @@ export function CreateTicket({
 
       const res = await fetch("/api/tickets", {
         method: "POST",
-        headers: {
-          "X-Requester-Id": String(selectedRequester?.id || ""),
-        },
         body: formData,
       });
 
@@ -387,11 +386,7 @@ export function CreateTicket({
                   id="sys-requester"
                   type="text"
                   className="form-control form-control-sm zg-readonly-field"
-                  value={
-                    selectedRequester
-                      ? `${selectedRequester.name} (${selectedRequester.email})`
-                      : "Not selected"
-                  }
+                  value={user ? `${user.name} (${user.email})` : ""}
                   readOnly
                 />
               </div>

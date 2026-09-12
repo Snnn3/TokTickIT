@@ -1,10 +1,7 @@
 import { Router, Response } from "express";
 import multer from "multer";
 import { prisma } from "../prisma";
-import {
-  requireRequester,
-  AuthenticatedRequest,
-} from "../middleware/requester";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
 import {
@@ -12,6 +9,7 @@ import {
   serializeAttachment,
 } from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
+import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
 
 export const ticketsRouter = Router();
 
@@ -195,6 +193,9 @@ async function createTicketTransaction(
       summary: payload.summary,
       description: payload.description,
       requestedPriority: payload.requestedPriority,
+      // IT Priority starts as a copy of Requested Priority and is editable
+      // only by staff from there on [BR-11].
+      itPriority: payload.requestedPriority,
       status: TicketStatus.NEW,
     },
   });
@@ -327,18 +328,20 @@ function validateTicketQuery(
     }
   }
 
-  // Parse and validate status
+  // Parse and validate status. Lab 2 accepted the single value NEW; the
+  // vocabulary is eight values from Lab 3 onward [BR-12], and the surviving
+  // Lab 2 status=NEW query is the canary that the widening stayed compatible.
   let status: TicketStatus | undefined;
   if (query.status !== undefined) {
     const s = String(query.status);
-    if (s !== "NEW") {
+    if (isTicketStatus(s)) {
+      status = s;
+    } else {
       details.push({
         field: "status",
         parameter: "status",
-        issue: "Status must be NEW",
+        issue: `Status must be one of ${TICKET_STATUSES.join(", ")}`,
       });
-    } else {
-      status = TicketStatus.NEW;
     }
   }
 
@@ -410,9 +413,9 @@ function validateTicketQuery(
 // GET /api/tickets [FR-08, BR-04, BR-19..BR-22, AC-16]
 ticketsRouter.get(
   "/",
-  requireRequester,
+  ...requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const validation = validateTicketQuery(req.query);
 
     if (!validation.valid) {
@@ -516,7 +519,7 @@ ticketsRouter.get(
 // POST /api/tickets [FR-05, BR-01, BR-07..BR-11, BR-13, BR-14, AC-01]
 ticketsRouter.post(
   "/",
-  requireRequester,
+  ...requireAuth,
   (req, res, next) => {
     upload.array("files")(req, res, (err: any) => {
       if (handleMulterError(err, res)) return;
@@ -524,7 +527,7 @@ ticketsRouter.post(
     });
   },
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const files = (req.files as Express.Multer.File[]) || [];
 
     // Check file count constraint [BR-13]
@@ -681,9 +684,9 @@ async function getOwnedTicket(
 // GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
 ticketsRouter.get(
   "/:id",
-  requireRequester,
+  ...requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const ticketId = parsePositiveIntParam(req.params.id);
 
     if (!ticketId) {
@@ -758,7 +761,7 @@ ticketsRouter.get(
 // POST /api/tickets/:id/attachments [FR-10, BR-13, BR-15, AC-07..AC-09]
 ticketsRouter.post(
   "/:id/attachments",
-  requireRequester,
+  ...requireAuth,
   (req, res, next) => {
     upload.single("file")(req, res, (err: any) => {
       if (handleMulterError(err, res)) return;
@@ -766,7 +769,7 @@ ticketsRouter.post(
     });
   },
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const ticketId = parsePositiveIntParam(req.params.id);
 
     if (!ticketId) {

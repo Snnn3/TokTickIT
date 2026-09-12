@@ -32,9 +32,7 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
   });
 
   it("C-13: performs client file pre-checks for invalid types and oversize >5MB (AC-07, AC-08)", async () => {
-    render(
-      <AttachmentSection ticketId={10} attachments={[]} requesterId={1} />
-    );
+    render(<AttachmentSection ticketId={10} attachments={[]} />);
 
     const input = screen.getByTestId(
       "add-attachment-input"
@@ -60,13 +58,7 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
   });
 
   it("C-12: renders removed attachments with strikethrough, badge, reason caption, and disabled actions (AC-11)", async () => {
-    render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={mockAttachments}
-        requesterId={1}
-      />
-    );
+    render(<AttachmentSection ticketId={10} attachments={mockAttachments} />);
 
     // Active attachment: enabled actions
     const activeDownload = screen.getByTestId("download-button-101");
@@ -94,7 +86,6 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       <AttachmentSection
         ticketId={10}
         attachments={[mockAttachments[0]]}
-        requesterId={1}
         onAttachmentRemoved={onRemoved}
       />
     );
@@ -153,13 +144,7 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       () => deletePromise as any
     );
 
-    render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={mockAttachments}
-        requesterId={1}
-      />
-    );
+    render(<AttachmentSection ticketId={10} attachments={mockAttachments} />);
 
     fireEvent.click(screen.getByTestId("remove-button-101"));
     expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();

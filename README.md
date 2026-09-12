@@ -142,7 +142,9 @@ All work happens on feature branches and enters `main` through `lab1-staging`. P
 
 ## Lab 2 — Requester Ticket Flow
 
-Requester-scoped ticket creation, listing, detail view, and attachment lifecycle. Test identity is carried by the `X-Requester-Id` header (real auth arrives in Lab 3).
+Requester-scoped ticket creation, listing, detail view, and attachment lifecycle. Lab 2 shipped
+with identity carried by an `X-Requester-Id` header; from Lab 3 onward the same screens and
+endpoints run under a real session cookie, as the Lab 3 section below describes.
 
 ### Prerequisites
 
@@ -175,39 +177,122 @@ npm run dev --prefix server   # Express API at http://localhost:3000
 npm run dev --prefix client   # Vite UI at http://localhost:5173 (proxies /api to :3000)
 ```
 
-### Lab 3 status (in progress)
+### Lab 3 - Authentication and roles (in progress)
 
-Lab 3 replaces the development requester selector with real authentication. The engineering
-contract is in `docs/lab-03/` and is the source of truth; **the Lab 2 sections below describe
-the currently shipped behaviour and are superseded as each Lab 3 slice merges**:
+Lab 3 replaces the development requester selector with real email-and-password
+authentication and three roles. The engineering contract in `docs/lab-03/` is the source of
+truth. **The auth foundation has landed, so the Lab 2 sections below are superseded where they
+describe identity:**
 
-- Identity moves from the `X-Requester-Id` header to a signed, http-only session cookie, so
-  every Lab 2 endpoint below keeps its path and payload but changes how the caller is identified.
-- `GET /api/requesters` and the Requester Selection screen are removed.
-- `e2e/lab-02/` is retired; browser regression moves to `e2e/lab-03/`.
-- New environment keys `JWT_SECRET` and `SEED_INITIAL_PASSWORD` are documented in
-  `server/.env.example`.
+- Identity is a signed, http-only session cookie, not the `X-Requester-Id` header. Every Lab 2
+  endpoint keeps its path and payload; only how the caller is identified changed.
+- `RequesterUser` became `User`, carrying a role, an activation flag, a forced-password-change
+  flag and a token version. `GET /api/requesters` and the Requester Selection screen are gone.
+- Every screen has a real, deep-linkable address behind a route guard.
+- `e2e/lab-02/` is retired along with its evidence-capture specs, all of which drove the
+  selector; browser regression moves to `e2e/lab-03/` in a later slice. See `e2e/README.md`.
+  The Lab 2 figures they produced remain committed under `artifacts/lab-02/`.
+- The staff queue, staff detail and administrator screens arrive in later slices. Their routes
+  and role guards exist and are enforced; the screens themselves are placeholders.
 
-**Seeded local-development credentials (Lab 3).** Every seeded and migrated account uses the
-initial password **`ChangeMe!2026`** and is forced to change it at first sign-in. This value is
-a documented lab convenience for local development only — it is never a real secret, and it is
-overridden by `SEED_INITIAL_PASSWORD` when that variable is set. Seeded sign-in addresses follow
-the pattern shown by `npm run db:seed` output.
+### Setup (Lab 3)
 
-Run and test commands for Lab 3 are added to this README as each slice lands; until then the
-Lab 2 commands below are the ones that work.
+```bash
+docker compose up -d db
+npm install --prefix server
+npm install --prefix client
+cp server/.env.example server/.env   # then set your own JWT_SECRET
+npm --prefix server run prisma:migrate
+npm --prefix server run db:seed
+```
 
-### REST API (Lab 2, superseded by Lab 3 auth)
+`JWT_SECRET` signs the session cookie and must be set, or the server refuses to issue one.
+Generate a local value with:
 
-All endpoints below require `X-Requester-Id: <active requester id>`; missing/unknown/inactive returns `401 AUTH_REQUIRED`. Errors use the envelope `{ "error": { "code", "message", "details" } }`. Lab 1 endpoints (`GET /api/health`, `GET /api/categories`) remain available.
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+**Run order matters.** The migration cannot run bcrypt, so it carries existing development
+requesters over with a placeholder password hash that nothing can match. `db:seed` writes the
+real hash. Migrate, then seed.
+
+Fresh or reset development database:
+
+```bash
+cd server && npx prisma migrate reset --force && npm run db:seed
+```
+
+The seed is idempotent and reaches the minimums the specification requires: four active and one
+inactive Requester, three active and one inactive IT Staff member, and two active
+Administrators. Re-running it restores every account to the documented initial password and
+bumps each token version, which signs out any session issued beforehand.
+
+### Seeded local-development credentials
+
+Every seeded and migrated account signs in with the initial password **`ChangeMe!2026`** and is
+forced to change it at first sign-in. This value is a documented lab convenience for local
+development only. It is never a real secret, and `SEED_INITIAL_PASSWORD` overrides it.
+
+| Role | Sign-in address |
+| ---- | --------------- |
+| Requester | `anucha.wongchai@example.com` (plus three more active, one inactive) |
+| IT Staff | `kittipong.saelim@example.com` (plus two more active, one inactive) |
+| Administrator | `apinya.ratchada@example.com`, `thanakorn.wattana@example.com` |
+
+A password must be at least 8 characters after trimming, at most 72 bytes, and contain an upper
+case letter, a lower case letter, a digit and a special character. The change-password screen
+shows the rules as a checklist that updates as you type.
+
+Each role lands on its own screen after signing in: a Requester on `/tickets`, IT Staff on
+`/staff/queue`, and an Administrator on `/admin/users`.
+
+### Authentication API (Lab 3)
 
 | Endpoint | Description |
 | -------- | ----------- |
-| `GET /api/requesters` | List active requesters for the selector (name asc) |
+| `POST /api/auth/login` | `{email, password}` returns `200` with the user plus an http-only session cookie. `401 INVALID_CREDENTIALS` for an unknown email, a wrong password **or** an inactive account, worded identically in all three cases. `429 TOO_MANY_ATTEMPTS` after 5 failures for one address inside 15 minutes, worded the same again |
+| `POST /api/auth/logout` | Always `204` with a cleared cookie, with or without a session. Bumps the token version, so the previous cookie is refused if replayed |
+| `GET /api/auth/me` | `200` with the current user; `401 AUTH_REQUIRED` without a valid session |
+| `POST /api/auth/change-password` | `{currentPassword?, newPassword, confirmPassword}` returns `200`. The current password is required except on a first login. A wrong one answers `403 CURRENT_PASSWORD_INVALID`, not `401`. Success clears the forced-change flag, bumps the token version and re-issues the cookie, so other devices are signed out and this one is not |
+
+While an account carries an initial password, every endpoint except those three answers
+`403 PASSWORD_CHANGE_REQUIRED`. An unauthenticated request to any protected endpoint answers
+`401 AUTH_REQUIRED`, the same code Lab 2 used.
+
+### Migration evidence
+
+`server/prisma/migration-evidence/` holds the procedure and the recorded run proving the
+migration preserved every ticket, ticket number, attachment byte and requester relationship.
+
+### Test (Lab 3)
+
+```bash
+cd server && npm test                    # 73 tests, 10 files (Prisma stubbed, no DB needed)
+cd server && npx vitest run tests/lab-03 # Lab 3 only
+cd server && npx vitest run tests/lab-02 # Lab 2 regression
+cd client && npm test                    # 73 tests, 13 files
+npm run lint --prefix client             # oxlint
+npm run check                            # repository formatting
+```
+
+### REST API (Lab 2 paths, now behind the session cookie)
+
+
+
+All endpoints below require the session cookie from `POST /api/auth/login`; a missing, expired
+or invalidated session returns `401 AUTH_REQUIRED`, and an account still carrying an initial
+password returns `403 PASSWORD_CHANGE_REQUIRED`. Ownership is the authenticated user, never a
+value the client sends. Errors use the envelope `{ "error": { "code", "message", "details" } }`.
+Lab 1 endpoints (`GET /api/health`, `GET /api/categories`) remain available without a session,
+because the Lab 1 suite asserts that and BR-28 keeps every Lab 1 test unchanged.
+
+| Endpoint | Description |
+| -------- | ----------- |
 | `GET /api/reference/categories` | List active categories (name asc) |
 | `GET /api/reference/systems` | List active related systems (name asc) |
 | `POST /api/tickets` | Create ticket with optional attachments (`multipart/form-data`), returns `201` with `TKT-{year}-{seq}` number |
-| `GET /api/tickets` | Owned paginated list with search/filter/sort (`search`, `categoryId`, `priority`, `status`, `sort`, `order`, `page`, `pageSize` 5/10/20) |
+| `GET /api/tickets` | Owned paginated list with search/filter/sort (`search`, `categoryId`, `priority`, `status`, `sort`, `order`, `page`, `pageSize` 5/10/20). `status` now accepts any of the eight values, not just `NEW` |
 | `GET /api/tickets/:id` | Owned ticket detail with attachment metadata (`403` cross-requester, `404` unknown) |
 | `POST /api/tickets/:id/attachments` | Add one attachment to an owned ticket (`201`; `409 LIMIT_REACHED` past 5 active) |
 | `GET /api/attachments/:id` | Owned attachment metadata |
@@ -218,7 +303,8 @@ Upload rules: jpeg/png/webp/pdf only, each max 5 MB, max 5 files per ticket; cre
 
 ### Screens
 
-- Requester Selection (dev-only selector, not a login screen)
+- Login and the mandatory Change Password gate with a live rule checklist (Lab 3)
+- Authenticated shell: role-filtered navigation, the signed-in name with a role badge, Logout
 - Create Ticket (read-only System strip, Classification, Details, Attachments, Submit/Cancel)
 - My Tickets (search, category/priority/status filters, sort, pagination, empty vs no-results states)
 - Ticket Detail + Attachment section (read-only ticket card, add/download/soft-remove with reason)
@@ -227,16 +313,15 @@ Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-deta
 
 ### Test
 
-```bash
-cd server && npm test                    # full server suite
-cd server && npx vitest run tests/lab-02 # Lab 2 only: 31 tests, 6 files
-cd client && npm test                    # 42 tests, 11 files
-npx playwright install chromium          # first time only
-npx playwright test e2e/lab-02           # 3 tests (E-01, E-02, R-01 & E-03) - retired once Lab 3 lands, superseded by e2e/lab-03
-npx playwright test e2e/evidence         # submission evidence captures (report figures)
-```
+The Lab 2 server and client suites still run, adapted to the session cookie; see the Lab 3 test
+commands above. The Lab 2 Playwright suite and its evidence captures are retired, because they
+drove the selector end to end. See `e2e/README.md`. The figures they produced remain under
+`artifacts/lab-02/`.
 
-Seed precondition: rebuild the dev DB with `npx prisma migrate reset --force` plus `npm run db:seed` (from `server/`, container `toktickit-db` running) before API/E2E runs. Lab 1 `API-02.categories` fails only when this seed step is skipped, which is a documented precondition, not a code defect.
+Seed precondition: rebuild the dev DB with `npx prisma migrate reset --force` plus
+`npm run db:seed` (from `server/`, container `toktickit-db` running) before API runs. Lab 1
+`API-02.categories` fails only when this seed step is skipped, which is a documented
+precondition, not a code defect.
 
 ### Docs
 

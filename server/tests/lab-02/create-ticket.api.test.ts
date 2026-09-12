@@ -2,23 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
+import { sessionCookie, sessionUser } from "../helpers/session";
 
-const mockRequester = {
+const mockRequester = sessionUser({
   id: 1,
   name: "Anucha Wongchai",
   email: "anucha.wongchai@example.com",
-  isActive: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+});
 
 describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Default mock for authentication middleware
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue(
-      mockRequester
-    );
+    // Default mock for the authentication middleware, which now loads the
+    // signed-in User rather than a development requester.
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(mockRequester);
   });
 
   it("creates valid ticket and returns 201 with official number and status NEW (A-01, BR-01, BR-02, BR-12)", async () => {
@@ -71,7 +68,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
 
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "Cannot connect to campus Wi-Fi")
       .field(
         "description",
@@ -97,7 +94,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   it("returns 400 VALIDATION_FAILED when summary is missing (A-02, BR-07, AC-04)", async () => {
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "   ")
       .field("description", "Valid description")
       .field("categoryId", "1")
@@ -114,7 +111,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   it("returns 400 when summary > 150 or description > 5000 chars (A-03, BR-07, BR-08, AC-05)", async () => {
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "A".repeat(151))
       .field("description", "B".repeat(5001))
       .field("categoryId", "1")
@@ -134,7 +131,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   it("returns 400 when category/system/priority are invalid (A-04, BR-09, BR-10, BR-11, AC-06)", async () => {
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "Valid summary")
       .field("description", "Valid description")
       .field("categoryId", "invalid-id")
@@ -149,7 +146,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   it("returns 415 UNSUPPORTED_TYPE for disallowed file types (A-05, BR-13, AC-07)", async () => {
     const res = await request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "Valid summary")
       .field("description", "Valid description")
       .field("categoryId", "1")
@@ -167,7 +164,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   it("returns 400 when more than 5 files are attached (A-06, BR-13, AC-08)", async () => {
     const req = request(app)
       .post("/api/tickets")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .field("summary", "Valid summary")
       .field("description", "Valid description")
       .field("categoryId", "1")

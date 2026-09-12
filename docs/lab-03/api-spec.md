@@ -1,6 +1,6 @@
 # Lab 3 API Specification — TokTickIT REST Contract
 
-Version: 1.9 | Date: 2026-09-11 | Companion to `specification.md` (FR/BR/AC refs).
+Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md` (FR/BR/AC refs).
 
 ## 1. Conventions
 
