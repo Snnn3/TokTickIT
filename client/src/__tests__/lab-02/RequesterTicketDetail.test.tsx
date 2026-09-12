@@ -65,9 +65,7 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
 
     const onBack = vi.fn();
 
-    render(
-      <RequesterTicketDetail ticketId={42} requesterId={1} onBack={onBack} />
-    );
+    render(<RequesterTicketDetail ticketId={42} onBack={onBack} />);
 
     // Initial loading skeleton state
     expect(screen.getByTestId("ticket-detail-loading")).toBeInTheDocument();
@@ -130,9 +128,7 @@ describe("RequesterTicketDetail Component (C-10, AC-23, FR-09, BR-06)", () => {
       } as Response;
     });
 
-    render(
-      <RequesterTicketDetail ticketId={99} requesterId={1} onBack={vi.fn()} />
-    );
+    render(<RequesterTicketDetail ticketId={99} onBack={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByTestId("ticket-detail-error")).toBeInTheDocument();

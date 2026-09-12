@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRequester } from "../context/RequesterContext";
 import type {
   TicketSummaryItem,
   TicketPriority,
@@ -39,8 +38,6 @@ const initialQueryState: TicketQueryState = {
 };
 
 export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
-  const { selectedRequester } = useRequester();
-
   // State
   const [tickets, setTickets] = useState<TicketSummaryItem[]>([]);
   const { categories } = useCategories();
@@ -73,9 +70,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   );
 
   // Fetch tickets
+  // The list is scoped by the session cookie, so there is nothing to wait for
+  // before fetching and no identity for this component to carry.
   const fetchTickets = useCallback(async () => {
-    if (!selectedRequester) return;
-
     setLoading(true);
     setError(null);
 
@@ -90,11 +87,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     params.set("pageSize", String(queryState.pageSize));
 
     try {
-      const res = await fetch(`/api/tickets?${params.toString()}`, {
-        headers: {
-          "X-Requester-Id": String(selectedRequester.id),
-        },
-      });
+      const res = await fetch(`/api/tickets?${params.toString()}`);
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -118,7 +111,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       setLoading(false);
     }
   }, [
-    selectedRequester,
     debouncedSearch,
     queryState.categoryId,
     queryState.priority,

@@ -1,60 +1,94 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import App from "../../App";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AppRoutes } from "../../App";
+import { AuthHarnessProvider, testUser } from "../../test/authHarness";
 
-const mockRequesters = [
-  { id: 1, name: "Anucha Wongchai", email: "anucha.wongchai@example.com" },
-];
+/**
+ * Adapted from Lab 2 under BR-28. The Lab 2 version asserted that the app shows
+ * a development-requester selection screen first and the shell afterwards. The
+ * selector is gone, so the same question is now asked of the session: without
+ * one the app shows Login, with one it shows the authenticated shell.
+ */
 
-describe("App Root & Route Guard (Issue #24, AC-02, C-09)", () => {
+function renderAt(route: string, harness = {}) {
+  return render(
+    <MemoryRouter initialEntries={[route]}>
+      <AuthHarnessProvider harness={harness}>
+        <AppRoutes />
+      </AuthHarnessProvider>
+    </MemoryRouter>
+  );
+}
+
+describe("App Root and Route Guard (Issue #24 adapted for Lab 3, FR-18, FR-19)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    sessionStorage.clear();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        categories: [],
+        systems: [],
+        tickets: [],
+        total: 0,
+      }),
+    } as Response);
   });
 
-  it("renders RequesterSelection when no requester is selected, then shows App Shell upon selection", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ requesters: mockRequesters }),
-    } as Response);
-
-    render(<App />);
-
-    // First renders selection screen
-    expect(screen.getByText("TokTickIT")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Select a Development Requester to test requester-specific ticket behavior/i
-      )
-    ).toBeInTheDocument();
+  it("sends an unauthenticated visitor to the login screen", async () => {
+    renderAt("/tickets", { user: null });
 
     await waitFor(() => {
-      expect(
-        screen.getByLabelText(/Development Requester/i)
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("login-card")).toBeInTheDocument();
     });
+    expect(screen.queryByTestId("identity-chip")).not.toBeInTheDocument();
+  });
 
-    // Select requester and continue
-    fireEvent.change(screen.getByLabelText(/Development Requester/i), {
-      target: { value: "1" },
+  it("renders the authenticated shell with the identity chip and the requester navigation", async () => {
+    renderAt("/tickets");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("identity-chip")).toHaveTextContent(
+        "Signed in as Anucha Wongchai"
+      );
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continue/i }));
+    expect(
+      screen.getByRole("link", { name: "My Tickets" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Create Ticket" })
+    ).toBeInTheDocument();
+    // The Lab 2 development affordances are gone, not merely hidden.
+    expect(
+      screen.queryByTestId("change-requester-btn")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Development Requester/i)
+    ).not.toBeInTheDocument();
+  });
 
-    // Now renders App shell
-    expect(screen.getByTestId("requester-chip")).toHaveTextContent(
-      "Signed in as Anucha Wongchai (dev)"
-    );
-    expect(
-      screen.getByRole("button", { name: "My Tickets" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create Ticket" })
-    ).toBeInTheDocument();
+  it("holds a user carrying an initial password on the change-password gate", async () => {
+    renderAt("/tickets", { user: testUser({ mustChangePassword: true }) });
 
-    // Click Change Requester clears context-bound state and returns to selection (FR-03, BR-05, AC-18)
-    fireEvent.click(screen.getByTestId("change-requester-btn"));
-    expect(
-      screen.getByText(/Select a Development Requester/i)
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("change-password-card")).toBeInTheDocument();
+    });
+    // No navigation is offered, because there is nowhere they may go yet.
+    expect(screen.queryByTestId("identity-chip")).not.toBeInTheDocument();
+  });
+
+  it("waits rather than redirecting while the session probe is still in flight", () => {
+    renderAt("/tickets", { user: null, loading: true });
+
+    expect(screen.getByTestId("auth-loading")).toBeInTheDocument();
+    expect(screen.queryByTestId("login-card")).not.toBeInTheDocument();
+  });
+
+  it("renders a not-found panel for an address that matches no screen", async () => {
+    renderAt("/no-such-screen");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("not-found-panel")).toBeInTheDocument();
+    });
   });
 });

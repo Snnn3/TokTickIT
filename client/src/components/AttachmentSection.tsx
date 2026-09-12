@@ -20,7 +20,6 @@ interface StagedFile {
 interface AttachmentSectionProps {
   ticketId: number;
   attachments: AttachmentMetadata[];
-  requesterId: number;
   onAttachmentAdded?: (attachment: AttachmentMetadata) => void;
   onAttachmentRemoved?: (update: AttachmentRemovalUpdate) => void;
 }
@@ -28,7 +27,6 @@ interface AttachmentSectionProps {
 export function AttachmentSection({
   ticketId,
   attachments,
-  requesterId,
   onAttachmentAdded,
   onAttachmentRemoved,
 }: AttachmentSectionProps) {
@@ -160,9 +158,6 @@ export function AttachmentSection({
     try {
       const res = await fetch(`/api/tickets/${ticketId}/attachments`, {
         method: "POST",
-        headers: {
-          "X-Requester-Id": String(requesterId),
-        },
         body: formData,
       });
 
@@ -219,11 +214,7 @@ export function AttachmentSection({
     });
 
     try {
-      const res = await fetch(`/api/attachments/${attachment.id}/download`, {
-        headers: {
-          "X-Requester-Id": String(requesterId),
-        },
-      });
+      const res = await fetch(`/api/attachments/${attachment.id}/download`);
 
       if (res.status === 410) {
         setDownloadErrors((prev) => ({
@@ -289,7 +280,6 @@ export function AttachmentSection({
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "X-Requester-Id": String(requesterId),
         },
         body: JSON.stringify({ reason: trimmedReason }),
       });
