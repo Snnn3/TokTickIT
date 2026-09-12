@@ -26,7 +26,7 @@ async function assertNoHorizontalScrollAndCapture(
   page: Page,
   screenName: "create-ticket" | "my-tickets" | "ticket-detail",
   screenshotsBase: string,
-  viewports: ViewportConfig[] = VIEWPORTS,
+  viewports: ViewportConfig[] = VIEWPORTS
 ) {
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
@@ -52,9 +52,13 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     page,
   }) => {
     // 1. Requester Selection screen renders [FR-01, BR-03]
-    await expect(page.getByRole("heading", { name: "TokTickIT", level: 1 })).toBeVisible();
     await expect(
-      page.getByText("Select a Development Requester to test requester-specific ticket behavior"),
+      page.getByRole("heading", { name: "TokTickIT", level: 1 })
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Select a Development Requester to test requester-specific ticket behavior"
+      )
     ).toBeVisible();
 
     const selectDropdown = page.locator("#requester-select");
@@ -78,7 +82,9 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.getByRole("button", { name: "Create Ticket" }).first().click();
 
     // 2. Lands on App Shell in Create Ticket tab [FR-04, BR-08, BR-10]
-    await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Create Support Ticket", level: 1 })
+    ).toBeVisible();
     await expect(page.locator("#sys-requester")).toHaveValue(/Anucha Wongchai/);
 
     // 3. Fill ticket details with keyboard & select controls
@@ -88,7 +94,9 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
 
     const uniqueSummary = `E2E Happy Path Ticket - ${Date.now()}`;
     await page.locator("#summary-input").fill(uniqueSummary);
-    await page.locator("#description-input").fill("This is an end-to-end automated test ticket description.");
+    await page
+      .locator("#description-input")
+      .fill("This is an end-to-end automated test ticket description.");
 
     // Stage a valid file attachment [FR-06, BR-13]
     const filePayload = {
@@ -107,14 +115,20 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     // 4. Success panel renders with official ticket number [AC-01, FR-07, BR-01]
     const successPanel = page.getByTestId("success-panel");
     await expect(successPanel).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Ticket Created Successfully!" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Ticket Created Successfully!" })
+    ).toBeVisible();
 
-    const ticketNumber = await successPanel.getByTestId("success-ticket-number").innerText();
+    const ticketNumber = await successPanel
+      .getByTestId("success-ticket-number")
+      .innerText();
     expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{5}$/);
 
     // 5. Navigate to My Tickets and verify ticket is located [FR-08, AC-02]
     await page.getByRole("button", { name: "View My Tickets" }).click();
-    await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "My Tickets", level: 1 })
+    ).toBeVisible();
 
     // Find ticket row
     await expect(page.getByText(uniqueSummary).first()).toBeVisible();
@@ -126,19 +140,27 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     request,
   }) => {
     // --- Step 1: Requester A (Anucha) logs in and creates a ticket with attachment ---
-    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
+    await page
+      .locator("#requester-select")
+      .selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Navigate to Create Ticket
     await page.getByRole("button", { name: "Create Ticket" }).first().click();
-    await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Create Support Ticket", level: 1 })
+    ).toBeVisible();
 
     const isolationSummary = `Isolation & Attachment Lifecycle - ${Date.now()}`;
     await page.locator("#category-select").selectOption({ index: 1 });
     await page.locator("#system-select").selectOption({ index: 1 });
     await page.locator("#priority-select").selectOption("HIGH");
     await page.locator("#summary-input").fill(isolationSummary);
-    await page.locator("#description-input").fill("Testing multi-requester data isolation and attachment soft-removal.");
+    await page
+      .locator("#description-input")
+      .fill(
+        "Testing multi-requester data isolation and attachment soft-removal."
+      );
 
     await page.locator("#file-upload-input").setInputFiles({
       name: "report.pdf",
@@ -149,20 +171,28 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.getByRole("button", { name: "Submit Ticket" }).click();
     const successPanel = page.getByTestId("success-panel");
     await expect(successPanel).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Ticket Created Successfully!" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Ticket Created Successfully!" })
+    ).toBeVisible();
 
-    const ticketNumber = await successPanel.getByTestId("success-ticket-number").innerText();
+    const ticketNumber = await successPanel
+      .getByTestId("success-ticket-number")
+      .innerText();
     expect(ticketNumber).toMatch(/^TKT-\d{4}-\d{5}$/);
 
     // --- Step 2: Switch to Requester B (Busaba) and assert data isolation [AC-18, BR-04] ---
     await page.getByRole("button", { name: "Change Requester" }).click();
     await expect(page.locator("#requester-select")).toBeVisible();
 
-    await page.locator("#requester-select").selectOption({ label: BUSABA_LABEL });
+    await page
+      .locator("#requester-select")
+      .selectOption({ label: BUSABA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Lands on My Tickets
-    await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "My Tickets", level: 1 })
+    ).toBeVisible();
 
     // Verify Requester B CANNOT see Requester A's ticket
     await expect(page.getByText(isolationSummary)).toHaveCount(0);
@@ -170,10 +200,14 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
 
     // --- Step 3: Switch back to Requester A and open Ticket Detail ---
     await page.getByRole("button", { name: "Change Requester" }).click();
-    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
+    await page
+      .locator("#requester-select")
+      .selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "My Tickets", level: 1 })
+    ).toBeVisible();
     await expect(page.getByText(isolationSummary).first()).toBeVisible();
 
     // Click on ticket to view Detail
@@ -210,11 +244,14 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     const activeAttachmentId = activeRowTestId?.replace("attachment-row-", "");
 
     // Verify active attachment download is accessible [FR-11, AC-11]
-    const activeDownloadRes = await request.get(`/api/attachments/${activeAttachmentId}/download`, {
-      headers: {
-        "X-Requester-Id": ANUCHA_ID,
-      },
-    });
+    const activeDownloadRes = await request.get(
+      `/api/attachments/${activeAttachmentId}/download`,
+      {
+        headers: {
+          "X-Requester-Id": ANUCHA_ID,
+        },
+      }
+    );
     expect(activeDownloadRes.status()).toBe(200);
 
     // --- Step 5: Soft-remove an attachment with mandatory reason [AC-11, AC-12, BR-17] ---
@@ -230,7 +267,9 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
 
     // Fill valid reason
     const reasonTextarea = page.locator("#removal-reason-input");
-    await reasonTextarea.fill("Uploaded by mistake, replacing with updated version.");
+    await reasonTextarea.fill(
+      "Uploaded by mistake, replacing with updated version."
+    );
     await expect(confirmRemoveBtn).toBeEnabled();
 
     // Submit removal
@@ -239,7 +278,9 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
 
     // Assert removed row rendering: strikethrough, Removed badge, audit caption
     await expect(page.getByTestId(/^removed-badge-/).first()).toBeVisible();
-    await expect(page.getByTestId(/^removed-reason-/).first()).toContainText("Uploaded by mistake");
+    await expect(page.getByTestId(/^removed-reason-/).first()).toContainText(
+      "Uploaded by mistake"
+    );
 
     // Extract removed attachment ID from testid
     const removedBadge = page.getByTestId(/^removed-badge-/).first();
@@ -247,11 +288,14 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     const removedAttachmentId = testIdAttr?.replace("removed-badge-", "");
 
     // Verify download byte streaming is blocked with HTTP 410 [AC-11, BR-16]
-    const downloadRes = await request.get(`/api/attachments/${removedAttachmentId}/download`, {
-      headers: {
-        "X-Requester-Id": ANUCHA_ID,
-      },
-    });
+    const downloadRes = await request.get(
+      `/api/attachments/${removedAttachmentId}/download`,
+      {
+        headers: {
+          "X-Requester-Id": ANUCHA_ID,
+        },
+      }
+    );
     expect(downloadRes.status()).toBe(410);
   });
 
@@ -259,16 +303,29 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     page,
   }) => {
     // 1. Select Requester
-    await page.locator("#requester-select").selectOption({ label: ANUCHA_LABEL });
+    await page
+      .locator("#requester-select")
+      .selectOption({ label: ANUCHA_LABEL });
     await page.getByRole("button", { name: "Continue" }).click();
 
-    const screenshotsBase = path.join(process.cwd(), "artifacts", "lab-02", "screenshots");
-    fs.mkdirSync(path.join(screenshotsBase, "create-ticket"), { recursive: true });
+    const screenshotsBase = path.join(
+      process.cwd(),
+      "artifacts",
+      "lab-02",
+      "screenshots"
+    );
+    fs.mkdirSync(path.join(screenshotsBase, "create-ticket"), {
+      recursive: true,
+    });
     fs.mkdirSync(path.join(screenshotsBase, "my-tickets"), { recursive: true });
-    fs.mkdirSync(path.join(screenshotsBase, "ticket-detail"), { recursive: true });
+    fs.mkdirSync(path.join(screenshotsBase, "ticket-detail"), {
+      recursive: true,
+    });
 
     // --- Screen 1: My Tickets ---
-    await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "My Tickets", level: 1 })
+    ).toBeVisible();
 
     // Assert responsive layout DOM element switching [AC-22, ui-spec §8]
     await page.setViewportSize({ width: 1366, height: 768 });
@@ -277,14 +334,24 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await expect(page.getByTestId("tickets-mobile-cards")).toBeVisible();
 
-    await assertNoHorizontalScrollAndCapture(page, "my-tickets", screenshotsBase);
+    await assertNoHorizontalScrollAndCapture(
+      page,
+      "my-tickets",
+      screenshotsBase
+    );
 
     // --- Screen 2: Create Ticket ---
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.getByRole("button", { name: "Create Ticket" }).first().click();
-    await expect(page.getByRole("heading", { name: "Create Support Ticket", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Create Support Ticket", level: 1 })
+    ).toBeVisible();
 
-    await assertNoHorizontalScrollAndCapture(page, "create-ticket", screenshotsBase);
+    await assertNoHorizontalScrollAndCapture(
+      page,
+      "create-ticket",
+      screenshotsBase
+    );
 
     // --- Screen 3: Ticket Detail ---
     // Create a ticket first to guarantee at least 1 ticket exists for Detail view capture
@@ -293,18 +360,26 @@ test.describe("Lab 2 Requester E2E & Visual Testing Suite", () => {
     await page.locator("#priority-select").selectOption("MEDIUM");
     const visualEvidenceSummary = `Visual Evidence Ticket - ${Date.now()}`;
     await page.locator("#summary-input").fill(visualEvidenceSummary);
-    await page.locator("#description-input").fill("Detail view layout responsive verification.");
+    await page
+      .locator("#description-input")
+      .fill("Detail view layout responsive verification.");
     await page.getByRole("button", { name: "Submit Ticket" }).click();
 
     await expect(page.getByTestId("success-panel")).toBeVisible();
     await page.getByRole("button", { name: "View My Tickets" }).click();
-    await expect(page.getByRole("heading", { name: "My Tickets", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "My Tickets", level: 1 })
+    ).toBeVisible();
 
     // Ensure desktop viewport before clicking table row
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.getByRole("button", { name: "View" }).first().click();
     await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
 
-    await assertNoHorizontalScrollAndCapture(page, "ticket-detail", screenshotsBase);
+    await assertNoHorizontalScrollAndCapture(
+      page,
+      "ticket-detail",
+      screenshotsBase
+    );
   });
 });

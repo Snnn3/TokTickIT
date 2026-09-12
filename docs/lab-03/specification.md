@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: **Draft — pending peer approval on PR #44** | Version: 1.8 | Date: 2026-09-10
+Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 1.9 | Date: 2026-09-11
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder). **All documents in `docs/lab-03/` carry the same version number and bump together**, so any file whose header differs from the others is out of date by definition — three review rounds each caught a stale version stamp somewhere in the set, and a single shared number makes that failure visible at a glance instead of requiring a cross-check.
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
@@ -21,6 +21,8 @@ Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24
 **Changes in v1.7** (internal-consistency audit across all six documents): ten contradictions between documents that each looked correct alone. Two were half-applied fixes from earlier rounds — BR-22 still demanded a JSON content type on every state-changing request while `api-spec.md` exempted body-less ones, and only the requester-facing reopen cleared the Resolution Summary while a staff reopen through the status PATCH did not. The CSRF exemption is now stated by request shape rather than an endpoint list that had already drifted. D10 no longer claims Cancelled is reachable from Resolved, which the BR-13 matrix forbids. BR-19 now permits all three fields the API actually returns instead of one. The BR-24 role-demotion cascade reaches the API contract, AC-21 and API-21 rather than existing only as a business rule. The BR-25 blanket claim is scoped to ticket-addressed routes, since the queue and the assignee list cannot obey it. The requester ticket detail now exposes `appearsResolvedAt`, without which the badge `ui-spec.md` requires could not survive a reload. The Owner filter exposes the `assigned` value it validates. AC-27 and AC-28 are back in order in both §9 and the traceability table.
 
 **Changes in v1.8** (addressing the third peer review by @YummieGG on PR #44): the header claimed **Approved** while the PR carried two unresolved `CHANGES_REQUESTED` rounds and no approval — the status is now Draft, and the Definition of Done gains an explicit item requiring a recorded peer approval before it changes, so the label can never again run ahead of the reviewer's verdict. The two authenticated reference endpoints had no authorization-matrix row, and the matrix never stated what an unauthenticated caller receives; both are fixed. The logout contract said a cookie was required *and* that it was idempotent when absent, which left the implementer unable to choose between `401` and `204`; it now pins `204` unconditionally, with the reason, and API-06 asserts it.
+
+**Changes in v1.9** (recording the outcome of the third peer review, not new contract content): @YummieGG approved PR #44 at head `d09355b` on 2026-09-10 16:01 and the PR merged into `lab3-staging` at 16:04, which closed issue #35 and unblocked #36. The status header therefore moves from Draft to Approved, and the Definition of Done item that gated on a *recorded* approval is ticked with the record cited. No FR, BR, AC or decision changed in this revision; every document in `docs/lab-03/` bumps to 1.9 together because the set shares one version number, and the peer-review record in `reviewer.md` changed.
 
 ## 1. Sprint Goal
 
@@ -250,7 +252,7 @@ Delivery:
 * [ ] Issues tracked on the Kanban board Backlog → Specified → Started → PR Review → Fixing → Done.
 * [ ] Feature branches only; peer-reviewed PRs into `lab3-staging`; release PR to `main` approved.
 * [ ] Contract docs version-controlled and merged **before** implementation PRs (handout Part 2 evidence).
-* [ ] Peer approval recorded on PR #44 and this document's status changed from Draft to Approved. Until that happens the contract is not approved, whatever this file's header says — the reviewer's verdict on the PR is the authority, not the label.
+* [x] Peer approval recorded on PR #44 and this document's status changed from Draft to Approved. Until that happens the contract is not approved, whatever this file's header says — the reviewer's verdict on the PR is the authority, not the label. *Satisfied in v1.9: @YummieGG approved at head `d09355b` on 2026-09-10 16:01 and the PR merged at 16:04; the record is the PR #44 row in `reviewer.md`.*
 * [ ] `reviewer.md` complete with reviews given and received, links and approvals.
 * [ ] Submission PDF using the literal headings "Answer Part 1" through "Answer Part 9" with working links.
 

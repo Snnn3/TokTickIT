@@ -35,7 +35,11 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
       updatedAt: new Date(),
       category: { name: "Network" },
       system: { name: "File Server" },
-      requester: { id: 1, name: "Anucha Wongchai", email: "anucha@example.com" },
+      requester: {
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha@example.com",
+      },
       attachments: [],
     } as any);
 
@@ -119,7 +123,11 @@ describe("Ticket Detail API (A-14, A-15, FR-09, FR-13, BR-06, AC-03)", () => {
       updatedAt: mockDate,
       category: { name: "Hardware" },
       system: { name: "Workstation" },
-      requester: { id: 1, name: "Anucha Wongchai", email: "anucha@example.com" },
+      requester: {
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha@example.com",
+      },
       attachments: [
         {
           id: 101,

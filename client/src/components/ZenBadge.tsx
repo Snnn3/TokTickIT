@@ -10,7 +10,11 @@ const STATUS_BADGE_MAP: Record<TicketStatus, string> = {
   NEW: "badge badge-zen-new",
 };
 
-export function ZenPriorityBadge({ priority }: { priority: TicketPriority | string }) {
+export function ZenPriorityBadge({
+  priority,
+}: {
+  priority: TicketPriority | string;
+}) {
   const badgeClass =
     PRIORITY_BADGE_MAP[priority as TicketPriority] || "badge badge-zen-low";
 

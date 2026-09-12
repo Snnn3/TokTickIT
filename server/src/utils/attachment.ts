@@ -1,4 +1,6 @@
-export function parsePositiveIntParam(paramValue: string | string[] | undefined): number | null {
+export function parsePositiveIntParam(
+  paramValue: string | string[] | undefined
+): number | null {
   const raw = Array.isArray(paramValue) ? paramValue[0] : paramValue;
   const trimmed = String(raw || "").trim();
   if (!/^\d+$/.test(trimmed)) return null;

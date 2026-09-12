@@ -6,9 +6,11 @@ import { Prisma } from "@prisma/client";
  */
 export async function generateTicketNumber(
   tx: Prisma.TransactionClient,
-  year: number = new Date().getUTCFullYear(),
+  year: number = new Date().getUTCFullYear()
 ): Promise<string> {
-  const result = await tx.$queryRaw<{ seq: bigint }[]>`SELECT nextval('ticket_number_seq') AS seq`;
+  const result = await tx.$queryRaw<
+    { seq: bigint }[]
+  >`SELECT nextval('ticket_number_seq') AS seq`;
   const seq = Number(result[0].seq);
   const padded = String(seq).padStart(5, "0");
   return `TKT-${year}-${padded}`;

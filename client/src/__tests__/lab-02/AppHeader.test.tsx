@@ -1,7 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { AppHeader } from "../../components/AppHeader";
-import { RequesterProvider, useRequester } from "../../context/RequesterContext";
+import {
+  RequesterProvider,
+  useRequester,
+} from "../../context/RequesterContext";
 
 const mockUser = {
   id: 1,
@@ -20,7 +23,9 @@ describe("AppHeader Component (Issue #24, FR-02, FR-03, FR-14)", () => {
 
     expect(screen.getByText("TokTickIT")).toBeInTheDocument();
     const myTicketsBtn = screen.getByRole("button", { name: /My Tickets/i });
-    const createTicketBtn = screen.getByRole("button", { name: /Create Ticket/i });
+    const createTicketBtn = screen.getByRole("button", {
+      name: /Create Ticket/i,
+    });
 
     expect(myTicketsBtn).toHaveClass("active");
     expect(createTicketBtn).not.toHaveClass("active");
@@ -32,10 +37,14 @@ describe("AppHeader Component (Issue #24, FR-02, FR-03, FR-14)", () => {
   it("displays requester chip and invokes clearRequester on Change Requester button", () => {
     function Wrapper() {
       const { selectRequester, selectedRequester } = useRequester();
-      
+
       return (
         <div>
-          <button type="button" onClick={() => selectRequester(mockUser)} data-testid="login-helper">
+          <button
+            type="button"
+            onClick={() => selectRequester(mockUser)}
+            data-testid="login-helper"
+          >
             Log In
           </button>
           <AppHeader activeTab="my-tickets" onTabChange={() => {}} />
@@ -55,11 +64,15 @@ describe("AppHeader Component (Issue #24, FR-02, FR-03, FR-14)", () => {
     // Trigger requester selection
     fireEvent.click(screen.getByTestId("login-helper"));
 
-    expect(screen.getByTestId("requester-chip")).toHaveTextContent("Signed in as Anucha Wongchai (dev)");
+    expect(screen.getByTestId("requester-chip")).toHaveTextContent(
+      "Signed in as Anucha Wongchai (dev)"
+    );
 
     const changeBtn = screen.getByTestId("change-requester-btn");
     fireEvent.click(changeBtn);
 
-    expect(screen.getByTestId("status-indicator")).toHaveTextContent("logged-out");
+    expect(screen.getByTestId("status-indicator")).toHaveTextContent(
+      "logged-out"
+    );
   });
 });

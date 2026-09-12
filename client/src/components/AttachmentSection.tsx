@@ -34,12 +34,17 @@ export function AttachmentSection({
 }: AttachmentSectionProps) {
   const [fileList, setFileList] = useState<AttachmentMetadata[]>(attachments);
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
-  const [downloadErrors, setDownloadErrors] = useState<Record<number, string>>({});
+  const [downloadErrors, setDownloadErrors] = useState<Record<number, string>>(
+    {}
+  );
 
   // Modal / Dialog state for soft removal
-  const [removingAttachment, setRemovingAttachment] = useState<AttachmentMetadata | null>(null);
+  const [removingAttachment, setRemovingAttachment] =
+    useState<AttachmentMetadata | null>(null);
   const [removeReason, setRemoveReason] = useState("");
-  const [removeReasonError, setRemoveReasonError] = useState<string | null>(null);
+  const [removeReasonError, setRemoveReasonError] = useState<string | null>(
+    null
+  );
   const [isRemoving, setIsRemoving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,9 +73,10 @@ export function AttachmentSection({
           closeRemoveModal();
         }
       } else if (e.key === "Tab" && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
+        const focusableElements =
+          modalRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
         if (focusableElements.length === 0) return;
 
         const firstElement = focusableElements[0];
@@ -165,9 +171,14 @@ export function AttachmentSection({
         setStagedFiles((prev) =>
           prev.map((f) =>
             f.id === tempId
-              ? { ...f, status: "invalid", errorMessage: data?.error?.message || "Failed to upload attachment." }
-              : f,
-          ),
+              ? {
+                  ...f,
+                  status: "invalid",
+                  errorMessage:
+                    data?.error?.message || "Failed to upload attachment.",
+                }
+              : f
+          )
         );
       } else {
         const uploadedAtt: AttachmentMetadata = data;
@@ -181,9 +192,13 @@ export function AttachmentSection({
       setStagedFiles((prev) =>
         prev.map((f) =>
           f.id === tempId
-            ? { ...f, status: "invalid", errorMessage: "Network error while uploading attachment." }
-            : f,
-        ),
+            ? {
+                ...f,
+                status: "invalid",
+                errorMessage: "Network error while uploading attachment.",
+              }
+            : f
+        )
       );
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -213,7 +228,8 @@ export function AttachmentSection({
       if (res.status === 410) {
         setDownloadErrors((prev) => ({
           ...prev,
-          [attachment.id]: "This attachment has been removed and cannot be downloaded.",
+          [attachment.id]:
+            "This attachment has been removed and cannot be downloaded.",
         }));
         return;
       }
@@ -222,7 +238,8 @@ export function AttachmentSection({
         const data = await res.json().catch(() => ({}));
         setDownloadErrors((prev) => ({
           ...prev,
-          [attachment.id]: data?.error?.message || "Download failed. Please try again.",
+          [attachment.id]:
+            data?.error?.message || "Download failed. Please try again.",
         }));
         return;
       }
@@ -279,15 +296,17 @@ export function AttachmentSection({
 
       const data = await res.json();
       if (!res.ok) {
-        setRemoveReasonError(data?.error?.message || "Failed to remove attachment.");
+        setRemoveReasonError(
+          data?.error?.message || "Failed to remove attachment."
+        );
       } else {
         const removedAt = data.removedAt || new Date().toISOString();
         setFileList((prev) =>
           prev.map((item) =>
             item.id === removingAttachment.id
               ? { ...item, removedAt, removedReason: trimmedReason }
-              : item,
-          ),
+              : item
+          )
         );
         if (onAttachmentRemoved) {
           onAttachmentRemoved({
@@ -332,7 +351,11 @@ export function AttachmentSection({
           >
             {isUploading ? (
               <>
-                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                <span
+                  className="spinner-border spinner-border-sm"
+                  role="status"
+                  aria-hidden="true"
+                />
                 <span>Uploading...</span>
               </>
             ) : (
@@ -347,7 +370,9 @@ export function AttachmentSection({
 
       {/* Attachments List with All 5 States [ui-spec §9, §12] */}
       {!hasItems ? (
-        <p className="text-muted small mb-0 fst-italic">No attachments on this ticket.</p>
+        <p className="text-muted small mb-0 fst-italic">
+          No attachments on this ticket.
+        </p>
       ) : (
         <div className="list-group list-group-flush border-top">
           {/* Staged files in uploading or invalid state */}
@@ -359,10 +384,20 @@ export function AttachmentSection({
             >
               <div>
                 <div className="d-flex align-items-center gap-2">
-                  <span className="fw-medium small text-zen-body">{staged.filename}</span>
+                  <span className="fw-medium small text-zen-body">
+                    {staged.filename}
+                  </span>
                   {staged.status === "uploading" && (
-                    <span className="badge badge-zen-medium d-flex align-items-center gap-1" data-testid="uploading-badge">
-                      <span className="spinner-border spinner-border-sm" style={{ width: "10px", height: "10px" }} role="status" aria-hidden="true" />
+                    <span
+                      className="badge badge-zen-medium d-flex align-items-center gap-1"
+                      data-testid="uploading-badge"
+                    >
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        style={{ width: "10px", height: "10px" }}
+                        role="status"
+                        aria-hidden="true"
+                      />
                       Uploading
                     </span>
                   )}
@@ -418,7 +453,10 @@ export function AttachmentSection({
                         <span className="text-decoration-line-through text-muted small fw-medium">
                           {att.filename}
                         </span>
-                        <span className="badge badge-zen-removed" data-testid={`removed-badge-${att.id}`}>
+                        <span
+                          className="badge badge-zen-removed"
+                          data-testid={`removed-badge-${att.id}`}
+                        >
                           Removed
                         </span>
                       </>
@@ -446,9 +484,12 @@ export function AttachmentSection({
                       className="small text-zen-muted mt-1 zg-readonly-panel p-2 rounded"
                       data-testid={`removed-reason-${att.id}`}
                     >
-                      <strong className="text-zen-body">Reason:</strong> {att.removedReason}
+                      <strong className="text-zen-body">Reason:</strong>{" "}
+                      {att.removedReason}
                       {att.removedAt && (
-                        <span className="text-muted ms-1">({formatDateTime(att.removedAt)})</span>
+                        <span className="text-muted ms-1">
+                          ({formatDateTime(att.removedAt)})
+                        </span>
                       )}
                     </div>
                   )}
@@ -531,7 +572,9 @@ export function AttachmentSection({
           <div className="modal-dialog modal-dialog-centered" ref={modalRef}>
             <div className="modal-content">
               <div className="modal-header">
-                <h3 className="modal-title h5 text-zen-primary fw-bold">Remove Attachment</h3>
+                <h3 className="modal-title h5 text-zen-primary fw-bold">
+                  Remove Attachment
+                </h3>
                 <button
                   type="button"
                   className="btn-close"
@@ -544,11 +587,17 @@ export function AttachmentSection({
 
               <div className="modal-body">
                 <p className="small text-muted mb-3">
-                  Are you sure you want to remove <strong>{removingAttachment.filename}</strong>? Once removed, the file bytes cannot be downloaded again, but the metadata and your reason will remain visible for audit compliance.
+                  Are you sure you want to remove{" "}
+                  <strong>{removingAttachment.filename}</strong>? Once removed,
+                  the file bytes cannot be downloaded again, but the metadata
+                  and your reason will remain visible for audit compliance.
                 </p>
 
                 <div className="mb-2">
-                  <label htmlFor="removal-reason-input" className="form-label small fw-semibold">
+                  <label
+                    htmlFor="removal-reason-input"
+                    className="form-label small fw-semibold"
+                  >
                     Removal Reason <span className="text-danger">*</span>
                   </label>
                   <textarea
@@ -576,9 +625,13 @@ export function AttachmentSection({
                         {removeReasonError}
                       </span>
                     ) : (
-                      <span className="text-muted small">Max 300 characters</span>
+                      <span className="text-muted small">
+                        Max 300 characters
+                      </span>
                     )}
-                    <span className="text-muted small">{removeReason.length}/300</span>
+                    <span className="text-muted small">
+                      {removeReason.length}/300
+                    </span>
                   </div>
                 </div>
               </div>
@@ -602,7 +655,11 @@ export function AttachmentSection({
                 >
                   {isRemoving ? (
                     <>
-                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                      <span
+                        className="spinner-border spinner-border-sm"
+                        role="status"
+                        aria-hidden="true"
+                      />
                       <span>Removing...</span>
                     </>
                   ) : (

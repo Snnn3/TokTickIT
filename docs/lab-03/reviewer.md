@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 1.8 | Date: 2026-09-10 | Companion to `specification.md`.
+Version: 1.9 | Date: 2026-09-11 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -14,7 +14,7 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
 | [#43](https://github.com/Snnn3/TokTickIT/pull/43) (closed unmerged) | feature/lab3-1-contract | Closed by me before review; superseded by #44 on the same branch and base |
-| [#44](https://github.com/Snnn3/TokTickIT/pull/44) | feature/lab3-1-contract (contract v1.8) | **CHANGES_REQUESTED ×3** by @YummieGG; all three rounds addressed, awaiting re-review |
+| [#44](https://github.com/Snnn3/TokTickIT/pull/44) | feature/lab3-1-contract (contract v1.8) | **CHANGES_REQUESTED ×3** by @YummieGG, every round addressed; **APPROVED** 2026-09-10 16:01 at head `d09355b`, merged into `lab3-staging` 16:04 |
 | TBD | feature/lab3-2-refactor | TBD |
 | TBD | feature/lab3-3-auth-foundation | TBD |
 | TBD | feature/lab3-4-requester-regression | TBD |
@@ -64,6 +64,24 @@ Repositories: mine is [Snnn3/TokTickIT](https://github.com/Snnn3/TokTickIT); my 
 *Response — fix commit `e105a48` (contract v1.8).* All four accepted. The approval point was the most serious: the contract asserted its own approval while this PR carried two unresolved rounds and no recorded approval, which makes the label worthless as evidence. Status is now **Draft — pending peer approval on PR #44**, and the Definition of Done gained an item stating it may only change once an approval is *recorded*, since the reviewer's verdict is the authority and the header is not. `My Reflection` was written, marked as drafted from the session record pending the author's final wording. The reference endpoints gained a matrix row, and a wider gap found while fixing it was closed too — the matrix had never stated unauthenticated behaviour for *any* row, so it now says an unauthenticated caller receives `401 AUTH_REQUIRED` everywhere except login. Logout was pinned to the reviewer's suggested behaviour: no cookie required, always `204`, always a cleared `Set-Cookie`, with API-06 asserting the no-cookie case, because a client whose session has already expired must still be able to reach a clean signed-out state. PR title and description were updated to v1.8 at the current head.
 
 *One point contested rather than accepted.* The review described `docs/lab-03/plan.md` as "a required contract file". Handout §12 lists six required files — `specification.md`, `tests.md`, `ui-spec.md`, `api-spec.md`, `reviewer.md`, `ai-use.md` — all of which are present and tracked; the plan is a local working document untracked deliberately in `34b7763`, and no tracked document references it. This was raised on the PR for the reviewer to settle rather than silently actioned either way.
+
+**PR #44 — round 4 — @YummieGG, `APPROVED`, 2026-09-10 16:01**
+
+> Re-reviewed the latest revision against the Lab 03 handout and Issue #35. All previous findings have been addressed:
+>
+> - The required contract files and review evidence are now consistent.
+> - The PR metadata matches the current head.
+> - The authorization matrix, logout behavior, and acceptance-test traceability are complete.
+> - The AI-use and peer-review records are synchronized.
+> - No additional Standards or Spec issues remain in this documentation-only PR.
+>
+> The contract is complete and ready for implementation.
+>
+> **Approved.**
+
+*Outcome — no fix commit; the approval landed on the unchanged head `d09355b` (contract v1.8).* The reviewer merged nothing new: rounds 1 to 3 had already been answered by `5734da0`, `98249e6` and `e105a48`, and this round confirmed that the v1.8 set holds together. PR #44 was merged into `lab3-staging` three minutes later, and issue #35 was closed by that merge, which unblocked #36 (the Lab3-02 formatting pass).
+
+This is the approval that the round-3 Definition of Done item was waiting for: the contract may only call itself approved once a peer approval is *recorded*, and the record is this row. The contested point from round 3 — whether `docs/lab-03/plan.md` is a required contract file — was not ruled on separately. The reviewer approved with no further comment on it, so the round-3 position stands by default rather than by decision: the handout's six required files are all tracked, and the plan remains a local working document.
 
 ## Pull Requests I reviewed for my partner
 

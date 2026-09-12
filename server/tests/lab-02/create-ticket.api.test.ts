@@ -16,7 +16,9 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     // Default mock for authentication middleware
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue(mockRequester);
+    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue(
+      mockRequester
+    );
   });
 
   it("creates valid ticket and returns 201 with official number and status NEW (A-01, BR-01, BR-02, BR-12)", async () => {
@@ -35,35 +37,46 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
       updatedAt: new Date(),
     };
 
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) => {
-      const txMock = {
-        category: {
-          findFirst: vi.fn().mockResolvedValue({ id: 1, name: "Network", isActive: true }),
-        },
-        relatedSystem: {
-          findFirst: vi.fn().mockResolvedValue({ id: 2, name: "Campus Wi-Fi", isActive: true }),
-        },
-        $queryRaw: vi.fn().mockResolvedValue([{ seq: 1n }]),
-        ticket: {
-          create: vi.fn().mockResolvedValue(mockCreatedTicket),
-        },
-        attachment: {
-          create: vi.fn().mockResolvedValue({
-            id: 101,
-            filename: "screenshot.png",
-            mimeType: "image/png",
-            sizeBytes: 1234,
-          }),
-        },
-      };
-      return callback(txMock);
-    });
+    vi.spyOn(prisma, "$transaction").mockImplementation(
+      async (callback: any) => {
+        const txMock = {
+          category: {
+            findFirst: vi
+              .fn()
+              .mockResolvedValue({ id: 1, name: "Network", isActive: true }),
+          },
+          relatedSystem: {
+            findFirst: vi.fn().mockResolvedValue({
+              id: 2,
+              name: "Campus Wi-Fi",
+              isActive: true,
+            }),
+          },
+          $queryRaw: vi.fn().mockResolvedValue([{ seq: 1n }]),
+          ticket: {
+            create: vi.fn().mockResolvedValue(mockCreatedTicket),
+          },
+          attachment: {
+            create: vi.fn().mockResolvedValue({
+              id: 101,
+              filename: "screenshot.png",
+              mimeType: "image/png",
+              sizeBytes: 1234,
+            }),
+          },
+        };
+        return callback(txMock);
+      }
+    );
 
     const res = await request(app)
       .post("/api/tickets")
       .set("X-Requester-Id", "1")
       .field("summary", "Cannot connect to campus Wi-Fi")
-      .field("description", "My laptop keeps dropping connection in building 3.")
+      .field(
+        "description",
+        "My laptop keeps dropping connection in building 3."
+      )
       .field("categoryId", "1")
       .field("systemId", "2")
       .field("requestedPriority", "MEDIUM")
@@ -94,9 +107,7 @@ describe("POST /api/tickets (Create Ticket API Tests - A-01..A-06)", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_FAILED");
     expect(res.body.error.details).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ field: "summary" }),
-      ])
+      expect.arrayContaining([expect.objectContaining({ field: "summary" })])
     );
   });
 

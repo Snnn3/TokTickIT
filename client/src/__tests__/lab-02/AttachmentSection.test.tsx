@@ -33,23 +33,27 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
 
   it("C-13: performs client file pre-checks for invalid types and oversize >5MB (AC-07, AC-08)", async () => {
     render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={[]}
-        requesterId={1}
-      />,
+      <AttachmentSection ticketId={10} attachments={[]} requesterId={1} />
     );
 
-    const input = screen.getByTestId("add-attachment-input") as HTMLInputElement;
+    const input = screen.getByTestId(
+      "add-attachment-input"
+    ) as HTMLInputElement;
 
     // 1. Invalid file extension (.exe)
-    const invalidFile = new File(["binary content"], "bad_file.exe", { type: "application/x-msdownload" });
+    const invalidFile = new File(["binary content"], "bad_file.exe", {
+      type: "application/x-msdownload",
+    });
     fireEvent.change(input, { target: { files: [invalidFile] } });
 
     expect(screen.getByText(/unsupported/i)).toBeInTheDocument();
 
     // 2. Oversize file (>5MB)
-    const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], "oversize.png", { type: "image/png" });
+    const bigFile = new File(
+      [new ArrayBuffer(6 * 1024 * 1024)],
+      "oversize.png",
+      { type: "image/png" }
+    );
     fireEvent.change(input, { target: { files: [bigFile] } });
 
     expect(screen.getByText(/exceeds/i)).toBeInTheDocument();
@@ -61,7 +65,7 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
         ticketId={10}
         attachments={mockAttachments}
         requesterId={1}
-      />,
+      />
     );
 
     // Active attachment: enabled actions
@@ -92,7 +96,7 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
         attachments={[mockAttachments[0]]}
         requesterId={1}
         onAttachmentRemoved={onRemoved}
-      />,
+      />
     );
 
     // Click remove on active attachment
@@ -100,7 +104,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
 
     // Modal dialog opens
     expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
-    expect(screen.getByText(/Are you sure you want to remove/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to remove/i)
+    ).toBeInTheDocument();
 
     const confirmBtn = screen.getByTestId("confirm-remove-button");
     const reasonInput = screen.getByTestId("removal-reason-input");
@@ -109,7 +115,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     expect(confirmBtn).toBeDisabled();
 
     // Enter valid reason
-    fireEvent.change(reasonInput, { target: { value: "No longer needed by IT" } });
+    fireEvent.change(reasonInput, {
+      target: { value: "No longer needed by IT" },
+    });
     expect(confirmBtn).not.toBeDisabled();
 
     // Mock DELETE endpoint
@@ -129,7 +137,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
         removedReason: "No longer needed by IT",
         removedAt: "2026-08-30T12:00:00.000Z",
       });
-      expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -139,14 +149,16 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       resolveDeletePromise = resolve;
     });
 
-    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() => deletePromise as any);
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () => deletePromise as any
+    );
 
     render(
       <AttachmentSection
         ticketId={10}
         attachments={mockAttachments}
         requesterId={1}
-      />,
+      />
     );
 
     fireEvent.click(screen.getByTestId("remove-button-101"));
@@ -170,11 +182,16 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     // Settle flight
     resolveDeletePromise({
       ok: true,
-      json: async () => ({ removed: true, removedAt: new Date().toISOString() }),
+      json: async () => ({
+        removed: true,
+        removedAt: new Date().toISOString(),
+      }),
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 });

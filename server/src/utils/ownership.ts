@@ -14,7 +14,7 @@ export type OwnedResourceResult<T> =
 export async function getOwnedResource<T>(
   find: () => Promise<T | null>,
   isOwner: (resource: T) => boolean,
-  notFoundMessage: string,
+  notFoundMessage: string
 ): Promise<OwnedResourceResult<T>> {
   const resource = await find();
 

@@ -13,7 +13,13 @@ import * as fs from "fs";
  * plus desktop/tablet/mobile responsive shots.
  */
 
-const SHOTS = path.join(process.cwd(), "artifacts", "lab-02", "screenshots", "requester-selection");
+const SHOTS = path.join(
+  process.cwd(),
+  "artifacts",
+  "lab-02",
+  "screenshots",
+  "requester-selection"
+);
 
 test.describe.configure({ mode: "serial" });
 test.use({ actionTimeout: 15000 });
@@ -48,7 +54,9 @@ test("selector state captures for report", async ({ page }) => {
 
   // ---- 01 initial: dropdown enabled, Continue disabled ----
   await gotoFreshSelector(page);
-  await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("requester-form")).toBeVisible({
+    timeout: 15000,
+  });
   const select = page.locator("#requester-select");
   const cont = page.getByRole("button", { name: "Continue" });
   await expect(select).toBeEnabled();
@@ -72,7 +80,10 @@ test("selector state captures for report", async ({ page }) => {
 
   // ---- 04 loading state (delay /api/requesters 2.5s) ----
   const slowReq = async (route: Route) => {
-    if (route.request().url().includes("/api/requesters") && route.request().method() === "GET") {
+    if (
+      route.request().url().includes("/api/requesters") &&
+      route.request().method() === "GET"
+    ) {
       await new Promise((r) => setTimeout(r, 2500));
     }
     await route.continue();
@@ -81,7 +92,9 @@ test("selector state captures for report", async ({ page }) => {
   await gotoFreshSelector(page);
   await expect(page.getByTestId("loading-state")).toBeVisible();
   await shot("04-loading-state.png");
-  await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("requester-form")).toBeVisible({
+    timeout: 15000,
+  });
   await page.unroute("**/api/requesters", slowReq);
 
   // ---- 05 empty state (mock zero requesters) ----
@@ -92,7 +105,7 @@ test("selector state captures for report", async ({ page }) => {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({ requesters: [] }),
-    }),
+    })
   );
   await page.goto("/");
   await expect(page.getByTestId("empty-state")).toBeVisible();
@@ -108,17 +121,21 @@ test("selector state captures for report", async ({ page }) => {
       status: 500,
       contentType: "application/json",
       body: JSON.stringify({ error: { code: "UNEXPECTED", message: "boom" } }),
-    }),
+    })
   );
   await page.goto("/");
   await expect(page.getByTestId("error-state")).toBeVisible();
-  await expect(page.getByText(/Unable to load development requesters/)).toBeVisible();
+  await expect(
+    page.getByText(/Unable to load development requesters/)
+  ).toBeVisible();
   await shot("06-failure-state.png");
   await page.unroute("**/api/requesters");
 
   // ---- 07 keyboard-focus ring on dropdown (AC-24) ----
   await gotoFreshSelector(page);
-  await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("requester-form")).toBeVisible({
+    timeout: 15000,
+  });
   await page.locator("#requester-select").focus();
   await expect(page.locator("#requester-select")).toBeFocused();
   await shot("07-focus-ring-dropdown.png");
@@ -126,10 +143,14 @@ test("selector state captures for report", async ({ page }) => {
   // ---- 08 open-dropdown ordering proof (native popup never paints headless,
   // so expand the select into a listbox to show active name-asc ordering) ----
   await page.evaluate(() => {
-    const sel = document.querySelector("#requester-select") as HTMLSelectElement;
+    const sel = document.querySelector(
+      "#requester-select"
+    ) as HTMLSelectElement;
     sel.size = sel.options.length;
   });
-  const optionTexts = await page.locator("#requester-select option").allInnerTexts();
+  const optionTexts = await page
+    .locator("#requester-select option")
+    .allInnerTexts();
   const names = optionTexts.slice(1);
   expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   await shot("08-dropdown-open-ordering.png");
@@ -143,8 +164,13 @@ test("selector state captures for report", async ({ page }) => {
   for (const vp of viewports) {
     await page.setViewportSize({ width: vp.width, height: vp.height });
     await page.goto("/");
-    await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
-    await page.screenshot({ path: path.join(SHOTS, `responsive-initial-${vp.name}.png`), fullPage: true });
+    await expect(page.getByTestId("requester-form")).toBeVisible({
+      timeout: 15000,
+    });
+    await page.screenshot({
+      path: path.join(SHOTS, `responsive-initial-${vp.name}.png`),
+      fullPage: true,
+    });
     // shell shot proves no horizontal scroll + chip/Change collapse into menu on mobile
     await page.locator("#requester-select").selectOption({ label });
     await page.getByRole("button", { name: "Continue" }).click();
@@ -154,11 +180,18 @@ test("selector state captures for report", async ({ page }) => {
       await toggler.click();
     }
     await expect(page.getByTestId("requester-chip")).toBeVisible();
-    const noOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    const noOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth
+    );
     expect(noOverflow).toBe(true);
-    await page.screenshot({ path: path.join(SHOTS, `responsive-shell-${vp.name}.png`), fullPage: true });
+    await page.screenshot({
+      path: path.join(SHOTS, `responsive-shell-${vp.name}.png`),
+      fullPage: true,
+    });
     // back to selector for next viewport
     await page.getByTestId("change-requester-btn").click();
-    await expect(page.getByTestId("requester-form")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId("requester-form")).toBeVisible({
+      timeout: 15000,
+    });
   }
 });

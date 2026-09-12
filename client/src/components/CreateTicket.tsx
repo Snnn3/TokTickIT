@@ -24,7 +24,10 @@ interface CreateTicketProps {
   onCancel?: () => void;
 }
 
-export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps) {
+export function CreateTicket({
+  onSuccessNavigate,
+  onCancel,
+}: CreateTicketProps) {
   const { selectedRequester } = useRequester();
 
   // Form inputs
@@ -43,7 +46,8 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fileErrors, setFileErrors] = useState<string[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [successResult, setSuccessResult] = useState<CreatedTicketResult | null>(null);
+  const [successResult, setSuccessResult] =
+    useState<CreatedTicketResult | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,7 +59,9 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
     const newErrors: string[] = [];
 
     if (stagedFiles.length + filesArray.length > MAX_ATTACHMENTS) {
-      newErrors.push(`You can only attach a maximum of ${MAX_ATTACHMENTS} files.`);
+      newErrors.push(
+        `You can only attach a maximum of ${MAX_ATTACHMENTS} files.`
+      );
       setFileErrors(newErrors);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -181,7 +187,9 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
           });
           setErrors(fieldMap);
         } else {
-          setApiError(data?.error?.message || "Failed to create ticket. Please try again.");
+          setApiError(
+            data?.error?.message || "Failed to create ticket. Please try again."
+          );
         }
         return;
       }
@@ -194,7 +202,10 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
       });
 
       // Scroll window to top so user clearly sees the confirmation banner
-      if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      if (
+        typeof window !== "undefined" &&
+        typeof window.scrollTo === "function"
+      ) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch {
@@ -208,14 +219,26 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
     <div className="my-2">
       {/* Success Banner / Card */}
       {successResult && (
-        <div className="zg-card p-4 p-md-5 text-center mb-4" data-testid="success-panel">
+        <div
+          className="zg-card p-4 p-md-5 text-center mb-4"
+          data-testid="success-panel"
+        >
           <div
             className="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
-            style={{ width: "64px", height: "64px", backgroundColor: "var(--zg-pale)" }}
+            style={{
+              width: "64px",
+              height: "64px",
+              backgroundColor: "var(--zg-pale)",
+            }}
           >
-            <span style={{ fontSize: "2rem", color: "var(--zg-primary)" }}>✓</span>
+            <span style={{ fontSize: "2rem", color: "var(--zg-primary)" }}>
+              ✓
+            </span>
           </div>
-          <h2 className="h3 fw-bold mb-2" style={{ color: "var(--zg-primary)" }}>
+          <h2
+            className="h3 fw-bold mb-2"
+            style={{ color: "var(--zg-primary)" }}
+          >
             Ticket Created Successfully!
           </h2>
           <p className="text-muted mb-4">
@@ -224,18 +247,30 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
 
           <div
             className="p-3 mb-4 rounded border text-start"
-            style={{ backgroundColor: "var(--zg-pale)", borderColor: "rgba(0,107,60,0.2)" }}
+            style={{
+              backgroundColor: "var(--zg-pale)",
+              borderColor: "rgba(0,107,60,0.2)",
+            }}
           >
             <div className="row g-3 align-items-center">
               <div className="col-12 col-md-6 border-end-md">
-                <div className="small text-muted mb-1">Official Ticket Number</div>
-                <div className="h3 fw-bold mb-0" style={{ color: "var(--zg-primary)" }} data-testid="success-ticket-number">
+                <div className="small text-muted mb-1">
+                  Official Ticket Number
+                </div>
+                <div
+                  className="h3 fw-bold mb-0"
+                  style={{ color: "var(--zg-primary)" }}
+                  data-testid="success-ticket-number"
+                >
                   {successResult.number}
                 </div>
               </div>
               <div className="col-12 col-md-6">
                 <div className="small text-muted mb-1">Ticket Date</div>
-                <div className="h6 fw-semibold mb-0" style={{ color: "var(--zg-text-primary)" }}>
+                <div
+                  className="h6 fw-semibold mb-0"
+                  style={{ color: "var(--zg-text-primary)" }}
+                >
                   {new Date(successResult.ticketDate).toLocaleString()}
                 </div>
               </div>
@@ -268,7 +303,10 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
       {/* Main Form Container */}
       <div className="zg-card p-4">
         <div className="border-bottom pb-3 mb-4">
-          <h1 className="h4 fw-bold mb-1" style={{ color: "var(--zg-primary)" }}>
+          <h1
+            className="h4 fw-bold mb-1"
+            style={{ color: "var(--zg-primary)" }}
+          >
             Create Support Ticket
           </h1>
           <p className="text-muted small mb-0">
@@ -277,20 +315,36 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
         </div>
 
         {apiError && (
-          <div className="alert alert-danger mb-4" role="alert" data-testid="api-error-banner">
+          <div
+            className="alert alert-danger mb-4"
+            role="alert"
+            data-testid="api-error-banner"
+          >
             {apiError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} noValidate data-testid="create-ticket-form">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          data-testid="create-ticket-form"
+        >
           {/* 1. System Group (Read-only strip) */}
           <div className="mb-4 p-3 rounded border bg-light">
-            <h2 className="h6 fw-semibold text-muted mb-3 text-uppercase" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+            <h2
+              className="h6 fw-semibold text-muted mb-3 text-uppercase"
+              style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
+            >
               System Metadata (Read-Only)
             </h2>
             <div className="row g-3">
               <div className="col-12 col-md-4">
-                <label htmlFor="sys-ticket-number" className="form-label small fw-semibold mb-1">Ticket Number</label>
+                <label
+                  htmlFor="sys-ticket-number"
+                  className="form-label small fw-semibold mb-1"
+                >
+                  Ticket Number
+                </label>
                 <input
                   id="sys-ticket-number"
                   type="text"
@@ -304,7 +358,12 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 />
               </div>
               <div className="col-12 col-md-4">
-                <label htmlFor="sys-ticket-date" className="form-label small fw-semibold mb-1">Ticket Date</label>
+                <label
+                  htmlFor="sys-ticket-date"
+                  className="form-label small fw-semibold mb-1"
+                >
+                  Ticket Date
+                </label>
                 <input
                   id="sys-ticket-date"
                   type="text"
@@ -318,12 +377,21 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 />
               </div>
               <div className="col-12 col-md-4">
-                <label htmlFor="sys-requester" className="form-label small fw-semibold mb-1">Requester</label>
+                <label
+                  htmlFor="sys-requester"
+                  className="form-label small fw-semibold mb-1"
+                >
+                  Requester
+                </label>
                 <input
                   id="sys-requester"
                   type="text"
                   className="form-control form-control-sm zg-readonly-field"
-                  value={selectedRequester ? `${selectedRequester.name} (${selectedRequester.email})` : "Not selected"}
+                  value={
+                    selectedRequester
+                      ? `${selectedRequester.name} (${selectedRequester.email})`
+                      : "Not selected"
+                  }
                   readOnly
                 />
               </div>
@@ -335,7 +403,10 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
             <h2 className="h6 fw-semibold mb-3">Classification</h2>
             <div className="row g-3">
               <div className="col-12 col-md-4">
-                <label htmlFor="category-select" className="form-label small fw-semibold mb-1">
+                <label
+                  htmlFor="category-select"
+                  className="form-label small fw-semibold mb-1"
+                >
                   Category <span className="text-danger">*</span>
                 </label>
                 <select
@@ -344,7 +415,8 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={categoryId}
                   onChange={(e) => {
                     setCategoryId(e.target.value);
-                    if (errors.categoryId) setErrors((prev) => ({ ...prev, categoryId: "" }));
+                    if (errors.categoryId)
+                      setErrors((prev) => ({ ...prev, categoryId: "" }));
                   }}
                   disabled={submitting || loadingRefs || !!successResult}
                   required
@@ -363,14 +435,20 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   )}
                 </select>
                 {errors.categoryId && (
-                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                  <div
+                    className="invalid-feedback d-block"
+                    style={{ color: "var(--zg-error)" }}
+                  >
                     {errors.categoryId}
                   </div>
                 )}
               </div>
 
               <div className="col-12 col-md-4">
-                <label htmlFor="system-select" className="form-label small fw-semibold mb-1">
+                <label
+                  htmlFor="system-select"
+                  className="form-label small fw-semibold mb-1"
+                >
                   Related System <span className="text-danger">*</span>
                 </label>
                 <select
@@ -379,7 +457,8 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={systemId}
                   onChange={(e) => {
                     setSystemId(e.target.value);
-                    if (errors.systemId) setErrors((prev) => ({ ...prev, systemId: "" }));
+                    if (errors.systemId)
+                      setErrors((prev) => ({ ...prev, systemId: "" }));
                   }}
                   disabled={submitting || loadingRefs || !!successResult}
                   required
@@ -398,14 +477,20 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   )}
                 </select>
                 {errors.systemId && (
-                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                  <div
+                    className="invalid-feedback d-block"
+                    style={{ color: "var(--zg-error)" }}
+                  >
                     {errors.systemId}
                   </div>
                 )}
               </div>
 
               <div className="col-12 col-md-4">
-                <label htmlFor="priority-select" className="form-label small fw-semibold mb-1">
+                <label
+                  htmlFor="priority-select"
+                  className="form-label small fw-semibold mb-1"
+                >
                   Requested Priority <span className="text-danger">*</span>
                 </label>
                 <select
@@ -414,7 +499,8 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   value={requestedPriority}
                   onChange={(e) => {
                     setRequestedPriority(e.target.value);
-                    if (errors.requestedPriority) setErrors((prev) => ({ ...prev, requestedPriority: "" }));
+                    if (errors.requestedPriority)
+                      setErrors((prev) => ({ ...prev, requestedPriority: "" }));
                   }}
                   disabled={submitting || loadingRefs || !!successResult}
                   required
@@ -425,7 +511,10 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   <option value="HIGH">HIGH</option>
                 </select>
                 {errors.requestedPriority && (
-                  <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                  <div
+                    className="invalid-feedback d-block"
+                    style={{ color: "var(--zg-error)" }}
+                  >
                     {errors.requestedPriority}
                   </div>
                 )}
@@ -438,10 +527,15 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
             <h2 className="h6 fw-semibold mb-3">Ticket Details</h2>
             <div className="mb-3">
               <div className="d-flex justify-content-between align-items-center mb-1">
-                <label htmlFor="summary-input" className="form-label small fw-semibold mb-0">
+                <label
+                  htmlFor="summary-input"
+                  className="form-label small fw-semibold mb-0"
+                >
                   Ticket Summary <span className="text-danger">*</span>
                 </label>
-                <span className={`small ${summary.length > 150 ? "text-danger fw-bold" : "text-muted"}`}>
+                <span
+                  className={`small ${summary.length > 150 ? "text-danger fw-bold" : "text-muted"}`}
+                >
                   {summary.length}/150
                 </span>
               </div>
@@ -454,13 +548,17 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 maxLength={160}
                 onChange={(e) => {
                   setSummary(e.target.value);
-                  if (errors.summary) setErrors((prev) => ({ ...prev, summary: "" }));
+                  if (errors.summary)
+                    setErrors((prev) => ({ ...prev, summary: "" }));
                 }}
                 disabled={submitting || !!successResult}
                 required
               />
               {errors.summary && (
-                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                <div
+                  className="invalid-feedback d-block"
+                  style={{ color: "var(--zg-error)" }}
+                >
                   {errors.summary}
                 </div>
               )}
@@ -468,10 +566,15 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
 
             <div className="mb-3">
               <div className="d-flex justify-content-between align-items-center mb-1">
-                <label htmlFor="description-input" className="form-label small fw-semibold mb-0">
+                <label
+                  htmlFor="description-input"
+                  className="form-label small fw-semibold mb-0"
+                >
                   Description <span className="text-danger">*</span>
                 </label>
-                <span className={`small ${description.length > 5000 ? "text-danger fw-bold" : "text-muted"}`}>
+                <span
+                  className={`small ${description.length > 5000 ? "text-danger fw-bold" : "text-muted"}`}
+                >
                   {description.length}/5000
                 </span>
               </div>
@@ -483,13 +586,17 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 value={description}
                 onChange={(e) => {
                   setDescription(e.target.value);
-                  if (errors.description) setErrors((prev) => ({ ...prev, description: "" }));
+                  if (errors.description)
+                    setErrors((prev) => ({ ...prev, description: "" }));
                 }}
                 disabled={submitting || !!successResult}
                 required
               />
               {errors.description && (
-                <div className="invalid-feedback d-block" style={{ color: "var(--zg-error)" }}>
+                <div
+                  className="invalid-feedback d-block"
+                  style={{ color: "var(--zg-error)" }}
+                >
                   {errors.description}
                 </div>
               )}
@@ -500,7 +607,9 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center mb-2">
               <h2 className="h6 fw-semibold mb-0">Attachments (Optional)</h2>
-              <span className="small text-muted">{stagedFiles.length}/{MAX_ATTACHMENTS} files</span>
+              <span className="small text-muted">
+                {stagedFiles.length}/{MAX_ATTACHMENTS} files
+              </span>
             </div>
             <p className="small text-muted mb-2">
               Allowed file types: JPG, PNG, WEBP, PDF. Max 5 MB per file.
@@ -513,7 +622,11 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
               accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
               multiple
               onChange={handleFileChange}
-              disabled={submitting || stagedFiles.length >= MAX_ATTACHMENTS || !!successResult}
+              disabled={
+                submitting ||
+                stagedFiles.length >= MAX_ATTACHMENTS ||
+                !!successResult
+              }
               id="file-upload-input"
             />
 
@@ -522,7 +635,9 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                 <label
                   htmlFor="file-upload-input"
                   className={`btn btn-sm btn-outline-secondary ${
-                    submitting || stagedFiles.length >= MAX_ATTACHMENTS ? "disabled" : ""
+                    submitting || stagedFiles.length >= MAX_ATTACHMENTS
+                      ? "disabled"
+                      : ""
                   }`}
                 >
                   + Add Files
@@ -559,7 +674,9 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
                   >
                     <div className="text-truncate me-2">
                       <span className="fw-semibold small">{file.name}</span>
-                      <span className="text-muted small ms-2">({formatFileSize(file.size)})</span>
+                      <span className="text-muted small ms-2">
+                        ({formatFileSize(file.size)})
+                      </span>
                     </div>
                     {!successResult && (
                       <button
@@ -600,7 +717,11 @@ export function CreateTicket({ onSuccessNavigate, onCancel }: CreateTicketProps)
               >
                 {submitting ? (
                   <>
-                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    <span
+                      className="spinner-border spinner-border-sm"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     <span>Submitting...</span>
                   </>
                 ) : (

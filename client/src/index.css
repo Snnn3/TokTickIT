@@ -1,18 +1,18 @@
 :root {
-  --zg-primary: #006B3C;
-  --zg-secondary: #0B7A46;
-  --zg-pale: #EAF6EF;
-  --zg-page-bg: #F5F7F6;
-  --zg-surface: #FFFFFF;
-  --zg-text-primary: #22332B;
-  --zg-text-muted: #5B6B62;
-  --zg-editable-field: #FFFFFF;
-  --zg-readonly-field: #EEF3EF;
-  --zg-error: #B3261E;
-  --zg-warning: #B7791F;
-  --zg-success: #1F7A45;
-  --zg-border: #E2E8E4;
-  --zg-input-border: #C9D2CC;
+  --zg-primary: #006b3c;
+  --zg-secondary: #0b7a46;
+  --zg-pale: #eaf6ef;
+  --zg-page-bg: #f5f7f6;
+  --zg-surface: #ffffff;
+  --zg-text-primary: #22332b;
+  --zg-text-muted: #5b6b62;
+  --zg-editable-field: #ffffff;
+  --zg-readonly-field: #eef3ef;
+  --zg-error: #b3261e;
+  --zg-warning: #b7791f;
+  --zg-success: #1f7a45;
+  --zg-border: #e2e8e4;
+  --zg-input-border: #c9d2cc;
 }
 
 body {
@@ -26,11 +26,11 @@ body {
 /* Header & Navigation */
 .zg-header {
   background-color: var(--zg-primary);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .zg-header .navbar-brand {
-  color: #FFFFFF;
+  color: #ffffff;
   font-weight: 700;
   font-size: 1.25rem;
 }
@@ -45,7 +45,7 @@ body {
 
 .zg-header .nav-link:hover,
 .zg-header .nav-link:focus {
-  color: #FFFFFF;
+  color: #ffffff;
   background-color: var(--zg-secondary);
 }
 
@@ -66,7 +66,7 @@ body {
 /* Buttons */
 .btn-zen-primary {
   background-color: var(--zg-primary);
-  color: #FFFFFF;
+  color: #ffffff;
   border: 1px solid var(--zg-primary);
   border-radius: 6px;
   font-weight: 500;
@@ -76,19 +76,19 @@ body {
 .btn-zen-primary:hover {
   background-color: var(--zg-secondary);
   border-color: var(--zg-secondary);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .btn-zen-primary:focus-visible,
 .btn-zen-primary:focus {
   background-color: var(--zg-secondary);
-  color: #FFFFFF;
+  color: #ffffff;
   outline: 2px solid var(--zg-secondary);
   outline-offset: 1px;
 }
 
 .btn-zen-secondary {
-  background-color: #FFFFFF;
+  background-color: #ffffff;
   color: var(--zg-primary);
   border: 1px solid var(--zg-primary);
   border-radius: 6px;
@@ -109,22 +109,22 @@ body {
 
 .btn-zen-destructive {
   background-color: var(--zg-error);
-  color: #FFFFFF;
+  color: #ffffff;
   border: 1px solid var(--zg-error);
   border-radius: 6px;
   font-weight: 500;
 }
 
 .btn-zen-destructive:hover {
-  background-color: #921E17;
-  border-color: #921E17;
-  color: #FFFFFF;
+  background-color: #921e17;
+  border-color: #921e17;
+  color: #ffffff;
 }
 
 .btn-zen-destructive:focus-visible,
 .btn-zen-destructive:focus {
-  background-color: #921E17;
-  color: #FFFFFF;
+  background-color: #921e17;
+  color: #ffffff;
   outline: 2px solid var(--zg-secondary);
   outline-offset: 1px;
 }
@@ -162,27 +162,27 @@ body {
 
 .badge-zen-low,
 .badge-zen-removed {
-  background-color: #F0F2F1;
+  background-color: #f0f2f1;
   color: var(--zg-text-muted);
   font-weight: 500;
 }
 
 .badge-zen-medium {
-  background-color: #CFE8DA;
+  background-color: #cfe8da;
   color: var(--zg-secondary);
   font-weight: 600;
 }
 
 .badge-zen-high {
   background-color: var(--zg-primary);
-  color: #FFFFFF;
+  color: #ffffff;
   font-weight: 600;
 }
 
 /* Requester Chip */
 .zg-requester-chip {
   background-color: rgba(255, 255, 255, 0.15);
-  color: #FFFFFF;
+  color: #ffffff;
   padding: 0.35rem 0.75rem;
   border-radius: 20px;
   font-size: 0.875rem;
@@ -267,4 +267,3 @@ body {
 .text-zen-body {
   color: var(--zg-text-primary) !important;
 }
-

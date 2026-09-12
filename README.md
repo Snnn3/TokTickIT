@@ -103,6 +103,35 @@ npm run test         # runs server + client test suites
 
 See `docs/lab-01/tests.md` for the full test list (API-01, API-02, UI-01, UI-02, UI-03).
 
+## Formatting
+
+The whole repository - server, client, `e2e/` and the root config files - is formatted by
+[Ultracite](https://www.ultracite.ai/), a preset over the [Biome](https://biomejs.dev/)
+formatter. Configuration lives in `biome.jsonc` at the repository root.
+
+```bash
+npm run check   # verify formatting; fails if any file is unformatted
+npm run fix     # reformat in place
+```
+
+Biome is used as a formatter only. Its linter and its assist actions (import ordering, key and
+attribute sorting) are disabled in `biome.jsonc`, so the tool does not rewrite code for a lint
+rule and does not reorder source. One exception is already in the history: `ultracite init`
+sorted the keys of the three `package.json` files during setup, before assist was switched off.
+Values are unchanged and npm ignores key order, but the sort is visible in the diff. The client
+keeps `oxlint` as its linter:
+
+```bash
+npm run lint --prefix client
+```
+
+Generated, vendored and binary paths are excluded from formatting: `node_modules/`, `dist/`,
+the npm lockfiles, `artifacts/`, `client/public/` and the Prisma migration SQL. Every
+hand-written file in a language Biome formats is inside the formatter, including the Playwright
+specs under `e2e/`. Biome formats neither Markdown nor the Prisma schema language, so the
+documents under `docs/`, this README and `server/prisma/schema.prisma` are outside it and are
+kept tidy by hand.
+
 ## Git Flow
 
 - `main` — stable release branch

@@ -1,8 +1,14 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
+import {
+  requireRequester,
+  AuthenticatedRequest,
+} from "../middleware/requester";
 
-import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
+import {
+  parsePositiveIntParam,
+  serializeAttachment,
+} from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
 
 export const attachmentsRouter = Router();
@@ -10,10 +16,7 @@ export const attachmentsRouter = Router();
 /**
  * Shared helper to load an attachment and enforce ticket ownership [BR-06, AC-03]
  */
-async function getOwnedAttachment(
-  attachmentId: number,
-  requesterId: number,
-) {
+async function getOwnedAttachment(attachmentId: number, requesterId: number) {
   const result = await getOwnedResource(
     () =>
       prisma.attachment.findUnique({
@@ -25,7 +28,7 @@ async function getOwnedAttachment(
         },
       }),
     (attachment) => attachment.ticket.requesterId === requesterId,
-    "Attachment not found",
+    "Attachment not found"
   );
 
   if (result.status !== 200) {
@@ -67,7 +70,7 @@ attachmentsRouter.get(
         },
       });
     }
-  },
+  }
 );
 
 // GET /api/attachments/:id/download [FR-11, BR-16, AC-11]
@@ -105,7 +108,10 @@ attachmentsRouter.get(
 
       const safeFilename = att.filename.replace(/"/g, '\\"');
       res.setHeader("Content-Type", att.mimeType);
-      res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${safeFilename}"`
+      );
       res.setHeader("Content-Length", att.sizeBytes);
 
       return res.status(200).send(Buffer.from(att.data));
@@ -117,7 +123,7 @@ attachmentsRouter.get(
         },
       });
     }
-  },
+  }
 );
 
 // DELETE /api/attachments/:id [FR-12, BR-16, BR-17, AC-12]
@@ -192,5 +198,5 @@ attachmentsRouter.delete(
         },
       });
     }
-  },
+  }
 );

@@ -1,10 +1,16 @@
 import { Router, Response } from "express";
 import multer from "multer";
 import { prisma } from "../prisma";
-import { requireRequester, AuthenticatedRequest } from "../middleware/requester";
+import {
+  requireRequester,
+  AuthenticatedRequest,
+} from "../middleware/requester";
 import { generateTicketNumber } from "../utils/ticketNumber";
 import { TicketPriority, TicketStatus, Prisma } from "@prisma/client";
-import { parsePositiveIntParam, serializeAttachment } from "../utils/attachment";
+import {
+  parsePositiveIntParam,
+  serializeAttachment,
+} from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
 
 export const ticketsRouter = Router();
@@ -62,7 +68,10 @@ function handleMulterError(err: unknown, res: Response): boolean {
 }
 
 function isValidAttachmentFile(file: Express.Multer.File): boolean {
-  return ALLOWED_MIME_TYPES.includes(file.mimetype) && hasValidExtension(file.originalname);
+  return (
+    ALLOWED_MIME_TYPES.includes(file.mimetype) &&
+    hasValidExtension(file.originalname)
+  );
 }
 
 interface ValidationResult {
@@ -119,7 +128,10 @@ function validateTicketPayload(body: any): ValidationResult {
 
   const rawPriority = body.requestedPriority;
   const validPriorities = Object.values(TicketPriority);
-  if (!rawPriority || !validPriorities.includes(rawPriority as TicketPriority)) {
+  if (
+    !rawPriority ||
+    !validPriorities.includes(rawPriority as TicketPriority)
+  ) {
     details.push({
       field: "requestedPriority",
       issue: "Requested priority must be LOW, MEDIUM, or HIGH",
@@ -148,20 +160,28 @@ async function createTicketTransaction(
     description: string;
     requestedPriority: TicketPriority;
   },
-  files: Express.Multer.File[],
+  files: Express.Multer.File[]
 ) {
   const category = await tx.category.findFirst({
     where: { id: payload.categoryId, isActive: true },
   });
   if (!category) {
-    throw { status: 400, field: "categoryId", message: "Category not found or inactive" };
+    throw {
+      status: 400,
+      field: "categoryId",
+      message: "Category not found or inactive",
+    };
   }
 
   const system = await tx.relatedSystem.findFirst({
     where: { id: payload.systemId, isActive: true },
   });
   if (!system) {
-    throw { status: 400, field: "systemId", message: "Related system not found or inactive" };
+    throw {
+      status: 400,
+      field: "systemId",
+      message: "Related system not found or inactive",
+    };
   }
 
   const ticketNumber = await generateTicketNumber(tx);
@@ -235,7 +255,7 @@ function parseStrictInteger(
   parameter: string,
   issue: string,
   details: { field: string; parameter: string; issue: string }[],
-  options?: { min?: number; allowed?: number[] },
+  options?: { min?: number; allowed?: number[] }
 ): number | undefined {
   if (value === undefined) return undefined;
   const raw = String(value).trim();
@@ -256,7 +276,7 @@ function parseStrictInteger(
 }
 
 function validateTicketQuery(
-  query: Record<string, unknown>,
+  query: Record<string, unknown>
 ): QueryValidationResult {
   const details: { field: string; parameter: string; issue: string }[] = [];
 
@@ -264,7 +284,11 @@ function validateTicketQuery(
   let search: string | undefined;
   if (query.search !== undefined) {
     if (typeof query.search !== "string") {
-      details.push({ field: "search", parameter: "search", issue: "Search must be a string" });
+      details.push({
+        field: "search",
+        parameter: "search",
+        issue: "Search must be a string",
+      });
     } else {
       const trimmed = query.search.trim();
       if (trimmed.length > 150) {
@@ -285,7 +309,7 @@ function validateTicketQuery(
     "categoryId",
     "Category ID must be a positive integer",
     details,
-    { min: 1 },
+    { min: 1 }
   );
 
   // Parse and validate priority
@@ -356,7 +380,7 @@ function validateTicketQuery(
       "page",
       "Page must be an integer >= 1",
       details,
-      { min: 1 },
+      { min: 1 }
     ) ?? 1;
 
   // Parse and validate pageSize
@@ -366,7 +390,7 @@ function validateTicketQuery(
       "pageSize",
       "Page size must be 5, 10, or 20",
       details,
-      { allowed: [5, 10, 20] },
+      { allowed: [5, 10, 20] }
     ) ?? 10;
 
   return {
@@ -401,8 +425,16 @@ ticketsRouter.get(
       });
     }
 
-    const { search, categoryId, priority, status, sort, order, page, pageSize } =
-      validation;
+    const {
+      search,
+      categoryId,
+      priority,
+      status,
+      sort,
+      order,
+      page,
+      pageSize,
+    } = validation;
 
     try {
       const where: Prisma.TicketWhereInput = {
@@ -478,7 +510,7 @@ ticketsRouter.get(
         },
       });
     }
-  },
+  }
 );
 
 // POST /api/tickets [FR-05, BR-01, BR-07..BR-11, BR-13, BR-14, AC-01]
@@ -538,7 +570,7 @@ ticketsRouter.post(
           requester.id,
           requester.name,
           validation,
-          files,
+          files
         );
       });
 
@@ -560,7 +592,7 @@ ticketsRouter.post(
         },
       });
     }
-  },
+  }
 );
 
 /**
@@ -598,23 +630,31 @@ type OwnedTicketFailure = {
 async function getOwnedTicket(
   ticketId: number,
   requesterId: number,
-  options: TicketDetailOptions,
+  options: TicketDetailOptions
 ): Promise<
-  | { status: 200; error: null; ticket: Prisma.TicketGetPayload<TicketDetailOptions> }
+  | {
+      status: 200;
+      error: null;
+      ticket: Prisma.TicketGetPayload<TicketDetailOptions>;
+    }
   | OwnedTicketFailure
 >;
 async function getOwnedTicket(
   ticketId: number,
   requesterId: number,
-  options: TicketOwnershipOptions,
+  options: TicketOwnershipOptions
 ): Promise<
-  | { status: 200; error: null; ticket: Prisma.TicketGetPayload<TicketOwnershipOptions> }
+  | {
+      status: 200;
+      error: null;
+      ticket: Prisma.TicketGetPayload<TicketOwnershipOptions>;
+    }
   | OwnedTicketFailure
 >;
 async function getOwnedTicket(
   ticketId: number,
   requesterId: number,
-  options: TicketDetailOptions | TicketOwnershipOptions,
+  options: TicketDetailOptions | TicketOwnershipOptions
 ) {
   const result = await getOwnedResource(
     () =>
@@ -628,7 +668,7 @@ async function getOwnedTicket(
             select: options.select,
           }),
     (ticket) => ticket.requesterId === requesterId,
-    "Ticket not found",
+    "Ticket not found"
   );
 
   if (result.status !== 200) {
@@ -699,7 +739,9 @@ ticketsRouter.get(
           },
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
-          attachments: (ticket.attachments || []).map((a) => serializeAttachment(a)),
+          attachments: (ticket.attachments || []).map((a) =>
+            serializeAttachment(a)
+          ),
         },
       });
     } catch {
@@ -710,7 +752,7 @@ ticketsRouter.get(
         },
       });
     }
-  },
+  }
 );
 
 // POST /api/tickets/:id/attachments [FR-10, BR-13, BR-15, AC-07..AC-09]
@@ -802,5 +844,5 @@ ticketsRouter.post(
         },
       });
     }
-  },
+  }
 );
