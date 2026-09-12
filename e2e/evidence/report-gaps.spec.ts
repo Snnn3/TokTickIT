@@ -115,10 +115,20 @@ test("Part 6 gaps: initial form + 201 proof", async ({ page, request }) => {
   await expect(
     page.getByRole("heading", { name: "Create Support Ticket", level: 1 })
   ).toBeVisible();
-  const catOptions = await page.locator("#category-select option").count();
-  const sysOptions = await page.locator("#system-select option").count();
-  expect(catOptions).toBeGreaterThan(1);
-  expect(sysOptions).toBeGreaterThan(1);
+  // While the reference fetch is in flight each select holds a single
+  // "Loading..." option, so a one-shot count() races the network: it passes on a
+  // fast machine and fails on a slow one. Poll instead, so the assertion waits
+  // for the options to arrive.
+  await expect
+    .poll(() => page.locator("#category-select option").count(), {
+      timeout: 15000,
+    })
+    .toBeGreaterThan(1);
+  await expect
+    .poll(() => page.locator("#system-select option").count(), {
+      timeout: 15000,
+    })
+    .toBeGreaterThan(1);
   await page.screenshot({
     path: path.join(OUT, "part6-initial-create-form.png"),
   });
