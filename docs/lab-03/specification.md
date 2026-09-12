@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.0 | Date: 2026-09-13
+Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.1 | Date: 2026-09-13
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder). **All documents in `docs/lab-03/` carry the same version number and bump together**, so any file whose header differs from the others is out of date by definition — three review rounds each caught a stale version stamp somewhere in the set, and a single shared number makes that failure visible at a glance instead of requiring a cross-check.
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
@@ -25,6 +25,8 @@ Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24
 **Changes in v1.9** (recording the outcome of the third peer review, not new contract content): @YummieGG approved PR #44 at head `d09355b` on 2026-09-10 16:01 and the PR merged into `lab3-staging` at 16:04, which closed issue #35 and unblocked #36. The status header therefore moves from Draft to Approved, and the Definition of Done item that gated on a *recorded* approval is ticked with the record cited. No FR, BR, AC or decision changed in this revision; every document in `docs/lab-03/` bumps to 1.9 together because the set shares one version number, and the peer-review record in `reviewer.md` changed.
 
 **Changes in v2.0** (recording the outcome of the peer review on PR #45, not new contract content): @YummieGG requested changes once and then approved PR #45 (the Lab3-02 formatting pass) at head `757038c` on 2026-09-12 12:07, and the PR merged into `lab3-staging`, closing issue #36 and unblocking #37. The set moves to a 2.x number to mark the change of phase: every 1.x revision was contract authoring or contract repair, whereas from here the documents are amended only to record what implementation actually did. No FR, BR, AC or decision changed in this revision; the peer-review record in `reviewer.md` did, and the whole set bumps with it because it shares one version number.
+
+**Changes in v2.1** (recording what the auth-foundation slice actually did, not new contract content): `tests.md` gains a section recording the BR-28 disposition **as executed**, against what the table predicted. Four corrections are recorded there, of which two matter. The disposition ran in this slice rather than the one after it, because the change-password gate and the `AUTH_REQUIRED` criterion in #37 cannot hold while a header is still able to identify a caller, so the header had to be removed together with the cookie that replaces it. And the three `e2e/evidence/` capture specs had to retire alongside `e2e/lab-02/requester-ticket-flow.spec.ts`, because all four drive the selector end to end; the Lab 2 figures they produced are unaffected and stay committed under `artifacts/lab-02/`. No FR, BR, AC or decision changed.
 
 ## 1. Sprint Goal
 

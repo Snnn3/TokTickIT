@@ -1,6 +1,6 @@
 # Lab 3 UI Specification — Zen Green Extensions
 
-Version: 2.0 | Date: 2026-09-13 | Companion to `specification.md`.
+Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md`.
 
 ## 1. Tokens and rules (reused from Lab 2, extended)
 

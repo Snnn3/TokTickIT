@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 2.0 | Date: 2026-09-13 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -99,6 +99,47 @@ Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled 
 **Unchanged.** Everything else, including all Lab 1 tests and `ticket-number.unit.test.ts`. Note that **every** Lab 2 file touching identity is now accounted for above; a file silently left in this bucket while depending on the selector or the identity header is the failure mode that broke earlier drafts of this plan twice.
 
 The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence. Retiring the Lab 2 browser spec also invalidates the `npx playwright test e2e/lab-02` command in the README and the evidence paths cited in `docs/lab-02/tests.md`; both must be annotated as superseded by `e2e/lab-03`, so the final `main` does not read as though graded Lab 2 evidence went missing.
+
+### Disposition as executed (auth foundation slice, #37)
+
+The table above was a hypothesis written before implementation; this records what the slice
+actually did, and where the two differ. The disposition ran in the auth-foundation slice rather
+than the requester-regression slice that follows it, because #37's own acceptance criteria
+cannot be satisfied while a header is still able to identify a caller: the change-password gate
+and the `AUTH_REQUIRED` criterion both require that the session cookie is the only identity,
+so the header had to go together with the cookie that replaces it.
+
+| Group | Predicted | Executed |
+|---|---|---|
+| Retired | `requesters.api.test.ts`, `RequesterSelection.test.tsx`, `e2e/lab-02/requester-ticket-flow.spec.ts` | All three, plus the three `e2e/evidence/` capture specs |
+| Adapted, server | 30 header calls, 14 `requesterUser` stubs | 29 header calls, 14 stub references |
+| Adapted, client | Provider swap on two files, prop removal on two, shell rewrite on two | The same six, plus five list assertions in `MyTickets.test.tsx` |
+| Unchanged | Everything else, Lab 1 included | Held: all Lab 1 tests and `ticket-number.unit.test.ts` untouched |
+
+Four corrections to the predicted table:
+
+* **The header count was 30, not 29.** One of the thirty was a test *title* naming the header
+  rather than a call sending it. The title was reworded; only 29 calls existed to change.
+* **Five assertions needed a change the "provider swap" line did not cover.** The Lab 2 list
+  tests asserted `toHaveBeenCalledWith(url, expect.anything())`, where the second argument
+  existed only to hold the identity header. With identity in the cookie the call takes a URL and
+  nothing else, so each of those five assertions had to drop its second argument. This is the
+  third time a round of review has found the disposition table incomplete, and the cause is the
+  same each time: the table tracks which files change and not which assertions do.
+* **`e2e/evidence/` had to retire with `e2e/lab-02/`.** The table named only the Lab 2 flow spec,
+  but all three evidence-capture specs drive the selector and the identity header end to end -- 21
+  references across the four files. A spec that throws on every run is neither passing nor
+  skipped, and the Definition of Done permits no skipped test, so they are deleted under the same
+  rule. The figures they produced are unaffected and stay committed under `artifacts/lab-02/`.
+  This leaves no browser suite until #42 writes `e2e/lab-03/`; `e2e/README.md` records that.
+* **`App.test.tsx` and `AppHeader.test.tsx` were adapted, not retired.** Their subject is the
+  application shell, which survives; only the identity beneath it changed. They now ask the same
+  questions of the session that they asked of the selector. `AppShell.test.tsx` under `lab-03/`
+  carries C-08's role-filtering and guard assertions, which have no Lab 2 equivalent.
+
+Counts after the slice: **73 server tests across 10 files** and **73 client tests across 13
+files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
+the difference being the eight retired tests in `requesters.api.test.ts`.
 
 ## 3. Acceptance-Criterion Traceability
 

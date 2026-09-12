@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 2.0 | Date: 2026-09-13 | Companion to `specification.md`.
+Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
