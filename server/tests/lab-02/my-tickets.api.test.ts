@@ -2,27 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
+import { sessionCookie, sessionUser } from "../helpers/session";
 
 describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("A-07: rejects request without X-Requester-Id with 401 AUTH_REQUIRED", async () => {
+  it("A-07: rejects request without a session cookie with 401 AUTH_REQUIRED", async () => {
     const res = await request(app).get("/api/tickets");
     expect(res.status).toBe(401);
     expect(res.body.error.code).toBe("AUTH_REQUIRED");
   });
 
   it("A-08: returns owned tickets list with pagination envelope and default sort", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const mockTickets = [
       {
@@ -46,7 +46,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
 
     const res = await request(app)
       .get("/api/tickets")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(200);
     expect(res.body.page).toBe(1);
@@ -60,14 +60,13 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   });
 
   it("A-08b: enforces requester isolation (BR-04, AC-18: Requester B never sees Requester A's tickets)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 2,
-      name: "Supaporn Srisuk",
-      email: "supaporn.s@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 2,
+        name: "Supaporn Srisuk",
+        email: "supaporn.s@example.com",
+      })
+    );
 
     const findManySpy = vi
       .spyOn(prisma.ticket, "findMany")
@@ -76,7 +75,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
 
     const res = await request(app)
       .get("/api/tickets")
-      .set("X-Requester-Id", "2");
+      .set("Cookie", sessionCookie(2));
 
     expect(res.status).toBe(200);
     expect(findManySpy).toHaveBeenCalledWith(
@@ -89,14 +88,13 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   });
 
   it("A-09: supports search query across ticket number and summary (BR-19)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const findManySpy = vi
       .spyOn(prisma.ticket, "findMany")
@@ -105,7 +103,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
 
     const res = await request(app)
       .get("/api/tickets?search=printer")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(200);
     expect(findManySpy).toHaveBeenCalledWith(
@@ -122,14 +120,13 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   });
 
   it("A-10: supports category, priority, and status filters (BR-20)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const findManySpy = vi
       .spyOn(prisma.ticket, "findMany")
@@ -138,7 +135,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
 
     const res = await request(app)
       .get("/api/tickets?categoryId=2&priority=HIGH&status=NEW")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(200);
     expect(findManySpy).toHaveBeenCalledWith(
@@ -154,14 +151,13 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   });
 
   it("A-11: supports custom pagination and sorting (BR-20, BR-21)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const findManySpy = vi
       .spyOn(prisma.ticket, "findMany")
@@ -170,7 +166,7 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
 
     const res = await request(app)
       .get("/api/tickets?page=2&pageSize=5&sort=createdAt&order=asc")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(200);
     expect(res.body.page).toBe(2);
@@ -188,20 +184,19 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
   });
 
   it("A-12: returns 400 INVALID_QUERY on invalid query parameters including malformed integers (AC-16)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const res = await request(app)
       .get(
         "/api/tickets?pageSize=15&priority=INVALID&page=2.5&categoryId=1abc&sort=invalidField"
       )
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("INVALID_QUERY");

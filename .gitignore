@@ -42,3 +42,7 @@ plan.md
 # Local-only agent scaffolding (never commit)
 .agents/
 opencode.json
+
+# Local migration-evidence capture (machine-specific; the run is recorded in
+# server/prisma/migration-evidence/README.md)
+server/prisma/migration-evidence/snapshot.before.json

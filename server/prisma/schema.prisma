@@ -7,14 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  REQUESTER
+  IT_STAFF
+  ADMINISTRATOR
+}
+
 enum TicketPriority {
   LOW
   MEDIUM
   HIGH
 }
 
+// Expanded from the single-value Lab 2 enum [BR-12]. CLOSED and CANCELLED are terminal.
 enum TicketStatus {
   NEW
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_REQUESTER
+  RESOLVED
+  CLOSED
+  REOPENED
+  CANCELLED
 }
 
 model Category {
@@ -25,14 +39,26 @@ model Category {
   tickets   Ticket[]
 }
 
-model RequesterUser {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(120)
-  email     String   @unique @db.VarChar(255)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tickets   Ticket[]
+/// Replaces the Lab 2 RequesterUser model [FR-16, BR-06, BR-20].
+/// email is always stored lower-cased by every write path, so the unique index
+/// below is in effect a constraint on the lower-cased address (BR-09).
+model User {
+  id                 Int             @id @default(autoincrement())
+  name               String          @db.VarChar(120)
+  email              String          @unique @db.VarChar(255)
+  passwordHash       String          @db.Text
+  role               Role            @default(REQUESTER)
+  isActive           Boolean         @default(true)
+  mustChangePassword Boolean         @default(true)
+  tokenVersion       Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  requestedTickets   Ticket[]        @relation("TicketRequester")
+  ownedTickets       Ticket[]        @relation("TicketOwner")
+  publicComments     PublicComment[]
+  internalNotes      InternalNote[]
+
+  @@index([role, isActive])
 }
 
 model RelatedSystem {
@@ -44,24 +70,35 @@ model RelatedSystem {
 }
 
 model Ticket {
-  id                Int            @id @default(autoincrement())
-  number            String         @unique @db.VarChar(20)
+  id                Int             @id @default(autoincrement())
+  number            String          @unique @db.VarChar(20)
   requesterId       Int
+  ownerId           Int?
   categoryId        Int
   systemId          Int
-  summary           String         @db.VarChar(150)
-  description       String         @db.Text
+  summary           String          @db.VarChar(150)
+  description       String          @db.Text
   requestedPriority TicketPriority
-  status            TicketStatus   @default(NEW)
-  ticketDate        DateTime       @default(now())
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  requester         RequesterUser  @relation(fields: [requesterId], references: [id])
-  category          Category       @relation(fields: [categoryId], references: [id])
-  system            RelatedSystem  @relation(fields: [systemId], references: [id])
+  itPriority        TicketPriority
+  status            TicketStatus    @default(NEW)
+  appearsResolvedAt DateTime?
+  resolutionSummary String?         @db.Text
+  ticketDate        DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  requester         User            @relation("TicketRequester", fields: [requesterId], references: [id])
+  owner             User?           @relation("TicketOwner", fields: [ownerId], references: [id])
+  category          Category        @relation(fields: [categoryId], references: [id])
+  system            RelatedSystem   @relation(fields: [systemId], references: [id])
   attachments       Attachment[]
+  publicComments    PublicComment[]
+  internalNotes     InternalNote[]
 
   @@index([requesterId, updatedAt(sort: Desc)])
+  // The staff queue defaults to no predicate at all (D12), so an unfiltered
+  // ORDER BY updatedAt DESC needs an index led by updatedAt.
+  @@index([updatedAt(sort: Desc)])
+  @@index([ownerId])
 }
 
 model Attachment {
@@ -77,4 +114,32 @@ model Attachment {
   ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+}
+
+/// Visible to the requester, IT Staff and Administrators [BR-04].
+model PublicComment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  authorId  Int
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId, createdAt])
+}
+
+/// Visible to IT Staff and Administrators only. A separate table rather than a
+/// flag on PublicComment, so authorization cannot leak through a forgotten
+/// filter predicate [BR-04, D20].
+model InternalNote {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  authorId  Int
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId, createdAt])
 }

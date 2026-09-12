@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
+import { sessionCookie, sessionUser } from "../helpers/session";
 
 describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07..AC-12)", () => {
   beforeEach(() => {
@@ -9,14 +10,13 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
   });
 
   it("A-16: adds attachment to owned ticket (201) and leaves ticket untouched on failures (FR-10, BR-15)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       id: 20,
@@ -39,7 +39,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const res = await request(app)
       .post("/api/tickets/20/attachments")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .attach("file", Buffer.from("fake image bytes"), "screenshot.png");
 
     expect(res.status).toBe(201);
@@ -48,14 +48,13 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
   });
 
   it("A-17: enforces attachment limits: 6th active -> 409 LIMIT_REACHED; unsupported type -> 415; oversize -> 413 (AC-07..AC-09, BR-13)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       id: 20,
@@ -67,7 +66,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resLimit = await request(app)
       .post("/api/tickets/20/attachments")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .attach("file", Buffer.from("fake bytes"), "more.png");
 
     expect(resLimit.status).toBe(409);
@@ -78,7 +77,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resUnsupported = await request(app)
       .post("/api/tickets/20/attachments")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .attach("file", Buffer.from("malware bytes"), "virus.exe");
 
     expect(resUnsupported.status).toBe(415);
@@ -88,7 +87,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
     const largeBuffer = Buffer.alloc(5 * 1024 * 1024 + 1024);
     const resOversize = await request(app)
       .post("/api/tickets/20/attachments")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .attach("file", largeBuffer, "huge_file.png");
 
     expect(resOversize.status).toBe(413);
@@ -96,14 +95,13 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
   });
 
   it("A-18: download streaming: active -> 200 binary bytes; soft-removed -> 410 REMOVED (FR-11, AC-11, BR-16)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     const fileContent = Buffer.from("real pdf binary content");
 
@@ -123,7 +121,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resActive = await request(app)
       .get("/api/attachments/301/download")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resActive.status).toBe(200);
     expect(resActive.headers["content-type"]).toBe("application/pdf");
@@ -146,26 +144,25 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resRemoved = await request(app)
       .get("/api/attachments/302/download")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resRemoved.status).toBe(410);
     expect(resRemoved.body.error.code).toBe("REMOVED");
   });
 
   it("A-19: soft removal: missing reason -> 400; valid reason -> 200; repeat call -> 409 (FR-12, BR-16, BR-17, AC-12)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     // 1. Missing reason
     const resNoReason = await request(app)
       .delete("/api/attachments/401")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .send({ reason: "   " });
 
     expect(resNoReason.status).toBe(400);
@@ -198,7 +195,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resSuccess = await request(app)
       .delete("/api/attachments/401")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .send({ reason: "Outdated log file" });
 
     expect(resSuccess.status).toBe(200);
@@ -220,7 +217,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resRepeat = await request(app)
       .delete("/api/attachments/401")
-      .set("X-Requester-Id", "1")
+      .set("Cookie", sessionCookie(1))
       .send({ reason: "Attempt second remove" });
 
     expect(resRepeat.status).toBe(409);
@@ -228,14 +225,13 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
   });
 
   it("A-20: metadata ownership: 200 for owner, 403 for other requester, 404 for unknown (BR-06)", async () => {
-    vi.spyOn(prisma.requesterUser, "findFirst").mockResolvedValue({
-      id: 1,
-      name: "Anucha Wongchai",
-      email: "anucha.wongchai@example.com",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({
+        id: 1,
+        name: "Anucha Wongchai",
+        email: "anucha.wongchai@example.com",
+      })
+    );
 
     // 1. Owner 200
     vi.spyOn(prisma.attachment, "findUnique").mockResolvedValueOnce({
@@ -252,7 +248,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resOwner = await request(app)
       .get("/api/attachments/501")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resOwner.status).toBe(200);
     expect(resOwner.body.id).toBe(501);
@@ -272,7 +268,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resForbidden = await request(app)
       .get("/api/attachments/502")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resForbidden.status).toBe(403);
     expect(resForbidden.body.error.code).toBe("FORBIDDEN");
@@ -282,7 +278,7 @@ describe("Attachments API (A-16..A-20, FR-10..FR-12, BR-13, BR-15..BR-17, AC-07.
 
     const resNotFound = await request(app)
       .get("/api/attachments/999")
-      .set("X-Requester-Id", "1");
+      .set("Cookie", sessionCookie(1));
 
     expect(resNotFound.status).toBe(404);
     expect(resNotFound.body.error.code).toBe("NOT_FOUND");
