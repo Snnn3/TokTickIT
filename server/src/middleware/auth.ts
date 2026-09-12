@@ -59,7 +59,24 @@ export async function requireSession(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const claims = verifySession(req.cookies?.[SESSION_COOKIE]);
+  let claims: ReturnType<typeof verifySession>;
+  try {
+    claims = verifySession(req.cookies?.[SESSION_COOKIE]);
+  } catch {
+    // Only a configuration fault reaches here: verifySession swallows every
+    // token-level failure itself and answers null. Reporting that as 401 would
+    // tell an operator that nobody is signed in, when the truth is that this
+    // server cannot verify anyone -- the hardest possible reading to diagnose
+    // from the outside, and the reason this case is separated at all.
+    res.status(500).json({
+      error: {
+        code: "UNEXPECTED",
+        message: "Failed to verify the session",
+      },
+    });
+    return;
+  }
+
   if (!claims) {
     refuseUnauthenticated(res);
     return;

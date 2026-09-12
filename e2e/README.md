@@ -14,8 +14,11 @@ slice (#42) and will carry three specs plus the responsive assertions:
 | `staff-ticket-flow.spec.ts` | E-02: queue, claim, prioritise, advance, resolve, comment, note, reopen |
 | `user-administration.spec.ts` | E-03: admin search, create, edit, reset, guards, deactivation cascade |
 
-Until then there is no browser suite, and `npx playwright test` has nothing to
-run. Server and client suites cover the behaviour in the meantime:
+Until then there is no browser suite, and `npx playwright test` — including the
+root `npm run test:e2e` script, which is the same command — finds no specs and
+reports "No tests found". That is expected on this lineage, not a broken script;
+it starts passing when #42 lands. Server and client suites cover the behaviour in
+the meantime:
 
 ```bash
 npm test --prefix server   # API, authorization and migration behaviour

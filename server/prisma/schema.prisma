@@ -40,12 +40,17 @@ model Category {
 }
 
 /// Replaces the Lab 2 RequesterUser model [FR-16, BR-06, BR-20].
-/// email is always stored lower-cased by every write path, so the unique index
-/// below is in effect a constraint on the lower-cased address (BR-09).
+/// email is a citext column, so the unique index below compares addresses
+/// case-insensitively and two rows differing only in case cannot both exist
+/// (BR-09). Write paths still lower-case before storing, but that is now
+/// normalisation for readability rather than the thing enforcing the rule -- a
+/// write path that forgets is refused by the database instead of silently
+/// creating a row login could never resolve. A CHECK constraint added in the
+/// same migration restates the 255-character bound that citext does not carry.
 model User {
   id                 Int             @id @default(autoincrement())
   name               String          @db.VarChar(120)
-  email              String          @unique @db.VarChar(255)
+  email              String          @unique @db.Citext
   passwordHash       String          @db.Text
   role               Role            @default(REQUESTER)
   isActive           Boolean         @default(true)

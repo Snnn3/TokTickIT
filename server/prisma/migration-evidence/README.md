@@ -52,6 +52,43 @@ development requesters over and the seed then adds the four IT Staff and two
 Administrator accounts that specification.md section 5.3 requires. The check is
 therefore "no account was lost", not "the count is unchanged".
 
+## Follow-up: case-insensitive email uniqueness — 2026-09-13
+
+`20260913090000_lab03_auth_foundation` lower-cases every address it backfills, and the
+seed lower-cases everything it writes, but `"User_email_key"` was an ordinary btree over a
+`VARCHAR`: uniqueness was enforced *case-sensitively*, and the case-insensitive guarantee
+BR-09 states was therefore a convention each write path had to remember rather than
+something the database refused to break. `20260913120000_user_email_case_insensitive`
+converts the column to `citext`, which rebuilds that same unique index under citext's
+operator class.
+
+It is a **second migration rather than an edit to the first** because the first has already
+been applied to the development database, and the M-01 run above was captured from it
+against real Lab 2 data that no surviving spec can regenerate. Amending it in place would
+have changed its checksum, forced `migrate reset`, and destroyed the evidence this file
+records.
+
+Verified 2026-09-13 against a scratch database carrying all five migrations:
+
+| Check | Result |
+|---|---|
+| All five migrations apply from empty (`prisma migrate deploy`) | PASS |
+| `User.email` column type after migration | `citext` |
+| `"User_email_key"` still the unique index (not dropped or renamed) | PASS |
+| Insert `alice@example.com` then `ALICE@Example.com` | rejected — `duplicate key value violates unique constraint "User_email_key"` |
+| Lookup `WHERE email = 'ANUCHA.Wongchai@EXAMPLE.com'` | matches the stored `anucha.wongchai@example.com` |
+| `prisma migrate diff` schema → migrated DB | empty, so no later `migrate dev` will undo it |
+| Collision guard, with two case-differing pairs pre-seeded | aborts before the type change, naming both pairs |
+| 255-character bound restated as `User_email_length_check` | present |
+
+Applied to the development database afterwards; the M-01 figures above are unchanged
+(11 accounts, 92 tickets, 72 attachments, 0 orphans), as the migration touches only the
+`User.email` column type.
+
+A functional unique index on `lower("email")` was rejected as the alternative: Prisma cannot
+represent one in `schema.prisma`, so it would be invisible to the schema diff and dropped by
+the next generated migration — silently undoing the fix in a later slice.
+
 ## Why ownership is preserved by construction
 
 The migration reuses each `RequesterUser` primary key as the new `User` primary

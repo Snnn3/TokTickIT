@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 
 /**
@@ -121,4 +122,31 @@ export async function verifyPassword(
     return false;
   }
   return bcrypt.compare(normalizePassword(raw), hash as string);
+}
+
+let equalizerHash: string | null = null;
+
+/**
+ * A hash that no submitted password can match, used to keep the elapsed time of
+ * a failed login independent of *why* it failed [BR-01, BR-21, AC-02].
+ *
+ * Returning early when no account was found would answer an unknown address in
+ * about a millisecond and a wrong password in sixty or more, which is an
+ * account-enumeration oracle every bit as usable as a differing message. The
+ * caller therefore always performs one comparison, against this value when it
+ * has no real hash to compare with.
+ *
+ * The plaintext is random per process and is never stored or returned, so the
+ * comparison always fails; the only thing it provides is the bcrypt work a real
+ * comparison would have cost. It is computed on first use rather than at module
+ * load so that importing this module stays cheap.
+ */
+export function timingEqualizerHash(): string {
+  if (!equalizerHash) {
+    equalizerHash = bcrypt.hashSync(
+      randomBytes(32).toString("hex"),
+      BCRYPT_COST
+    );
+  }
+  return equalizerHash;
 }

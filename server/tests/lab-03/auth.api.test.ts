@@ -464,6 +464,48 @@ describe("API-06 session invalidation (AC-06, AC-28, FR-30)", () => {
     expect(res.status).toBe(204);
   });
 
+  it("pins the logout write to the version the cookie carries, so a replayed cookie cannot sign out the current session", async () => {
+    // A signature-valid cookie that has already been superseded still verifies,
+    // because verifySession checks only the signature and the expiry. Without
+    // the version in the filter, replaying one inside its eight-hour lifetime
+    // would bump tokenVersion again and end whichever session the user actually
+    // holds now. The stub cannot evaluate a where clause, so this is asserted on
+    // the call -- the same exception the replay test above already makes.
+    const staleCookie = sessionCookie({ id: 11, tokenVersion: 0 });
+    const updateMany = vi
+      .spyOn(prisma.user, "updateMany")
+      .mockResolvedValue({ count: 0 });
+
+    const res = await request(app)
+      .post("/api/auth/logout")
+      .set("Cookie", staleCookie);
+
+    expect(res.status).toBe(204);
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 11, tokenVersion: 0 } })
+    );
+  });
+
+  it("reports an unconfigured signing secret as a server fault, not as an absent session", async () => {
+    // A missing JWT_SECRET means this server cannot verify anyone. Answering
+    // 401 AUTH_REQUIRED would report that as "nobody is signed in", which is the
+    // hardest possible reading of the misconfiguration from the outside.
+    const cookie = sessionCookie({ id: 12 });
+    const secret = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = undefined;
+    // biome-ignore lint/performance/noDelete: restoring the exact absent state
+    delete process.env.JWT_SECRET;
+
+    try {
+      const res = await request(app).get("/api/auth/me").set("Cookie", cookie);
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe("UNEXPECTED");
+      expect(JSON.stringify(res.body)).not.toContain("JWT_SECRET");
+    } finally {
+      process.env.JWT_SECRET = secret;
+    }
+  });
+
   it("kills a second outstanding session on a password change while the changing one survives (AC-28)", async () => {
     const deviceA = sessionCookie({ id: 9 });
     const deviceB = sessionCookie({ id: 9 });

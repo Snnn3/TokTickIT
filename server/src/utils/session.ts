@@ -56,8 +56,14 @@ export function verifySession(token: string | undefined): SessionClaims | null {
   if (!token) {
     return null;
   }
+  // Read the secret before the try, deliberately. Inside it, a missing
+  // JWT_SECRET would be caught alongside a bad token and reported as "there is
+  // no session", so an unconfigured server would answer 401 AUTH_REQUIRED to
+  // every request and look exactly like one where nobody has signed in. The
+  // caller separates the two; see requireSession.
+  const secret = sessionSecret();
   try {
-    const decoded = jwt.verify(token, sessionSecret());
+    const decoded = jwt.verify(token, secret);
     if (
       typeof decoded !== "object" ||
       decoded === null ||

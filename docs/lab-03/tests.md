@@ -12,7 +12,7 @@ Lab 3 reuses the seams already established in Lab 2 rather than introducing new 
 
 | Seam | Prior art in this repo | Used for |
 |---|---|---|
-| Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every API, authorization and regression test — no live database required, so the suite runs anywhere |
+| Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every Lab 2 and Lab 3 API, authorization and regression test — no live database required, so these run anywhere. **One exception, inherited:** `server/tests/lab-01/API-02.categories.test.ts` calls `GET /api/categories` without a stub and therefore needs the seeded database; `BR-28` classifies every Lab 1 test as unchanged, so it is left exactly as Lab 1 wrote it rather than retro-fitted with a stub |
 | React Testing Library rendering a component with `fetch` mocked | `client/src/__tests__/lab-02/MyTickets.test.tsx`, `CreateTicket.test.tsx` | every UI component and style test |
 | Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` (retired by BR-28 — the pattern is carried forward, the file is not) | the three end-to-end specs and responsive assertions |
 
@@ -118,7 +118,7 @@ so the header had to go together with the cookie that replaces it.
 
 Four corrections to the predicted table:
 
-* **The header count was 30, not 29.** One of the thirty was a test *title* naming the header
+* **The header count was 29, not 30.** One of the thirty was a test *title* naming the header
   rather than a call sending it. The title was reworded; only 29 calls existed to change.
 * **Five assertions needed a change the "provider swap" line did not cover.** The Lab 2 list
   tests asserted `toHaveBeenCalledWith(url, expect.anything())`, where the second argument
@@ -183,7 +183,7 @@ Per screen (Login, Change Password, Staff Queue, Staff Detail, Users) at 1366×7
 ## 5. Test Commands
 
 ```bash
-cd server && npm test                    # full server suite (Prisma stubbed, no DB needed)
+cd server && npm test                    # full server suite (Prisma stubbed, except the Lab 1 API-02 categories test, which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 server tests only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
 cd client && npm test                    # client suite

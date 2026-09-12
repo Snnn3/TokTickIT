@@ -6,7 +6,9 @@ import { requireSession } from "../middleware/auth";
 import { loginThrottle } from "../utils/loginThrottle";
 import {
   hashPassword,
+  isUsablePasswordHash,
   normalizePassword,
+  timingEqualizerHash,
   validatePassword,
   verifyPassword,
 } from "../utils/password";
@@ -110,10 +112,16 @@ authRouter.post("/login", async (req: AuthenticatedRequest, res) => {
 
     // An unknown email, a wrong password and a deactivated account are one
     // outcome here on purpose: distinguishing them would turn the login form
-    // into an account-enumeration oracle.
-    const passwordMatches = user
-      ? await verifyPassword(password, user.passwordHash)
-      : false;
+    // into an account-enumeration oracle. That has to hold for elapsed time as
+    // well as for the body, so every attempt pays exactly one bcrypt
+    // comparison -- against the stored hash where there is a usable one, and
+    // against a hash nothing can match otherwise. A migrated account still
+    // carrying the seed placeholder takes the same path as an unknown address.
+    const comparableHash =
+      user && isUsablePasswordHash(user.passwordHash)
+        ? user.passwordHash
+        : timingEqualizerHash();
+    const passwordMatches = await verifyPassword(password, comparableHash);
     if (!user || !user.isActive || !passwordMatches) {
       loginThrottle.recordFailure(email);
       refuseLogin(res, 401);
@@ -153,8 +161,15 @@ authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
       // Bumping tokenVersion is what kills the cookie that was just sent, and
       // every other outstanding cookie for this user, rather than merely
       // asking the browser to forget one of them.
+      //
+      // The version the cookie carries is part of the filter, because
+      // verifySession checks only the signature and the expiry. Without it, an
+      // already-invalidated cookie replayed inside its eight-hour lifetime
+      // would still bump the counter and so sign out whichever session the user
+      // actually holds now. Matching zero rows is the right outcome there, and
+      // the answer stays 204 either way.
       await prisma.user.updateMany({
-        where: { id: session.sub },
+        where: { id: session.sub, tokenVersion: session.tv },
         data: { tokenVersion: { increment: 1 } },
       });
     }
