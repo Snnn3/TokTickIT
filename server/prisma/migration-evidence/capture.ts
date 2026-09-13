@@ -23,7 +23,12 @@ const prisma = new PrismaClient();
 const SNAPSHOT = join(__dirname, "snapshot.before.json");
 
 type TicketRow = { id: number; number: string; requesterEmail: string };
-type AttachmentRow = { id: number; sizeBytes: number; checksum: string };
+type AttachmentRow = {
+  id: number;
+  ticketId: number;
+  sizeBytes: number;
+  checksum: string;
+};
 
 type Snapshot = {
   phase: "before" | "after";
@@ -75,7 +80,7 @@ async function capture(phase: "before" | "after"): Promise<Snapshot> {
     `SELECT t.id, t.number, lower(u.email) AS "requesterEmail" FROM "Ticket" t JOIN "${table}" u ON u.id = t."requesterId" ORDER BY t.id`
   );
   const attachmentRows = await prisma.$queryRawUnsafe<AttachmentRow[]>(
-    'SELECT id, "sizeBytes", md5(data) AS checksum FROM "Attachment" ORDER BY id'
+    'SELECT id, "ticketId", "sizeBytes", md5(data) AS checksum FROM "Attachment" ORDER BY id'
   );
 
   return {
@@ -138,6 +143,11 @@ function compare(before: Snapshot, after: Snapshot): boolean {
     }
   }
 
+  const afterAttachmentIds = new Set(after.attachments.map((a) => a.id));
+  const missingAttachments = before.attachments.filter(
+    (a) => !afterAttachmentIds.has(a.id)
+  );
+
   const rows = [
     row(
       "Account rows (RequesterUser then User)",
@@ -162,6 +172,12 @@ function compare(before: Snapshot, after: Snapshot): boolean {
       0,
       missingTickets.length,
       missingTickets.length === 0
+    ),
+    row(
+      "Attachments missing after migration",
+      0,
+      missingAttachments.length,
+      missingAttachments.length === 0
     ),
     row(
       "Ticket numbers changed",
@@ -195,6 +211,11 @@ function compare(before: Snapshot, after: Snapshot): boolean {
   }
   if (missingTickets.length) {
     failures.push(`${missingTickets.length} tickets missing after migration`);
+  }
+  if (missingAttachments.length) {
+    failures.push(
+      `${missingAttachments.length} attachments missing after migration`
+    );
   }
   failures.push(...numberChanges, ...requesterChanges, ...byteChanges);
 

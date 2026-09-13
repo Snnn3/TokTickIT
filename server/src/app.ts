@@ -2,6 +2,7 @@ import "dotenv/config";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
 import { requireAuth, requireJsonBody } from "./middleware/auth";
 import { prisma } from "./prisma";
 import { attachmentsRouter } from "./routes/attachments";
@@ -26,7 +27,7 @@ app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok", service: "TokTickIT API" });
 });
 
-// Lab 1 compatibility endpoint. Unauthenticated by carry-over: the Lab 1 suite
+// Lab 1 compatibility endpoint. Unauthenticated by carry-over (BR-29): the Lab 1 suite
 // asserts an anonymous 200 here and BR-28 classifies every Lab 1 test as
 // unchanged, so protecting this path would retire a test the disposition keeps.
 // The authenticated reference endpoints below are what the Lab 3 client uses.
@@ -92,3 +93,23 @@ app.get("/api/reference/systems", ...requireAuth, async (_req, res) => {
 // value the client supplied [FR-20, BR-03].
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/attachments", attachmentsRouter);
+
+// Terminal error handler, after the routers. Without it the framework default
+// answers a malformed JSON body with an HTML stack trace carrying absolute
+// filesystem paths, against the response-shape contract (envelope on every
+// non-2xx, safe generic messages, never stacks). A body-parser SyntaxError is
+// a client fault (400 VALIDATION_FAILED); anything else reaching here is a
+// server fault (500 UNEXPECTED).
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (err instanceof SyntaxError && "body" in err) {
+    return res.status(400).json({
+      error: { code: "VALIDATION_FAILED", message: "Request body is not valid JSON" },
+    });
+  }
+  return res.status(500).json({
+    error: { code: "UNEXPECTED", message: "Unexpected server error" },
+  });
+});

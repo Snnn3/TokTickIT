@@ -486,13 +486,31 @@ describe("API-06 session invalidation (AC-06, AC-28, FR-30)", () => {
     );
   });
 
+  it("answers 500 with the error envelope when the tokenVersion revocation fails (AC-06, FR-30)", async () => {
+    // A rejected updateMany leaves the presented cookie valid for up to eight
+    // hours. Answering 204 here would report that live session as signed out,
+    // so the failure surfaces loudly instead -- the client clears its local
+    // session on any status, so the 500 strands nobody.
+    vi.spyOn(prisma.user, "updateMany").mockRejectedValue(
+      new Error("database unavailable")
+    );
+
+    const res = await request(app)
+      .post("/api/auth/logout")
+      .set("Cookie", sessionCookie({ id: 13 }));
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      error: { code: "UNEXPECTED", message: "Failed to complete the sign-out" },
+    });
+  });
+
   it("reports an unconfigured signing secret as a server fault, not as an absent session", async () => {
     // A missing JWT_SECRET means this server cannot verify anyone. Answering
     // 401 AUTH_REQUIRED would report that as "nobody is signed in", which is the
     // hardest possible reading of the misconfiguration from the outside.
     const cookie = sessionCookie({ id: 12 });
     const secret = process.env.JWT_SECRET;
-    process.env.JWT_SECRET = undefined;
     // biome-ignore lint/performance/noDelete: restoring the exact absent state
     delete process.env.JWT_SECRET;
 
@@ -666,5 +684,36 @@ describe("BR-22 content-type posture on state-changing requests", () => {
     // would make signing out impossible.
     const res = await request(app).post("/api/auth/logout");
     expect(res.status).toBe(204);
+  });
+});
+
+describe("malformed JSON body (response-shape contract)", () => {
+  const truncated = '{"email": "a@b.com", ';
+
+  function malformedLogin() {
+    return request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send(truncated);
+  }
+
+  it("answers 400 VALIDATION_FAILED with the error envelope, not the framework default", async () => {
+    const res = await malformedLogin();
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: {
+        code: "VALIDATION_FAILED",
+        message: "Request body is not valid JSON",
+      },
+    });
+  });
+
+  it("leaks neither the stack nor a filesystem path", async () => {
+    const res = await malformedLogin();
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain("SyntaxError");
+    expect(body).not.toContain("/");
+    expect(body).not.toContain("\\");
   });
 });

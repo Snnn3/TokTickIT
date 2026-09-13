@@ -137,7 +137,7 @@ Four corrections to the predicted table:
   questions of the session that they asked of the selector. `AppShell.test.tsx` under `lab-03/`
   carries C-08's role-filtering and guard assertions, which have no Lab 2 equivalent.
 
-Counts after the slice: **73 server tests across 10 files** and **73 client tests across 13
+Counts after the slice: **78 server tests across 10 files** and **73 client tests across 13
 files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
 the difference being the eight retired tests in `requesters.api.test.ts`.
 

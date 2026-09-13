@@ -155,28 +155,40 @@ authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  try {
-    const session = verifySession(token);
-    if (session) {
-      // Bumping tokenVersion is what kills the cookie that was just sent, and
-      // every other outstanding cookie for this user, rather than merely
-      // asking the browser to forget one of them.
-      //
-      // The version the cookie carries is part of the filter, because
-      // verifySession checks only the signature and the expiry. Without it, an
-      // already-invalidated cookie replayed inside its eight-hour lifetime
-      // would still bump the counter and so sign out whichever session the user
-      // actually holds now. Matching zero rows is the right outcome there, and
-      // the answer stays 204 either way.
+  // verifySession swallows every token-level failure itself and answers null,
+  // so only a missing JWT_SECRET throws here -- and that misconfiguration must
+  // surface as a 500 through the terminal error handler, never as a silent 204
+  // that reports a live session as signed out. The cookie is already cleared
+  // above, so the client still lands signed-out either way.
+  const session = verifySession(token); // cannot throw except on config
+  if (session) {
+    // Bumping tokenVersion is what kills the cookie that was just sent, and
+    // every other outstanding cookie for this user, rather than merely
+    // asking the browser to forget one of them.
+    //
+    // The version the cookie carries is part of the filter, because
+    // verifySession checks only the signature and the expiry. Without it, an
+    // already-invalidated cookie replayed inside its eight-hour lifetime
+    // would still bump the counter and so sign out whichever session the user
+    // actually holds now. Matching zero rows is the right outcome there, and
+    // the answer stays 204 either way.
+    //
+    // A rejected updateMany is the opposite case: tokenVersion never moved, so
+    // the presented cookie stays valid for up to eight hours. Answering 204
+    // here would report that live session as signed out (AC-06, FR-30), so it
+    // fails loudly instead -- the client clears its local session on any
+    // status, so nobody is stranded by the 500.
+    try {
       await prisma.user.updateMany({
         where: { id: session.sub, tokenVersion: session.tv },
         data: { tokenVersion: { increment: 1 } },
       });
+    } catch {
+      res.status(500).json({
+        error: { code: "UNEXPECTED", message: "Failed to complete the sign-out" },
+      });
+      return;
     }
-  } catch {
-    // A sign-out must never fail. The cookie is already cleared; a bookkeeping
-    // error here leaves the old token valid until it expires, which is strictly
-    // better than refusing to sign the user out.
   }
 
   res.status(204).end();
