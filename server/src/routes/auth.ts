@@ -185,7 +185,10 @@ authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
       });
     } catch {
       res.status(500).json({
-        error: { code: "UNEXPECTED", message: "Failed to complete the sign-out" },
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to complete the sign-out",
+        },
       });
       return;
     }
