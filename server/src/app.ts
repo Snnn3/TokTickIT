@@ -23,6 +23,11 @@ app.get("/", (_req, res) => {
   res.status(200).json({ service: "TokTickIT API" });
 });
 
+// Liveness probe, deliberately public and ungated (Issue #37 exception): it
+// answers whether the process is up, not who is asking, so it stays 200 for
+// anonymous callers and for gated users (mustChangePassword=true) alike. It
+// sits beside the Lab 1 compatibility exception below -- together they are the
+// only two paths the change-password gate never closes.
 app.get("/api/health", (_req, res) => {
   res.status(200).json({ status: "ok", service: "TokTickIT API" });
 });

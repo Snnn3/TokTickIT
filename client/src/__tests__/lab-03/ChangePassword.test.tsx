@@ -64,16 +64,27 @@ describe("C-02 Change Password gate", () => {
     expect(screen.getByLabelText(/Current password/i)).toBeInTheDocument();
   });
 
-  it("renders all four checklist rules as unmet before anything is typed", () => {
+  it("renders all checklist rules as unmet before anything is typed", () => {
     renderGate();
 
     expect(screen.getByTestId("password-checklist")).toBeInTheDocument();
+    // Four complexity rules plus the 72-byte ceiling mirrored from the server.
+    expect(PASSWORD_RULES.map((rule) => rule.id).sort()).toEqual(
+      ["digit", "length", "letterCase", "maxBytes", "special"].sort()
+    );
     for (const rule of PASSWORD_RULES) {
       const item = screen.getByTestId(`password-rule-${rule.id}`);
-      expect(item).toHaveAttribute("data-met", "false");
+      // The byte ceiling is an upper bound, so an empty password already meets
+      // it; every other rule starts unmet.
+      expect(item).toHaveAttribute(
+        "data-met",
+        rule.id === "maxBytes" ? "true" : "false"
+      );
       expect(item).toHaveTextContent(rule.label);
       // Met and unmet are announced as text, not only as a colour.
-      expect(item).toHaveTextContent(/not met/i);
+      expect(item).toHaveTextContent(
+        rule.id === "maxBytes" ? /\(met\)/i : /not met/i
+      );
     }
   });
 
@@ -125,6 +136,29 @@ describe("C-02 Change Password gate", () => {
     fireEvent.change(newPassword(), { target: { value: "Ab3!def" } });
 
     expect(screen.getByTestId("password-rule-length")).toHaveAttribute(
+      "data-met",
+      "false"
+    );
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it("does not count a trailing space as a special character (trimmed like the server)", () => {
+    renderGate();
+    fireEvent.change(newPassword(), { target: { value: "Password1 " } });
+
+    expect(screen.getByTestId("password-rule-special")).toHaveAttribute(
+      "data-met",
+      "false"
+    );
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it("rejects a password longer than the 72-byte bcrypt limit", () => {
+    renderGate();
+    const overLimit = `Aa1!${"x".repeat(69)}`;
+    fireEvent.change(newPassword(), { target: { value: overLimit } });
+
+    expect(screen.getByTestId("password-rule-maxBytes")).toHaveAttribute(
       "data-met",
       "false"
     );
@@ -248,5 +282,19 @@ describe("C-02 Change Password gate", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Sign out/i }));
     expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a retryable message when the gate sign-out fails (AC-06)", async () => {
+    const signOut = vi.fn(async () => ({ ok: false as const }));
+    renderGate({ signOut });
+
+    fireEvent.click(screen.getByTestId("sign-out-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sign-out-error")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("sign-out-error")).toHaveTextContent(
+      /Could not sign out/i
+    );
   });
 });

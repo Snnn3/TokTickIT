@@ -57,6 +57,44 @@ export class LoginThrottle {
     return this.recent(LoginThrottle.key(email)).length >= LOGIN_FAILURE_LIMIT;
   }
 
+  /**
+   * Atomic admission for the login route [BR-21, AC-20].
+   *
+   * The check and the reservation happen synchronously with no await between
+   * them, so six parallel failures cannot all observe "four so far" and all
+   * answer 401. The reservation IS the failure record: the caller keeps it on
+   * a credential failure, clears it on success, and withdraws it when the
+   * attempt never reached a verdict (DB/config fault).
+   */
+  tryAdmit(email: string): boolean {
+    const key = LoginThrottle.key(email);
+    const kept = this.recent(key);
+    if (kept.length >= LOGIN_FAILURE_LIMIT) {
+      return false;
+    }
+    kept.push(this.now());
+    this.failures.set(key, kept);
+    this.sweep();
+    return true;
+  }
+
+  /**
+   * Withdraws the reservation `tryAdmit` just made, for the path where the
+   * login attempt never reached a credential verdict (a rejected Prisma call).
+   * A database fault is not a failed login and must not consume throttle
+   * budget.
+   */
+  cancelAdmission(email: string): void {
+    const key = LoginThrottle.key(email);
+    const kept = this.recent(key);
+    kept.pop();
+    if (kept.length) {
+      this.failures.set(key, kept);
+    } else {
+      this.failures.delete(key);
+    }
+  }
+
   recordFailure(email: string): void {
     const key = LoginThrottle.key(email);
     const kept = this.recent(key);

@@ -11,8 +11,15 @@
  */
 
 export const PASSWORD_MIN_LENGTH = 8;
+/** bcrypt ignores input past 72 bytes, so a longer password is a silent trap. Mirrors the server's PASSWORD_MAX_BYTES. */
+export const PASSWORD_MAX_BYTES = 72;
 
-export type PasswordRuleId = "length" | "letterCase" | "digit" | "special";
+export type PasswordRuleId =
+  | "length"
+  | "letterCase"
+  | "digit"
+  | "special"
+  | "maxBytes";
 
 export interface PasswordRule {
   id: PasswordRuleId;
@@ -24,22 +31,40 @@ export const PASSWORD_RULES: PasswordRule[] = [
   {
     id: "length",
     label: `At least ${PASSWORD_MIN_LENGTH} characters`,
-    isMet: (password) => password.trim().length >= PASSWORD_MIN_LENGTH,
+    // Trimmed first, like the server: surrounding whitespace is stripped
+    // before any rule is evaluated, so it never counts toward length.
+    isMet: (password) =>
+      normalizePassword(password).length >= PASSWORD_MIN_LENGTH,
   },
   {
     id: "letterCase",
     label: "Includes upper and lower case letters",
-    isMet: (password) => /[A-Z]/.test(password) && /[a-z]/.test(password),
+    isMet: (password) => {
+      const trimmed = normalizePassword(password);
+      return /[A-Z]/.test(trimmed) && /[a-z]/.test(trimmed);
+    },
   },
   {
     id: "digit",
     label: "Includes a number",
-    isMet: (password) => /[0-9]/.test(password),
+    isMet: (password) => /[0-9]/.test(normalizePassword(password)),
   },
   {
     id: "special",
     label: "Includes a special character",
-    isMet: (password) => /[^a-zA-Z0-9]/.test(password),
+    // Evaluated after the trim: a trailing space is not a special character
+    // the server would accept, since the server trims before validating.
+    isMet: (password) => /[^a-zA-Z0-9]/.test(normalizePassword(password)),
+  },
+  {
+    id: "maxBytes",
+    label: `At most ${PASSWORD_MAX_BYTES} bytes`,
+    // UTF-8 byte length of the trimmed value, mirroring the server's
+    // Buffer.byteLength check. TextEncoder works in the browser where Buffer
+    // does not.
+    isMet: (password) =>
+      new TextEncoder().encode(normalizePassword(password)).length <=
+      PASSWORD_MAX_BYTES,
   },
 ];
 

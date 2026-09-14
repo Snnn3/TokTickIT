@@ -89,8 +89,12 @@ authRouter.post("/login", async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  // Throttle first, so a throttled caller never reaches the hash comparison.
-  if (loginThrottle.isThrottled(email)) {
+  // Atomic admission: the throttle check reserves its slot synchronously
+  // before the first await, so parallel failures cannot all slip past the
+  // limit and answer 401. The reservation is the failure record -- it stays
+  // on a credential failure, clears on success, and is withdrawn when the
+  // attempt never reached a verdict [BR-21, AC-20].
+  if (!loginThrottle.tryAdmit(email)) {
     refuseLogin(res, 429);
     return;
   }
@@ -123,7 +127,8 @@ authRouter.post("/login", async (req: AuthenticatedRequest, res) => {
         : timingEqualizerHash();
     const passwordMatches = await verifyPassword(password, comparableHash);
     if (!user || !user.isActive || !passwordMatches) {
-      loginThrottle.recordFailure(email);
+      // Already counted by tryAdmit above; recording again would double-count
+      // every failure and throttle on the third attempt instead of the sixth.
       refuseLogin(res, 401);
       return;
     }
@@ -134,6 +139,10 @@ authRouter.post("/login", async (req: AuthenticatedRequest, res) => {
       user: publicUser(user),
     });
   } catch {
+    // The attempt never reached a credential verdict, so its reservation must
+    // not consume throttle budget. Without this a database outage would lock
+    // every address out on top of failing it.
+    loginThrottle.cancelAdmission(email);
     res.status(500).json({
       error: { code: "UNEXPECTED", message: "Failed to sign in" },
     });

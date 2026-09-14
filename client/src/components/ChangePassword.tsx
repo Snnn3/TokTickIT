@@ -29,6 +29,8 @@ export function ChangePassword({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [banner, setBanner] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [signOutPending, setSignOutPending] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   const rulesPass = isPasswordCompliant(newPassword);
   const confirmationMatches =
@@ -36,6 +38,21 @@ export function ChangePassword({
   const currentSupplied = firstLogin || currentPassword.trim().length > 0;
   const canSubmit =
     rulesPass && confirmationMatches && currentSupplied && !busy;
+
+  const handleSignOut = async () => {
+    if (signOutPending || busy) {
+      return;
+    }
+    setSignOutPending(true);
+    setSignOutError(null);
+    // A failed sign-out keeps the session (AC-06): the cookie is still live,
+    // so the gate stays put and the user retries from here.
+    const result = await signOut();
+    setSignOutPending(false);
+    if (!result.ok) {
+      setSignOutError("Could not sign out. Please try again.");
+    }
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -200,13 +217,23 @@ export function ChangePassword({
 
         {/* Always available, so a user who cannot meet the rules right now is
             never trapped on this screen with no way out. */}
+        {signOutError && (
+          <div
+            className="alert alert-danger py-2 mt-3 mb-0"
+            data-testid="sign-out-error"
+            role="alert"
+          >
+            {signOutError}
+          </div>
+        )}
         <button
           className="btn btn-link w-100 mt-3"
-          disabled={busy}
-          onClick={() => signOut()}
+          data-testid="sign-out-btn"
+          disabled={busy || signOutPending}
+          onClick={handleSignOut}
           type="button"
         >
-          Sign out
+          {signOutPending ? "Signing out..." : "Sign out"}
         </button>
       </div>
     </div>

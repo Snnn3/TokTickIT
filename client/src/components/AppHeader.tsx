@@ -41,6 +41,8 @@ export function AppHeader() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [navExpanded, setNavExpanded] = useState(false);
+  const [signOutPending, setSignOutPending] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   if (!user) {
     return null;
@@ -51,11 +53,20 @@ export function AppHeader() {
   );
 
   const handleSignOut = async () => {
+    // No duplicate submits while a sign-out is in flight: the second click
+    // would race the first revocation and report its own failure.
+    if (signOutPending) {
+      return;
+    }
+    setSignOutPending(true);
+    setSignOutError(null);
     // Stay put when the server could not revoke the session (AC-06): the
     // cookie is still live, so navigating to /login would report a signed-out
     // state the next probe immediately contradicts. The user retries from here.
     const result = await signOut();
+    setSignOutPending(false);
     if (!result.ok) {
+      setSignOutError("Could not sign out. Please try again.");
       return;
     }
     navigate("/login", { replace: true });
@@ -111,12 +122,22 @@ export function AppHeader() {
             <button
               className="btn btn-sm btn-outline-light"
               data-testid="logout-btn"
+              disabled={signOutPending}
               onClick={handleSignOut}
               type="button"
             >
-              Logout
+              {signOutPending ? "Signing out..." : "Logout"}
             </button>
           </div>
+          {signOutError && (
+            <div
+              className="alert alert-danger py-1 px-2 mt-2 mb-0"
+              data-testid="logout-error"
+              role="alert"
+            >
+              {signOutError}
+            </div>
+          )}
         </div>
       </div>
     </nav>

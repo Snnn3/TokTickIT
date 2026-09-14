@@ -106,6 +106,44 @@ describe("AppHeader Component (Issue #24 adapted for Lab 3, FR-18, FR-19)", () =
     expect(screen.getByTestId("identity-chip")).toBeInTheDocument();
   });
 
+  it("shows a retryable message when sign-out fails, without revealing internals", async () => {
+    const signOut = vi.fn(async () => ({ ok: false as const }));
+    render(withAuthRouter(<AppHeader />, { harness: { signOut } }));
+
+    fireEvent.click(screen.getByTestId("logout-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("logout-error")).toBeInTheDocument();
+    });
+    expect(screen.getByTestId("logout-error")).toHaveTextContent(
+      /Could not sign out/i
+    );
+    expect(screen.getByTestId("logout-error")).toHaveTextContent(/try again/i);
+  });
+
+  it("disables Logout while a sign-out is in flight and ignores duplicate clicks", async () => {
+    let release: (value: { ok: true }) => void = () => {};
+    const signOut = vi.fn(
+      () =>
+        new Promise<{ ok: true }>((resolve) => {
+          release = resolve;
+        })
+    );
+    render(withAuthRouter(<AppHeader />, { harness: { signOut } }));
+
+    fireEvent.click(screen.getByTestId("logout-btn"));
+    expect(screen.getByTestId("logout-btn")).toBeDisabled();
+
+    // A second click while pending must not issue a second revocation.
+    fireEvent.click(screen.getByTestId("logout-btn"));
+    expect(signOut).toHaveBeenCalledTimes(1);
+
+    release({ ok: true });
+    await waitFor(() => {
+      expect(screen.getByTestId("logout-btn")).toBeEnabled();
+    });
+  });
+
   it("renders nothing at all when there is no session", () => {
     const { container } = render(
       withAuthRouter(<AppHeader />, { harness: { user: null } })

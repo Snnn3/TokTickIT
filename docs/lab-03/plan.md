@@ -4,7 +4,7 @@ Version: 2.1 | Date: 2026-09-13 | Owner: student (Snnn3), drafted with AI agent
 Versioning: this plan previously ran an independent 3.x sequence; from this revision every document in `docs/lab-03/` carries the same version number and bumps together, so a reader can tell at a glance whether the set is coherent.
 Source: `material/Lab_3_sheet.pdf` (CPE 334, Lab 3) + student-approved decisions + `docs/lab-03/specification.md` **v2.0**.
 Tracker: GitHub issues #35–#42 on Kanban project 1 (see `.agents/AGENTS.md` + `.agents/agents/issue-tracker.md`).
-Local-only document: gitignored by design (see `34b7763`), so it is **not** part of any PR and must never be force-added.
+Tracked plan document: versioned with the `docs/lab-03/` set and reviewed in its PRs. The bare `plan.md` gitignore pattern predates this slice and does not untrack this already-tracked path, so the "local-only, never in a PR" note it once carried no longer holds; local-only scratch stays out via `.reviews/` and `migration-evidence/snapshot.before.json` instead.
 
 ## 1. Sprint Goal
 

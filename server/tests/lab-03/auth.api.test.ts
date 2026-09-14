@@ -683,6 +683,24 @@ describe("API-20 login throttling (AC-20, BR-21)", () => {
     }
   });
 
+  it("throttles concurrent failures: six parallel attempts yield a 429 with identical wording", async () => {
+    // Admission reserves its slot synchronously before the bcrypt await, so
+    // parallel failures cannot all observe room and answer 401. At least one
+    // of the six must be refused as throttled, worded like any other failure.
+    const attempts = await Promise.all(
+      Array.from({ length: 6 }, () => failedLogin())
+    );
+    const throttled = attempts.filter((res) => res.status === 429);
+    const rejected = attempts.filter((res) => res.status === 401);
+    expect(throttled.length).toBeGreaterThanOrEqual(1);
+    expect(throttled.length + rejected.length).toBe(6);
+    for (const res of throttled) {
+      expect(res.body.error.code).toBe("TOO_MANY_ATTEMPTS");
+    }
+    const messages = new Set(attempts.map((res) => res.body.error.message));
+    expect(messages.size).toBe(1);
+  });
+
   it("expires on its own, with no unlock workflow", async () => {
     // The window is rolling and held in memory. Advancing the injected clock
     // past it is the whole of the recovery path: there is no persisted lockout
@@ -812,6 +830,25 @@ describe("unknown API routes (response-shape contract)", () => {
 
     const health = await request(app).get("/api/health");
     expect(health.status).toBe(200);
+  });
+});
+
+describe("GET /api/health liveness exception (ungated by design)", () => {
+  it("stays 200 anonymous", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ok", service: "TokTickIT API" });
+  });
+
+  it("stays 200 for a gated user: liveness answers whether the process is up, not who asks", async () => {
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 3, mustChangePassword: true })
+    );
+    const res = await request(app)
+      .get("/api/health")
+      .set("Cookie", sessionCookie({ id: 3, mustChangePassword: true }));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ok", service: "TokTickIT API" });
   });
 });
 

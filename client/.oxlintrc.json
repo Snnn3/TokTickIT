@@ -5,7 +5,16 @@
     "react/rules-of-hooks": "error",
     "react/only-export-components": [
       "warn",
-      { "allowConstantExport": true, "allowExportNames": ["useAuth"] }
+      {
+        "allowConstantExport": true,
+        "allowExportNames": [
+          "useAuth",
+          "testUser",
+          "userWithRole",
+          "withAuthRouter",
+          "AuthHarnessProvider"
+        ]
+      }
     ]
   }
 }
