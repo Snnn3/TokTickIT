@@ -1,7 +1,11 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useAuth } from "../context/AuthContext";
-import { PASSWORD_RULES, isPasswordCompliant } from "../utils/password";
+import {
+  PASSWORD_RULES,
+  isPasswordCompliant,
+  normalizePassword,
+} from "../utils/password";
 
 interface ChangePasswordProps {
   onChanged: (destination: string) => void;
@@ -33,8 +37,13 @@ export function ChangePassword({
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
   const rulesPass = isPasswordCompliant(newPassword);
+  // Trimmed like the server (`normalizePassword` on both sides in
+  // `server/src/routes/auth.ts`): a trailing-space confirmation agrees with
+  // the server verdict instead of holding Save disabled on input the server
+  // would accept.
   const confirmationMatches =
-    confirmPassword.length > 0 && confirmPassword === newPassword;
+    normalizePassword(confirmPassword).length > 0 &&
+    normalizePassword(confirmPassword) === normalizePassword(newPassword);
   const currentSupplied = firstLogin || currentPassword.trim().length > 0;
   const canSubmit =
     rulesPass && confirmationMatches && currentSupplied && !busy;
@@ -199,11 +208,12 @@ export function ChangePassword({
               type="password"
               value={confirmPassword}
             />
-            {confirmPassword.length > 0 && !confirmationMatches && (
-              <div className="invalid-feedback d-block">
-                Confirmation does not match the new password
-              </div>
-            )}
+            {normalizePassword(confirmPassword).length > 0 &&
+              !confirmationMatches && (
+                <div className="invalid-feedback d-block">
+                  Confirmation does not match the new password
+                </div>
+              )}
           </div>
 
           <button

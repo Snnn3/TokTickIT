@@ -153,6 +153,17 @@ describe("C-02 Change Password gate", () => {
     expect(saveButton()).toBeDisabled();
   });
 
+  it("treats a trailing-space confirmation as matching (trimmed like the server)", () => {
+    renderGate();
+    fireEvent.change(newPassword(), { target: { value: "Password1!" } });
+    fireEvent.change(confirmPassword(), { target: { value: "Password1! " } });
+
+    expect(
+      screen.queryByText(/Confirmation does not match/i)
+    ).not.toBeInTheDocument();
+    expect(saveButton()).toBeEnabled();
+  });
+
   it("rejects a password longer than the 72-byte bcrypt limit", () => {
     renderGate();
     const overLimit = `Aa1!${"x".repeat(69)}`;

@@ -53,10 +53,6 @@ export class LoginThrottle {
     }
   }
 
-  isThrottled(email: string): boolean {
-    return this.recent(LoginThrottle.key(email)).length >= LOGIN_FAILURE_LIMIT;
-  }
-
   /**
    * Atomic admission for the login route [BR-21, AC-20].
    *
@@ -93,14 +89,6 @@ export class LoginThrottle {
     } else {
       this.failures.delete(key);
     }
-  }
-
-  recordFailure(email: string): void {
-    const key = LoginThrottle.key(email);
-    const kept = this.recent(key);
-    kept.push(this.now());
-    this.failures.set(key, kept);
-    this.sweep();
   }
 
   /** A successful login clears that email's counter (api-spec section 2). */

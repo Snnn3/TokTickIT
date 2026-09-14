@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -141,12 +141,16 @@ Counts after the slice: **78 server tests across 10 files** and **73 client test
 files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
 the difference being the eight retired tests in `requesters.api.test.ts`.
 
-The Issue #37 review fixes added 13 tests on top of those counts (+8 server / +5 client = 13 total: 78->86 server, 73->78 client): **86 server tests across
-10 files** (the logout-500 replay extension, the logout config-fault 500 test, one
-multipart-allowlist, four unknown-API-route and two `GET /api/categories` BR-29-exception
-tests in `auth.api.test.ts`) and **78 client
-tests across 14 files** (new `AuthContext.test.tsx` with three sign-out contract tests, plus two
-`AppHeader` navigation tests proving a failed sign-out stays put). The BR-29 exception they pin
+The Issue #37 review fixes added 22 tests on top of those counts (+11 server / +11 client = 22 total: 78->89 server, 73->84 client): **89 server tests across
+10 files** (the logout-500 replay extension to the existing revocation-failure test, plus eleven
+new tests in `auth.api.test.ts`: the logout config-fault 500 test, the parallel-admission
+throttle test, one multipart-allowlist test, four unknown-API-route tests, two
+`GET /api/health` liveness-exception tests and two `GET /api/categories` BR-29-exception
+tests) and **84 client
+tests across 14 files** (new `AuthContext.test.tsx` with four sign-out contract tests, three
+`AppHeader` sign-out navigation tests proving a failed sign-out stays put, and four
+`ChangePassword` additions — the trailing-space special-character case, the 72-byte ceiling
+case, the gate sign-out-failure message and the trailing-space-confirmation match case). The BR-29 exception they pin
 is the approved carve-out from BR-02's change-password gate: `GET /api/categories` stays public
 for anonymous callers and gated users alike, while the authenticated reference endpoints stay
 gated.
@@ -209,12 +213,12 @@ E2E and migration-evidence precondition: `docker compose up -d db`, then from `s
 This is the slice record, not the final Lab 3 record: the per-row Final column above stays TBD
 until the release slice. Slice suites, all passing with none skipped or disabled:
 
-* Server: **86 tests across 10 files** — 85 passing with the Prisma client stubbed and no
+* Server: **89 tests across 10 files** — 88 passing with the Prisma client stubbed and no
   database; the single failure is the inherited Lab 1 `API-02.categories`, which calls
   `GET /api/categories` without a stub and therefore needs the seeded database (`docker compose
   up -d db` + `prisma:migrate` + `db:seed`, per the §5 precondition). With the seeded DB it
-  passes, giving 86/86.
-* Client: **78 tests across 14 files, all passing** (`fetch` mocked, no backend needed).
+  passes, giving 89/89.
+* Client: **84 tests across 14 files, all passing** (`fetch` mocked, no backend needed).
 * Lab 2 disposition as executed (§2): retired suites gone, adapted suites green under the
   session cookie, unchanged suites (Lab 1 modulo the DB precondition above, plus
   `ticket-number.unit.test.ts`) untouched.
