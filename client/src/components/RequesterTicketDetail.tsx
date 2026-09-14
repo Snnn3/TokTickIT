@@ -8,13 +8,11 @@ import { useReferenceData } from "../hooks/useReferenceData";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
-  requesterId: number;
   onBack: () => void;
 }
 
 export function RequesterTicketDetail({
   ticketId,
-  requesterId,
   onBack,
 }: RequesterTicketDetailProps) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
@@ -28,11 +26,7 @@ export function RequesterTicketDetail({
     setError(null);
 
     try {
-      const res = await fetch(`/api/tickets/${ticketId}`, {
-        headers: {
-          "X-Requester-Id": String(requesterId),
-        },
-      });
+      const res = await fetch(`/api/tickets/${ticketId}`);
 
       if (res.status === 404) {
         setError(
@@ -61,7 +55,7 @@ export function RequesterTicketDetail({
     } finally {
       setLoading(false);
     }
-  }, [ticketId, requesterId]);
+  }, [ticketId]);
 
   useEffect(() => {
     fetchTicketDetail();
@@ -327,7 +321,6 @@ export function RequesterTicketDetail({
       <AttachmentSection
         ticketId={ticket.id}
         attachments={ticket.attachments}
-        requesterId={requesterId}
         onAttachmentAdded={handleAttachmentAdded}
         onAttachmentRemoved={handleAttachmentRemoved}
       />

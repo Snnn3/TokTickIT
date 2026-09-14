@@ -267,3 +267,138 @@ body {
 .text-zen-body {
   color: var(--zg-text-primary) !important;
 }
+
+/* ---------------------------------------------------------------------------
+   Lab 3 additions: authentication screens, role and status badges.
+   Tokens are the Lab 2 ones; nothing below introduces a new colour.
+   --------------------------------------------------------------------------- */
+
+/* Centred card used by Login and the Change Password gate (ui-spec 3, 4) */
+.zg-auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--zg-surface);
+  border: 1px solid var(--zg-border);
+  border-radius: 8px;
+  padding: 1.75rem;
+  box-shadow: 0 1px 3px rgba(34, 51, 43, 0.08);
+}
+
+/* Live password checklist (ui-spec 4). Each rule states met or unmet as text
+   and icon, so the state is never carried by colour alone. */
+.zg-password-checklist {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  background-color: var(--zg-readonly-field);
+  border: 1px solid var(--zg-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.zg-password-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.zg-password-checklist li.is-met {
+  color: var(--zg-success);
+  font-weight: 600;
+}
+
+.zg-password-checklist li.is-unmet {
+  color: var(--zg-text-muted);
+}
+
+.zg-checklist-icon {
+  width: 1rem;
+  text-align: center;
+  flex: 0 0 1rem;
+}
+
+/* Role badge in the identity chip (ui-spec 1) */
+.zg-role-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.zg-role-requester {
+  background-color: #f0f2f1;
+  color: var(--zg-text-primary);
+}
+
+.zg-role-it_staff {
+  background-color: var(--zg-pale);
+  color: var(--zg-primary);
+}
+
+.zg-role-administrator {
+  background-color: var(--zg-primary);
+  color: #ffffff;
+  border: 1px solid #ffffff;
+}
+
+/* Status badges across the eight-value vocabulary (BR-12, ui-spec 1).
+   Live statuses climb the pale-to-green scale; Resolved takes the success
+   tint; Closed and Cancelled are neutral grey because they are terminal. */
+.badge-zen-open {
+  background-color: #ddeee4;
+  color: var(--zg-primary);
+  font-weight: 600;
+  border: 1px solid rgba(0, 107, 60, 0.2);
+}
+
+.badge-zen-in-progress {
+  background-color: #cfe8da;
+  color: var(--zg-secondary);
+  font-weight: 600;
+}
+
+.badge-zen-waiting {
+  background-color: #fbf0dc;
+  color: var(--zg-warning);
+  font-weight: 600;
+  border: 1px solid rgba(183, 121, 31, 0.25);
+}
+
+.badge-zen-reopened {
+  background-color: #b5dcc5;
+  color: var(--zg-primary);
+  font-weight: 600;
+}
+
+.badge-zen-resolved {
+  background-color: #d6f0e0;
+  color: var(--zg-success);
+  font-weight: 700;
+  border: 1px solid rgba(31, 122, 69, 0.25);
+}
+
+.badge-zen-terminal {
+  background-color: #e4e7e5;
+  color: var(--zg-text-muted);
+  font-weight: 600;
+  border: 1px solid var(--zg-border);
+}
+
+/* Appears-resolved marker (ui-spec 1) */
+.badge-zen-appears-resolved {
+  background-color: #fbf0dc;
+  color: var(--zg-warning);
+  font-weight: 700;
+  border: 1px solid var(--zg-warning);
+}
+
+/* 44px touch targets below the tablet breakpoint (ui-spec 10) */
+@media (max-width: 767.98px) {
+  .zg-auth-card .btn,
+  .zg-auth-card .form-control {
+    min-height: 44px;
+  }
+}

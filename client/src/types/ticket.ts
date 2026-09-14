@@ -1,5 +1,40 @@
 export type TicketPriority = "LOW" | "MEDIUM" | "HIGH";
-export type TicketStatus = "NEW";
+/**
+ * The eight-value status vocabulary [BR-12]. Lab 2 had one value; CLOSED and
+ * CANCELLED are terminal.
+ */
+export type TicketStatus =
+  | "NEW"
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_FOR_REQUESTER"
+  | "RESOLVED"
+  | "CLOSED"
+  | "REOPENED"
+  | "CANCELLED";
+
+export const TICKET_STATUSES: TicketStatus[] = [
+  "NEW",
+  "OPEN",
+  "IN_PROGRESS",
+  "WAITING_FOR_REQUESTER",
+  "RESOLVED",
+  "CLOSED",
+  "REOPENED",
+  "CANCELLED",
+];
+
+/** Human-readable labels; the badge always shows text, never colour alone. */
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  NEW: "NEW",
+  OPEN: "OPEN",
+  IN_PROGRESS: "IN PROGRESS",
+  WAITING_FOR_REQUESTER: "WAITING FOR REQUESTER",
+  RESOLVED: "RESOLVED",
+  CLOSED: "CLOSED",
+  REOPENED: "REOPENED",
+  CANCELLED: "CANCELLED",
+};
 
 export interface Category {
   id: number;

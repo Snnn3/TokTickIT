@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MyTickets } from "../../components/MyTickets";
-import { RequesterProvider } from "../../context/RequesterContext";
+import { AuthHarnessProvider, testUser } from "../../test/authHarness";
 
 const mockRequester = {
   id: 1,
@@ -47,18 +47,16 @@ const mockTickets = [
 ];
 
 function AuthenticatedWrapper({ children }: { children: ReactNode }) {
-  return <RequesterProvider>{children}</RequesterProvider>;
+  return (
+    <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+      {children}
+    </AuthHarnessProvider>
+  );
 }
 
 describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    sessionStorage.clear();
-    sessionStorage.setItem(
-      "toktickit_selected_requester",
-      JSON.stringify(mockRequester)
-    );
-
     // Default fetch mock
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
@@ -140,8 +138,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     await waitFor(
       () => {
         expect(fetchSpy).toHaveBeenCalledWith(
-          expect.stringContaining("search=Printer"),
-          expect.anything()
+          expect.stringContaining("search=Printer")
         );
       },
       { timeout: 1000 }
@@ -178,12 +175,10 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("categoryId=2"),
-        expect.anything()
+        expect.stringContaining("categoryId=2")
       );
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("priority=HIGH"),
-        expect.anything()
+        expect.stringContaining("priority=HIGH")
       );
     });
   });
@@ -231,10 +226,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     fireEvent.click(nextBtn);
 
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("page=2"),
-        expect.anything()
-      );
+      expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("page=2"));
     });
 
     // Change page size to 5
@@ -243,8 +235,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("pageSize=5"),
-        expect.anything()
+        expect.stringContaining("pageSize=5")
       );
     });
   });

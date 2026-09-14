@@ -1,9 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../prisma";
-import {
-  requireRequester,
-  AuthenticatedRequest,
-} from "../middleware/requester";
+import { AuthenticatedRequest, requireAuth } from "../middleware/auth";
 
 import {
   parsePositiveIntParam,
@@ -41,9 +38,9 @@ async function getOwnedAttachment(attachmentId: number, requesterId: number) {
 // GET /api/attachments/:id [BR-06, AC-03]
 attachmentsRouter.get(
   "/:id",
-  requireRequester,
+  ...requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const attachmentId = parsePositiveIntParam(req.params.id);
 
     if (!attachmentId) {
@@ -76,9 +73,9 @@ attachmentsRouter.get(
 // GET /api/attachments/:id/download [FR-11, BR-16, AC-11]
 attachmentsRouter.get(
   "/:id/download",
-  requireRequester,
+  ...requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const attachmentId = parsePositiveIntParam(req.params.id);
 
     if (!attachmentId) {
@@ -129,9 +126,9 @@ attachmentsRouter.get(
 // DELETE /api/attachments/:id [FR-12, BR-16, BR-17, AC-12]
 attachmentsRouter.delete(
   "/:id",
-  requireRequester,
+  ...requireAuth,
   async (req: AuthenticatedRequest, res: Response) => {
-    const requester = req.requester!;
+    const requester = req.authUser!;
     const attachmentId = parsePositiveIntParam(req.params.id);
 
     if (!attachmentId) {

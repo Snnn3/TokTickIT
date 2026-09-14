@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 1.9 | Date: 2026-09-11 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 
@@ -12,7 +12,7 @@ Lab 3 reuses the seams already established in Lab 2 rather than introducing new 
 
 | Seam | Prior art in this repo | Used for |
 |---|---|---|
-| Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every API, authorization and regression test — no live database required, so the suite runs anywhere |
+| Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every Lab 2 and Lab 3 API, authorization and regression test — no live database required, so these run anywhere. **One exception, inherited:** `server/tests/lab-01/API-02.categories.test.ts` calls `GET /api/categories` without a stub and therefore needs the seeded database; `BR-28` classifies every Lab 1 test as unchanged, so it is left exactly as Lab 1 wrote it rather than retro-fitted with a stub |
 | React Testing Library rendering a component with `fetch` mocked | `client/src/__tests__/lab-02/MyTickets.test.tsx`, `CreateTicket.test.tsx` | every UI component and style test |
 | Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` (retired by BR-28 — the pattern is carried forward, the file is not) | the three end-to-end specs and responsive assertions |
 
@@ -100,6 +100,61 @@ Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled 
 
 The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence. Retiring the Lab 2 browser spec also invalidates the `npx playwright test e2e/lab-02` command in the README and the evidence paths cited in `docs/lab-02/tests.md`; both must be annotated as superseded by `e2e/lab-03`, so the final `main` does not read as though graded Lab 2 evidence went missing.
 
+### Disposition as executed (auth foundation slice, #37)
+
+The table above was a hypothesis written before implementation; this records what the slice
+actually did, and where the two differ. The disposition ran in the auth-foundation slice rather
+than the requester-regression slice that follows it, because #37's own acceptance criteria
+cannot be satisfied while a header is still able to identify a caller: the change-password gate
+and the `AUTH_REQUIRED` criterion both require that the session cookie is the only identity,
+so the header had to go together with the cookie that replaces it.
+
+| Group | Predicted | Executed |
+|---|---|---|
+| Retired | `requesters.api.test.ts`, `RequesterSelection.test.tsx`, `e2e/lab-02/requester-ticket-flow.spec.ts` | All three, plus the three `e2e/evidence/` capture specs |
+| Adapted, server | 30 header calls, 14 `requesterUser` stubs | 29 header calls, 14 stub references |
+| Adapted, client | Provider swap on two files, prop removal on two, shell rewrite on two | The same six, plus five list assertions in `MyTickets.test.tsx` |
+| Unchanged | Everything else, Lab 1 included | Held: all Lab 1 tests and `ticket-number.unit.test.ts` untouched |
+
+Four corrections to the predicted table:
+
+* **The header count was 29, not 30.** One of the thirty was a test *title* naming the header
+  rather than a call sending it. The title was reworded; only 29 calls existed to change.
+* **Five assertions needed a change the "provider swap" line did not cover.** The Lab 2 list
+  tests asserted `toHaveBeenCalledWith(url, expect.anything())`, where the second argument
+  existed only to hold the identity header. With identity in the cookie the call takes a URL and
+  nothing else, so each of those five assertions had to drop its second argument. This is the
+  third time a round of review has found the disposition table incomplete, and the cause is the
+  same each time: the table tracks which files change and not which assertions do.
+* **`e2e/evidence/` had to retire with `e2e/lab-02/`.** The table named only the Lab 2 flow spec,
+  but all three evidence-capture specs drive the selector and the identity header end to end -- 21
+  references across the four files. A spec that throws on every run is neither passing nor
+  skipped, and the Definition of Done permits no skipped test, so they are deleted under the same
+  rule. The figures they produced are unaffected and stay committed under `artifacts/lab-02/`.
+  This leaves no browser suite until #42 writes `e2e/lab-03/`; `e2e/README.md` records that.
+* **`App.test.tsx` and `AppHeader.test.tsx` were adapted, not retired.** Their subject is the
+  application shell, which survives; only the identity beneath it changed. They now ask the same
+  questions of the session that they asked of the selector. `AppShell.test.tsx` under `lab-03/`
+  carries C-08's role-filtering and guard assertions, which have no Lab 2 equivalent.
+
+Counts after the slice: **78 server tests across 10 files** and **73 client tests across 13
+files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
+the difference being the eight retired tests in `requesters.api.test.ts`.
+
+The Issue #37 review fixes added 22 tests on top of those counts (+11 server / +11 client = 22 total: 78->89 server, 73->84 client): **89 server tests across
+10 files** (the logout-500 replay extension to the existing revocation-failure test, plus eleven
+new tests in `auth.api.test.ts`: the logout config-fault 500 test, the parallel-admission
+throttle test, one multipart-allowlist test, four unknown-API-route tests, two
+`GET /api/health` liveness-exception tests and two `GET /api/categories` BR-29-exception
+tests) and **84 client
+tests across 14 files** (new `AuthContext.test.tsx` with four sign-out contract tests, three
+`AppHeader` sign-out navigation tests proving a failed sign-out stays put, and four
+`ChangePassword` additions — the trailing-space special-character case, the 72-byte ceiling
+case, the gate sign-out-failure message and the trailing-space-confirmation match case). The BR-29 exception they pin
+is the approved carve-out from BR-02's change-password gate: `GET /api/categories` stays public
+for anonymous callers and gated users alike, while the authenticated reference endpoints stay
+gated.
+
 ## 3. Acceptance-Criterion Traceability
 
 | AC | Tests |
@@ -142,7 +197,7 @@ Per screen (Login, Change Password, Staff Queue, Staff Detail, Users) at 1366×7
 ## 5. Test Commands
 
 ```bash
-cd server && npm test                    # full server suite (Prisma stubbed, no DB needed)
+cd server && npm test                    # full server suite (Prisma stubbed, except the Lab 1 API-02 categories test, which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 server tests only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
 cd client && npm test                    # client suite
@@ -153,7 +208,24 @@ E2E and migration-evidence precondition: `docker compose up -d db`, then from `s
 
 ## 6. Final Results
 
-TBD — to be filled after implementation from the final `main` branch. Must include: the full passing output of every suite; the M-01 evidence block (before/after row counts for User, Ticket and Attachment, ticket-number equality result, attachment checksum result); and the Lab 2 disposition counts per group from §2. No skipped or disabled tests are permitted.
+### Auth-foundation slice evidence (#37, `feature/lab3-3-auth-foundation`)
+
+This is the slice record, not the final Lab 3 record: the per-row Final column above stays TBD
+until the release slice. Slice suites, all passing with none skipped or disabled:
+
+* Server: **89 tests across 10 files** — 88 passing with the Prisma client stubbed and no
+  database; the single failure is the inherited Lab 1 `API-02.categories`, which calls
+  `GET /api/categories` without a stub and therefore needs the seeded database (`docker compose
+  up -d db` + `prisma:migrate` + `db:seed`, per the §5 precondition). With the seeded DB it
+  passes, giving 89/89.
+* Client: **84 tests across 14 files, all passing** (`fetch` mocked, no backend needed).
+* Lab 2 disposition as executed (§2): retired suites gone, adapted suites green under the
+  session cookie, unchanged suites (Lab 1 modulo the DB precondition above, plus
+  `ticket-number.unit.test.ts`) untouched.
+
+Deferred to #42, which owns the release evidence: the M-01 real-database preservation block
+(before/after row counts, ticket-number equality, attachment checksums), the E2E specs
+(E-01..E-03, R-01), the screenshots, and the final full-`main` green run.
 
 ## 7. Known Limitations
 

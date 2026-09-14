@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { CreateTicket } from "../../components/CreateTicket";
-import { RequesterProvider } from "../../context/RequesterContext";
+import { AuthHarnessProvider, testUser } from "../../test/authHarness";
 
 const mockRequester = {
   id: 1,
@@ -21,18 +21,16 @@ const mockSystems = [
 ];
 
 function AuthenticatedWrapper({ children }: { children: ReactNode }) {
-  return <RequesterProvider>{children}</RequesterProvider>;
+  return (
+    <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+      {children}
+    </AuthHarnessProvider>
+  );
 }
 
 describe("CreateTicket Component (C-01..C-06, S-01)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    sessionStorage.clear();
-    sessionStorage.setItem(
-      "toktickit_selected_requester",
-      JSON.stringify(mockRequester)
-    );
-
     // Default mock for reference endpoints
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
