@@ -1,5 +1,7 @@
 # Lab 3 — Peer Review Record
 
+Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
+
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
 | Author | Chanon Lhumsa-ard | 67070501059 | [@Snnn3](https://github.com/Snnn3) |
@@ -31,7 +33,7 @@
 - **My comment Round 2 (2026-09-10):** Quoted the review, then replied with fix commit `98249e6` (contract v1.6): `server/.env.example` gained `JWT_SECRET`/`SEED_INITIAL_PASSWORD` placeholders; README gained a Lab 3 status block; preservation evidence became real-database procedure M-01 with API-26 rescoped; PR metadata updated. Deviation raised: Lab 3 run/test commands not added to README (slices unimplemented; #42 carries the README-current DoD item).
 - **My comment (self-initiated audit, 2026-09-10):** Ran a cross-document consistency sweep; found ten contradictions (incl. BR-22 content-type vs body-less exemption, staff-reopen Resolution Summary clearing). Fixed in `b614162` (contract v1.7).
 - **Reviewer review Round 3 (YummieGG, CHANGES_REQUESTED, 2026-09-10):** "Contract approval status and required evidence are not complete (header claims Approved with no recorded approval; `My Reflection` TBD); authenticated reference endpoints missing from the matrix; PR description stale at v1.6; logout contract contradictory (requires cookie yet idempotent without one)."
-- **My comment Round 3 (2026-09-10):** Quoted the review, then replied with fix commit `e105a48` (contract v1.8): status is now Draft pending recorded peer approval (DoD item added); reference endpoints gained a matrix row plus unauthenticated-401 stated for every row; logout pinned to no-cookie-required, always 204 with cleared cookie. Contested one point on the PR thread instead of actioning it: the review called `docs/lab-03/plan.md` a required contract file, but handout §12 lists six required files (all tracked) and the plan is a deliberately untracked local working document.
+- **My comment Round 3 (2026-09-10):** Quoted the review, then replied with fix commit `e105a48` (contract v1.8): status is now Draft pending recorded peer approval (DoD item added); reference endpoints gained a matrix row plus unauthenticated-401 stated for every row; logout pinned to no-cookie-required, always 204 with cleared cookie. Contested one point on the PR thread instead of actioning it: the review called the local execution plan a required contract file, but handout §12 lists six required files (all tracked) and that plan is a deliberately untracked local working document.
 - **Reviewer review Round 4 (YummieGG, APPROVED, 2026-09-10 16:01):** "Re-reviewed the latest revision against the Lab 03 handout and Issue #35. All previous findings have been addressed. The contract is complete and ready for implementation. Approved."
 - **My comment Round 4 (2026-09-10):** No fix needed; approval landed on unchanged head `d09355b`. Merged into `lab3-staging` at 16:04, closing issue #35 and unblocking #36.
 

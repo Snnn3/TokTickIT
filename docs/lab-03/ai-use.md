@@ -1,6 +1,6 @@
 # AI Use Log — Lab 3
 
-Version: 2.1 | Date: 2026-09-13 | Companion to `specification.md`.
+Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
 
 LLMs used:
 - **Muse Spark 1.3** (accessed via opencode CLI) — Sprint 3 grilling, spec contract v1.0, and implementation/review loop
@@ -19,7 +19,7 @@ LLMs used:
 | 3 | `the spec should change form lab2 it must increase` | Produced FR/BR/AC delta plan (15→26 FRs, 1→8 statuses, 9→18 endpoints) |
 | 4 | `you can make the spec md now` | Wrote `docs/lab-03/specification.md` v1.0 with matrix, authz table, migration, DoD |
 | 5 | `create all md must have in this lab` | Wrote `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` |
-| 6 | `understand this project and improve the plan form this pdf @material\Lab_3_sheet.pdf . the plan is already set in @docs/lab-03/plan.md .` | Second grilling pass against v1.0. Surfaced four places where the **handout contradicts itself** (§4.3 vs §4.5 on Administrator authority; the Service Actions tab vs §4.2; mockup password rules vs the length-only policy; "My Queue" vs a shared queue) that v1.0 had silently left unresolved |
+| 6 | `understand this project and improve the plan form this pdf @material\Lab_3_sheet.pdf . the plan is already set locally .` | Second grilling pass against v1.0. Surfaced four places where the **handout contradicts itself** (§4.3 vs §4.5 on Administrator authority; the Service Actions tab vs §4.2; mockup password rules vs the length-only policy; "My Queue" vs a shared queue) that v1.0 had silently left unresolved |
 | 7 | `ask me the choice question` | Redirected open-ended questioning into structured multiple-choice rounds. Produced 17 locked decisions in five rounds, including Administrator-as-superset, `appearsResolvedAt`, requester reopen, and `tokenVersion` for real session invalidation |
 | 8 | `make it to spec in @docs/lab-03\ follow the lab assignment` | Rewrote the contract to v1.1 in the handout's mandated §1–§11 shape rather than a generic template; added FR-27..FR-30, BR-19..BR-28, AC-19..AC-27 |
 | 9 | `review spec again. check all spec is it conflict or not .` | Consistency audit asking whether any two normative documents *disagree*, rather than whether each is correct alone. Found 10 contradictions that three prior correctness reviews had all passed, including two half-applied fixes from earlier rounds → v1.7 |
