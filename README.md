@@ -268,10 +268,10 @@ migration preserved every ticket, ticket number, attachment byte and requester r
 ### Test (Lab 3)
 
 ```bash
-cd server && npm test                    # 86 tests, 10 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
+cd server && npm test                    # 89 tests, 10 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
-cd client && npm test                    # 78 tests, 14 files
+cd client && npm test                    # 84 tests, 14 files
 npm run lint --prefix client             # oxlint
 npm run check                            # repository formatting
 ```
