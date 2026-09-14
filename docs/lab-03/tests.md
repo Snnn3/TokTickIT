@@ -141,6 +141,16 @@ Counts after the slice: **78 server tests across 10 files** and **73 client test
 files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
 the difference being the eight retired tests in `requesters.api.test.ts`.
 
+The Issue #37 review fixes added 13 tests on top of those counts: **86 server tests across
+10 files** (the logout-500 replay extension, the logout config-fault 500 test, one
+multipart-allowlist, four unknown-API-route and two `GET /api/categories` BR-29-exception
+tests in `auth.api.test.ts`) and **78 client
+tests across 14 files** (new `AuthContext.test.tsx` with three sign-out contract tests, plus two
+`AppHeader` navigation tests proving a failed sign-out stays put). The BR-29 exception they pin
+is the approved carve-out from BR-02's change-password gate: `GET /api/categories` stays public
+for anonymous callers and gated users alike, while the authenticated reference endpoints stay
+gated.
+
 ## 3. Acceptance-Criterion Traceability
 
 | AC | Tests |
@@ -194,7 +204,24 @@ E2E and migration-evidence precondition: `docker compose up -d db`, then from `s
 
 ## 6. Final Results
 
-TBD — to be filled after implementation from the final `main` branch. Must include: the full passing output of every suite; the M-01 evidence block (before/after row counts for User, Ticket and Attachment, ticket-number equality result, attachment checksum result); and the Lab 2 disposition counts per group from §2. No skipped or disabled tests are permitted.
+### Auth-foundation slice evidence (#37, `feature/lab3-3-auth-foundation`)
+
+This is the slice record, not the final Lab 3 record: the per-row Final column above stays TBD
+until the release slice. Slice suites, all passing with none skipped or disabled:
+
+* Server: **86 tests across 10 files** — 85 passing with the Prisma client stubbed and no
+  database; the single failure is the inherited Lab 1 `API-02.categories`, which calls
+  `GET /api/categories` without a stub and therefore needs the seeded database (`docker compose
+  up -d db` + `prisma:migrate` + `db:seed`, per the §5 precondition). With the seeded DB it
+  passes, giving 86/86.
+* Client: **78 tests across 14 files, all passing** (`fetch` mocked, no backend needed).
+* Lab 2 disposition as executed (§2): retired suites gone, adapted suites green under the
+  session cookie, unchanged suites (Lab 1 modulo the DB precondition above, plus
+  `ticket-number.unit.test.ts`) untouched.
+
+Deferred to #42, which owns the release evidence: the M-01 real-database preservation block
+(before/after row counts, ticket-number equality, attachment checksums), the E2E specs
+(E-01..E-03, R-01), the screenshots, and the final full-`main` green run.
 
 ## 7. Known Limitations
 

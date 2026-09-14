@@ -243,7 +243,7 @@ describe("C-02 Change Password gate", () => {
   });
 
   it("always offers a sign-out, so the gate is never a trap", () => {
-    const signOut = vi.fn(async () => {});
+    const signOut = vi.fn(async () => ({ ok: true as const }));
     renderGate({ signOut });
 
     fireEvent.click(screen.getByRole("button", { name: /Sign out/i }));

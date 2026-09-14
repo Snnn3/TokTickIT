@@ -268,13 +268,19 @@ migration preserved every ticket, ticket number, attachment byte and requester r
 ### Test (Lab 3)
 
 ```bash
-cd server && npm test                    # 73 tests, 10 files (Prisma stubbed, no DB needed)
+cd server && npm test                    # 86 tests, 10 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
-cd client && npm test                    # 73 tests, 13 files
+cd client && npm test                    # 78 tests, 14 files
 npm run lint --prefix client             # oxlint
 npm run check                            # repository formatting
 ```
+
+Seed precondition (same as the Lab 2 section below): rebuild the dev DB with
+`docker compose up -d db` plus `npm --prefix server run prisma:migrate` and
+`npm --prefix server run db:seed` before API runs. Lab 1 `API-02.categories`
+is the one suite that calls the API without a Prisma stub, so it fails only
+when this seed step is skipped — a documented precondition, not a code defect.
 
 ### REST API (Lab 2 paths, now behind the session cookie)
 

@@ -51,7 +51,13 @@ export function AppHeader() {
   );
 
   const handleSignOut = async () => {
-    await signOut();
+    // Stay put when the server could not revoke the session (AC-06): the
+    // cookie is still live, so navigating to /login would report a signed-out
+    // state the next probe immediately contradicts. The user retries from here.
+    const result = await signOut();
+    if (!result.ok) {
+      return;
+    }
     navigate("/login", { replace: true });
   };
 

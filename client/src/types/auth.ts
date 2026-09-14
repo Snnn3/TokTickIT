@@ -19,7 +19,13 @@ export interface AuthContextType {
   /** True until the initial current-user probe settles, so guards can wait. */
   loading: boolean;
   signIn: (email: string, password: string) => Promise<SignInResult>;
-  signOut: () => Promise<void>;
+  /**
+   * Signs out [FR-18, FR-30, AC-06]. Local state clears ONLY when the server
+   * confirms the revocation (2xx): on a 500 the presented cookie is still
+   * valid for up to eight hours, so clearing would report a live session as
+   * signed out and strand the retry. Callers stay put on `{ok:false}`.
+   */
+  signOut: () => Promise<SignOutResult>;
   /** Applied after a successful password change, which clears the gate. */
   applyUser: (user: AuthUser) => void;
 }
@@ -27,6 +33,9 @@ export interface AuthContextType {
 export type SignInResult =
   | { ok: true; user: AuthUser }
   | { ok: false; message: string };
+
+/** `{ok:false}` keeps the caller signed in so the sign-out can be retried. */
+export type SignOutResult = { ok: true } | { ok: false };
 
 export const ROLE_LABELS: Record<Role, string> = {
   REQUESTER: "Requester",

@@ -486,23 +486,35 @@ describe("API-06 session invalidation (AC-06, AC-28, FR-30)", () => {
     );
   });
 
-  it("answers 500 with the error envelope when the tokenVersion revocation fails (AC-06, FR-30)", async () => {
+  it("answers 500 with the error envelope when the tokenVersion revocation fails, keeps the session live and clears no cookie (AC-06, FR-30)", async () => {
     // A rejected updateMany leaves the presented cookie valid for up to eight
-    // hours. Answering 204 here would report that live session as signed out,
-    // so the failure surfaces loudly instead -- the client clears its local
-    // session on any status, so the 500 strands nobody.
+    // hours. Answering 204 -- or clearing the cookie while answering 500 --
+    // would report that live session as signed out, so the failure surfaces
+    // loudly with no Set-Cookie clear and the client keeps its local session
+    // for a retry.
+    const cookie = sessionCookie({ id: 13 });
     vi.spyOn(prisma.user, "updateMany").mockRejectedValue(
       new Error("database unavailable")
     );
 
     const res = await request(app)
       .post("/api/auth/logout")
-      .set("Cookie", sessionCookie({ id: 13 }));
+      .set("Cookie", cookie);
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({
       error: { code: "UNEXPECTED", message: "Failed to complete the sign-out" },
     });
+    // No clear: the session is still live, so the browser must keep the cookie.
+    expect(sessionSetCookie(res)).toBeUndefined();
+
+    // Replay: tokenVersion never moved, so the very same cookie still yields
+    // 200 on the current-user probe -- the session survived the failed logout.
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 13 })
+    );
+    const replay = await request(app).get("/api/auth/me").set("Cookie", cookie);
+    expect(replay.status).toBe(200);
   });
 
   it("reports an unconfigured signing secret as a server fault, not as an absent session", async () => {
@@ -519,6 +531,26 @@ describe("API-06 session invalidation (AC-06, AC-28, FR-30)", () => {
       expect(res.status).toBe(500);
       expect(res.body.error.code).toBe("UNEXPECTED");
       expect(JSON.stringify(res.body)).not.toContain("JWT_SECRET");
+    } finally {
+      process.env.JWT_SECRET = secret;
+    }
+  });
+
+  it("answers 500 without clearing the cookie when logout cannot verify the session (config fault)", async () => {
+    // Same rule as the revocation failure above, for the verifySession throw
+    // path: the session may still be live, so no Set-Cookie clear.
+    const cookie = sessionCookie({ id: 14 });
+    const secret = process.env.JWT_SECRET;
+    // biome-ignore lint/performance/noDelete: restoring the exact absent state
+    delete process.env.JWT_SECRET;
+
+    try {
+      const res = await request(app)
+        .post("/api/auth/logout")
+        .set("Cookie", cookie);
+      expect(res.status).toBe(500);
+      expect(res.body.error.code).toBe("UNEXPECTED");
+      expect(sessionSetCookie(res)).toBeUndefined();
     } finally {
       process.env.JWT_SECRET = secret;
     }
@@ -679,6 +711,31 @@ describe("BR-22 content-type posture on state-changing requests", () => {
     expect(res.body.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
   });
 
+  it("refuses multipart on non-upload mutations, even though uploads allow it", async () => {
+    // multipart/form-data is accepted ONLY on POST /api/tickets and POST
+    // /api/tickets/:id/attachments (the upload allowlist). Everywhere else a
+    // multipart body is a 415 like any other non-JSON content type.
+    const login = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "multipart/form-data; boundary=----testboundary")
+      .send("------testboundary--");
+
+    expect(login.status).toBe(415);
+    expect(login.body.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 4 })
+    );
+    const change = await request(app)
+      .post("/api/auth/change-password")
+      .set("Cookie", sessionCookie({ id: 4 }))
+      .set("Content-Type", "multipart/form-data; boundary=----testboundary")
+      .send("------testboundary--");
+
+    expect(change.status).toBe(415);
+    expect(change.body.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+  });
+
   it("exempts a request that carries no body at all, so logout stays reachable", async () => {
     // A browser sends no Content-Type for a body-less fetch. Requiring one here
     // would make signing out impossible.
@@ -715,5 +772,81 @@ describe("malformed JSON body (response-shape contract)", () => {
     expect(body).not.toContain("SyntaxError");
     expect(body).not.toContain("/");
     expect(body).not.toContain("\\");
+  });
+});
+
+describe("unknown API routes (response-shape contract)", () => {
+  it("answers 404 with the JSON envelope for an unknown GET under /api", async () => {
+    const res = await request(app).get("/api/does-not-exist");
+
+    expect(res.status).toBe(404);
+    expect(res.headers["content-type"]).toMatch(/application\/json/);
+    expect(res.body).toEqual({
+      error: { code: "NOT_FOUND", message: "API route not found" },
+    });
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain("at ");
+    expect(body).not.toContain("/");
+    expect(body).not.toContain("\\");
+  });
+
+  it("answers 404 with the JSON envelope for an unknown POST under /api", async () => {
+    const res = await request(app)
+      .post("/api/does-not-exist")
+      .send({ anything: "here" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("answers 404 with the JSON envelope for an unknown route under a mounted router", async () => {
+    const res = await request(app).get("/api/auth/does-not-exist");
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("leaves non-API paths and health checks untouched", async () => {
+    const root = await request(app).get("/");
+    expect(root.status).toBe(200);
+
+    const health = await request(app).get("/api/health");
+    expect(health.status).toBe(200);
+  });
+});
+
+describe("GET /api/categories public exception (BR-29 vs BR-02)", () => {
+  const stubbedCategories = [
+    { id: 1, name: "Account and Access" },
+    { id: 2, name: "Hardware" },
+    { id: 3, name: "Software" },
+    { id: 4, name: "Network" },
+  ];
+
+  beforeEach(() => {
+    vi.spyOn(prisma.category, "findMany").mockResolvedValue(
+      stubbedCategories as never
+    );
+  });
+
+  it("stays 200 anonymous (BR-29 Lab 1 compatibility, BR-28 unchanged)", async () => {
+    const res = await request(app).get("/api/categories");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(stubbedCategories);
+  });
+
+  it("stays 200 for a gated user: the approved exception to the change-password gate", async () => {
+    // BR-02 closes every normal endpoint to a mustChangePassword user except
+    // /me, change-password and logout -- but this path was never closed to
+    // begin with (BR-29), so gating it here would retire the Lab 1 test the
+    // disposition keeps. The client reference endpoints stay gated instead.
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 3, mustChangePassword: true })
+    );
+    const res = await request(app)
+      .get("/api/categories")
+      .set("Cookie", sessionCookie({ id: 3, mustChangePassword: true }));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(stubbedCategories);
   });
 });

@@ -142,25 +142,51 @@ authRouter.post("/login", async (req: AuthenticatedRequest, res) => {
 
 // POST /api/auth/logout [FR-18, FR-30, BR-20, AC-06, AC-28]
 //
-// No cookie is required and the answer is always 204. A client whose session
+// No cookie is required and the answer is 204 on every path where the session
+// is known to be dead: no cookie, an invalid cookie, a successful revocation,
+// or a stale-version replay that matched zero rows. A client whose session
 // has already expired or been invalidated must still be able to complete a
 // sign-out and reach a clean state; answering 401 here would strand the user
 // on a screen whose only escape is the action that just failed.
+//
+// The 500 path is the deliberate exception (AC-06, FR-30): a rejected
+// updateMany leaves the presented cookie valid for up to eight hours, so the
+// cookie is NOT cleared and the client must keep its local session so a retry
+// is possible. Clearing here would report a live session as signed out while
+// the replay still yields 200 on GET /api/auth/me.
 authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
   const token = req.cookies?.[SESSION_COOKIE];
-  res.clearCookie(SESSION_COOKIE, clearedSessionCookieOptions());
 
   if (!token) {
+    res.clearCookie(SESSION_COOKIE, clearedSessionCookieOptions());
     res.status(204).end();
     return;
   }
 
   // verifySession swallows every token-level failure itself and answers null,
-  // so only a missing JWT_SECRET throws here -- and that misconfiguration must
-  // surface as a 500 through the terminal error handler, never as a silent 204
-  // that reports a live session as signed out. The cookie is already cleared
-  // above, so the client still lands signed-out either way.
-  const session = verifySession(token); // cannot throw except on config
+  // so only a missing JWT_SECRET throws here. That misconfiguration must
+  // surface as a 500 WITHOUT clearing the cookie: the session may still be
+  // live, and reporting it as signed out would strand the retry the same way
+  // a failed revocation does.
+  let session: ReturnType<typeof verifySession>;
+  try {
+    session = verifySession(token); // cannot throw except on config
+  } catch {
+    res.status(500).json({
+      error: {
+        code: "UNEXPECTED",
+        message: "Failed to complete the sign-out",
+      },
+    });
+    return;
+  }
+
+  if (!session) {
+    res.clearCookie(SESSION_COOKIE, clearedSessionCookieOptions());
+    res.status(204).end();
+    return;
+  }
+
   if (session) {
     // Bumping tokenVersion is what kills the cookie that was just sent, and
     // every other outstanding cookie for this user, rather than merely
@@ -175,9 +201,9 @@ authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
     //
     // A rejected updateMany is the opposite case: tokenVersion never moved, so
     // the presented cookie stays valid for up to eight hours. Answering 204
-    // here would report that live session as signed out (AC-06, FR-30), so it
-    // fails loudly instead -- the client clears its local session on any
-    // status, so nobody is stranded by the 500.
+    // or clearing the cookie here would report that live session as signed
+    // out (AC-06, FR-30), so it fails loudly instead and the client keeps its
+    // local session for a retry.
     try {
       await prisma.user.updateMany({
         where: { id: session.sub, tokenVersion: session.tv },
@@ -194,6 +220,7 @@ authRouter.post("/logout", async (req: AuthenticatedRequest, res) => {
     }
   }
 
+  res.clearCookie(SESSION_COOKIE, clearedSessionCookieOptions());
   res.status(204).end();
 });
 

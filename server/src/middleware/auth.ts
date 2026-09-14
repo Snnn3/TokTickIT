@@ -46,6 +46,22 @@ function refuseUnauthenticated(res: Response): void {
 }
 
 /**
+ * One 500 for every path where the session cannot even be verified: a missing
+ * signing secret or a database failure while loading the user. Both mean this
+ * server cannot tell who the caller is, so answering 401 would report that as
+ * "nobody is signed in" -- the hardest possible reading of the fault from the
+ * outside, and the reason this case is separated at all.
+ */
+function failedToVerifySession(res: Response): void {
+  res.status(500).json({
+    error: {
+      code: "UNEXPECTED",
+      message: "Failed to verify the session",
+    },
+  });
+}
+
+/**
  * Verifies the session and loads the user, rejecting a missing, inactive or
  * stale-tokenVersion account. This is the step that makes logout, password
  * change and deactivation real rather than cosmetic (BR-20): a cookie that was
@@ -64,16 +80,8 @@ export async function requireSession(
     claims = verifySession(req.cookies?.[SESSION_COOKIE]);
   } catch {
     // Only a configuration fault reaches here: verifySession swallows every
-    // token-level failure itself and answers null. Reporting that as 401 would
-    // tell an operator that nobody is signed in, when the truth is that this
-    // server cannot verify anyone -- the hardest possible reading to diagnose
-    // from the outside, and the reason this case is separated at all.
-    res.status(500).json({
-      error: {
-        code: "UNEXPECTED",
-        message: "Failed to verify the session",
-      },
-    });
+    // token-level failure itself and answers null (see failedToVerifySession).
+    failedToVerifySession(res);
     return;
   }
 
@@ -105,12 +113,7 @@ export async function requireSession(
     req.authUser = authUser;
     next();
   } catch {
-    res.status(500).json({
-      error: {
-        code: "UNEXPECTED",
-        message: "Failed to verify the session",
-      },
-    });
+    failedToVerifySession(res);
   }
 }
 
@@ -172,7 +175,25 @@ export function requireRole(...allowed: Role[]) {
  * a cross-origin form post to smuggle. That exemption is not a convenience --
  * a browser sends no Content-Type for a body-less fetch, so without it logout
  * would answer 415 and be unreachable.
+ *
+ * `multipart/form-data` is accepted ONLY on the two upload routes (Issue #37
+ * exception): POST /api/tickets (create with attachments) and POST
+ * /api/tickets/:id/attachments (single file). Every other mutation carrying
+ * multipart answers 415, so an upload content type cannot smuggle a body past
+ * the JSON-only rule elsewhere. This middleware runs before the routers, so
+ * the path is matched on req.path (the full path at app level).
  */
+const MULTIPART_UPLOAD_ROUTES: { method: string; pattern: RegExp }[] = [
+  { method: "POST", pattern: /^\/api\/tickets\/?$/ },
+  { method: "POST", pattern: /^\/api\/tickets\/\d+\/attachments\/?$/ },
+];
+
+export function isMultipartUploadRoute(method: string, path: string): boolean {
+  return MULTIPART_UPLOAD_ROUTES.some(
+    (route) => route.method === method && route.pattern.test(path)
+  );
+}
+
 export function requireJsonBody(
   req: Request,
   res: Response,
@@ -194,18 +215,22 @@ export function requireJsonBody(
   }
 
   const contentType = (req.headers["content-type"] ?? "").toLowerCase();
-  const accepted =
-    contentType.includes("application/json") ||
-    contentType.includes("multipart/form-data");
-  if (!accepted) {
-    res.status(415).json({
-      error: {
-        code: "UNSUPPORTED_MEDIA_TYPE",
-        message:
-          "A request with a body must be sent as application/json, or multipart/form-data where the endpoint accepts an upload",
-      },
-    });
+  if (contentType.includes("application/json")) {
+    next();
     return;
   }
-  next();
+  if (
+    contentType.includes("multipart/form-data") &&
+    isMultipartUploadRoute(method, req.path)
+  ) {
+    next();
+    return;
+  }
+  res.status(415).json({
+    error: {
+      code: "UNSUPPORTED_MEDIA_TYPE",
+      message:
+        "A request with a body must be sent as application/json, or multipart/form-data where the endpoint accepts an upload",
+    },
+  });
 }

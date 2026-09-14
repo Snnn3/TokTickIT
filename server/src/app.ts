@@ -30,6 +30,10 @@ app.get("/api/health", (_req, res) => {
 // Lab 1 compatibility endpoint. Unauthenticated by carry-over (BR-29): the Lab 1 suite
 // asserts an anonymous 200 here and BR-28 classifies every Lab 1 test as
 // unchanged, so protecting this path would retire a test the disposition keeps.
+// This is the approved exception to BR-02's change-password gate (Issue #37):
+// a gated user (mustChangePassword=true) also receives 200 here, because the
+// gate closes every endpoint EXCEPT current-user, change-password, logout --
+// and this public compatibility path was never closed to begin with.
 // The authenticated reference endpoints below are what the Lab 3 client uses.
 app.get("/api/categories", async (_req, res) => {
   try {
@@ -93,6 +97,18 @@ app.get("/api/reference/systems", ...requireAuth, async (_req, res) => {
 // value the client supplied [FR-20, BR-03].
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/attachments", attachmentsRouter);
+
+// Unknown API routes answer JSON, never the framework HTML default. Placed
+// after every /api/* router but before the terminal error handler, so it
+// covers all methods and paths under /api that matched nothing above while
+// leaving `/`, /api/health and non-/api paths untouched. The envelope keeps
+// the response-shape contract (envelope on every non-2xx) with no stack or
+// path leak.
+app.use("/api", (_req, res) => {
+  res.status(404).json({
+    error: { code: "NOT_FOUND", message: "API route not found" },
+  });
+});
 
 // Terminal error handler, after the routers. Without it the framework default
 // answers a malformed JSON body with an HTML stack trace carrying absolute

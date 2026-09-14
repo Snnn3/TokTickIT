@@ -54,7 +54,7 @@ export function AuthHarnessProvider({
     user: harness.user === undefined ? testUser() : harness.user,
     loading: harness.loading ?? false,
     signIn: harness.signIn ?? vi.fn(),
-    signOut: harness.signOut ?? vi.fn(async () => {}),
+    signOut: harness.signOut ?? (async () => ({ ok: true as const })),
     applyUser: harness.applyUser ?? vi.fn(),
   };
 

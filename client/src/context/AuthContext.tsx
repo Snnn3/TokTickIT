@@ -94,13 +94,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // No body, and therefore no content type: the server exempts body-less
       // requests from the JSON check precisely so this call is possible.
-      await fetch("/api/auth/logout", { method: "POST" });
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      // Only a confirmed revocation clears local state (AC-06, FR-30). The
+      // server answers 204 on every path where the session is known to be
+      // dead -- including an expired session -- and 500 WITHOUT clearing its
+      // cookie when the tokenVersion bump failed. Clearing here on a 500
+      // would report that still-live session as signed out, so the caller
+      // stays signed in and retries instead.
+      if (!res.ok) {
+        return { ok: false as const };
+      }
     } catch {
-      // Signing out must never leave the user stuck on an authenticated screen.
-      // The server call is what invalidates the token; clearing local state is
-      // what gets them back to the login form, and that happens either way.
+      // Unreachable server: the session may still be live, so staying on the
+      // authenticated screen (with a retry available) beats stranding the user
+      // on the login form while their cookie still works.
+      return { ok: false as const };
     }
     setUser(null);
+    return { ok: true as const };
   }, []);
 
   const applyUser = useCallback((next: AuthUser) => {
