@@ -141,7 +141,7 @@ Counts after the slice: **78 server tests across 10 files** and **73 client test
 files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
 the difference being the eight retired tests in `requesters.api.test.ts`.
 
-The Issue #37 review fixes added 13 tests on top of those counts: **86 server tests across
+The Issue #37 review fixes added 13 tests on top of those counts (+8 server / +5 client = 13 total: 78->86 server, 73->78 client): **86 server tests across
 10 files** (the logout-500 replay extension, the logout config-fault 500 test, one
 multipart-allowlist, four unknown-API-route and two `GET /api/categories` BR-29-exception
 tests in `auth.api.test.ts`) and **78 client

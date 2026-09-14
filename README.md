@@ -252,7 +252,7 @@ Each role lands on its own screen after signing in: a Requester on `/tickets`, I
 | Endpoint | Description |
 | -------- | ----------- |
 | `POST /api/auth/login` | `{email, password}` returns `200` with the user plus an http-only session cookie. `401 INVALID_CREDENTIALS` for an unknown email, a wrong password **or** an inactive account, worded identically in all three cases. `429 TOO_MANY_ATTEMPTS` after 5 failures for one address inside 15 minutes, worded the same again |
-| `POST /api/auth/logout` | Always `204` with a cleared cookie, with or without a session. Bumps the token version, so the previous cookie is refused if replayed |
+| `POST /api/auth/logout` | `204` + cleared cookie when the session is known dead (no/invalid/stale session or successful revocation); `500 UNEXPECTED` with no clear — client retains its session for a retry — when the token-version revocation or session verify fails (AC-06/FR-30/BR-20), so a live session is never reported as signed out. Bumps the token version, so the previous cookie is refused if replayed |
 | `GET /api/auth/me` | `200` with the current user; `401 AUTH_REQUIRED` without a valid session |
 | `POST /api/auth/change-password` | `{currentPassword?, newPassword, confirmPassword}` returns `200`. The current password is required except on a first login. A wrong one answers `403 CURRENT_PASSWORD_INVALID`, not `401`. Success clears the forced-change flag, bumps the token version and re-issues the cookie, so other devices are signed out and this one is not |
 
