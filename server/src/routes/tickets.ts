@@ -600,6 +600,12 @@ ticketsRouter.post(
 
 /**
  * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
+ *
+ * The detail include carries the requester's public discussion with it
+ * [FR-21]: comments ascending with their authors, so the detail screen renders
+ * one round trip. Internal notes are never selected here -- not filtered out,
+ * never fetched -- so they cannot leak through a forgotten predicate [BR-04,
+ * D20].
  */
 type TicketDetailOptions = {
   include: {
@@ -615,6 +621,12 @@ type TicketDetailOptions = {
         uploadedAt: true;
         removedAt: true;
         removedReason: true;
+      };
+    };
+    publicComments: {
+      orderBy: { createdAt: "asc" };
+      include: {
+        author: { select: { id: true; name: true; role: true } };
       };
     };
   };
@@ -681,6 +693,55 @@ async function getOwnedTicket(
   return { status: 200 as const, error: null, ticket: result.resource };
 }
 
+/**
+ * One serializer for a public comment, used by the detail embed and by the
+ * comment endpoints alike, so the three can never drift apart [FR-25, BR-14].
+ */
+function serializePublicComment(comment: {
+  id: number;
+  body: string;
+  authorId?: number;
+  author?: { id: number; name: string; role?: string } | null;
+  createdAt: Date | string;
+}) {
+  return {
+    id: comment.id,
+    body: comment.body,
+    author: comment.author
+      ? {
+          id: comment.author.id,
+          name: comment.author.name,
+          role: comment.author.role,
+        }
+      : { id: comment.authorId ?? null, name: "Unknown" },
+    createdAt: comment.createdAt,
+  };
+}
+
+/**
+ * Comment/note body rule [BR-14]: trimmed 1..2000 chars, whitespace-only
+ * rejected. The same predicate guards both collections; notes reuse it from
+ * the staff router in #40.
+ */
+export function validateCommentBody(raw: unknown): {
+  valid: boolean;
+  body: string;
+  issue?: string;
+} {
+  const body = typeof raw === "string" ? raw.trim() : "";
+  if (body.length < 1) {
+    return { valid: false, body, issue: "Comment body is required" };
+  }
+  if (body.length > 2000) {
+    return {
+      valid: false,
+      body,
+      issue: "Comment body must not exceed 2000 characters",
+    };
+  }
+  return { valid: true, body };
+}
+
 // GET /api/tickets/:id [FR-09, FR-13, BR-06, AC-03]
 ticketsRouter.get(
   "/:id",
@@ -715,6 +776,12 @@ ticketsRouter.get(
               removedReason: true,
             },
           },
+          publicComments: {
+            orderBy: { createdAt: "asc" },
+            include: {
+              author: { select: { id: true, name: true, role: true } },
+            },
+          },
         },
       });
 
@@ -742,6 +809,14 @@ ticketsRouter.get(
           },
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
+          // The requester's public discussion plus the resolution state
+          // [FR-21, FR-28, D3]. Internal notes are never selected above, so
+          // there is nothing here to omit -- the key simply does not exist.
+          appearsResolvedAt: ticket.appearsResolvedAt ?? null,
+          resolutionSummary: ticket.resolutionSummary ?? null,
+          publicComments: (ticket.publicComments ?? []).map(
+            serializePublicComment
+          ),
           attachments: (ticket.attachments || []).map((a) =>
             serializeAttachment(a)
           ),
@@ -844,6 +919,311 @@ ticketsRouter.post(
         error: {
           code: "UNEXPECTED",
           message: "Failed to upload attachment",
+        },
+      });
+    }
+  }
+);
+
+/**
+ * Comment access rule [FR-25, BR-04]: the ticket's own requester reaches
+ * public comments whatever their role (Public Comments are exempt from the
+ * BR-25 self-service ban -- a staff member who filed a ticket still discusses
+ * it as its requester); IT Staff and Administrators reach every ticket's.
+ * A REQUESTER-role caller on someone else's ticket is refused without leaking
+ * anything beyond the 403/404 discipline.
+ */
+async function getCommentableTicket(
+  ticketId: number,
+  user: { id: number; role: string }
+): Promise<
+  | { status: 200; ticket: { id: number; requesterId: number } }
+  | {
+      status: 404 | 403;
+      ticket: null;
+      error: { code: string; message: string };
+    }
+> {
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: ticketId },
+    select: { id: true, requesterId: true },
+  });
+
+  if (!ticket) {
+    return {
+      status: 404,
+      ticket: null,
+      error: { code: "NOT_FOUND", message: "Ticket not found" },
+    };
+  }
+
+  if (ticket.requesterId !== user.id && user.role === "REQUESTER") {
+    return {
+      status: 403,
+      ticket: null,
+      error: { code: "FORBIDDEN", message: "Access denied" },
+    };
+  }
+
+  return { status: 200, ticket };
+}
+
+// GET /api/tickets/:id/comments (public) [FR-25, BR-04, BR-14]
+ticketsRouter.get(
+  "/:id/comments",
+  ...requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.authUser!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    try {
+      const allowed = await getCommentableTicket(ticketId, user);
+      if (allowed.status !== 200) {
+        return res.status(allowed.status).json({ error: allowed.error });
+      }
+
+      const comments = await prisma.publicComment.findMany({
+        where: { ticketId },
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: { select: { id: true, name: true, role: true } },
+        },
+      });
+
+      return res.status(200).json({
+        comments: comments.map(serializePublicComment),
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to retrieve comments",
+        },
+      });
+    }
+  }
+);
+
+// POST /api/tickets/:id/comments (public) [FR-25, BR-14]
+ticketsRouter.post(
+  "/:id/comments",
+  ...requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.authUser!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    const validation = validateCommentBody(req.body?.body);
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message: validation.issue,
+          details: [{ field: "body", issue: validation.issue }],
+        },
+      });
+    }
+
+    try {
+      const allowed = await getCommentableTicket(ticketId, user);
+      if (allowed.status !== 200) {
+        return res.status(allowed.status).json({ error: allowed.error });
+      }
+
+      // Author and timestamp are backend-set; anything the client sent for
+      // them is ignored outright, never merged [FR-25].
+      const created = await prisma.publicComment.create({
+        data: {
+          ticketId,
+          authorId: user.id,
+          body: validation.body,
+        },
+      });
+
+      return res.status(201).json({
+        id: created.id,
+        body: created.body,
+        author: { id: user.id, name: user.name, role: user.role },
+        createdAt: created.createdAt,
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to create comment",
+        },
+      });
+    }
+  }
+);
+
+// POST /api/tickets/:id/appears-resolved [FR-21, BR-05, D3]
+ticketsRouter.post(
+  "/:id/appears-resolved",
+  ...requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.authUser!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    try {
+      // One lookup serves both gates: missing -> 404, foreign owner -> 403,
+      // which is the same 403/404 discipline getOwnedResource applies to the
+      // older routes, without a second round trip for the state below.
+      const current = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: {
+          id: true,
+          requesterId: true,
+          status: true,
+          appearsResolvedAt: true,
+        },
+      });
+
+      if (!current) {
+        return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Ticket not found" },
+        });
+      }
+
+      if (current.requesterId !== user.id) {
+        return res.status(403).json({
+          error: { code: "FORBIDDEN", message: "Access denied" },
+        });
+      }
+
+      if (current.status === "CLOSED" || current.status === "CANCELLED") {
+        return res.status(422).json({
+          error: {
+            code: "INVALID_TRANSITION",
+            message:
+              "A Closed or Cancelled ticket cannot be marked as appears resolved",
+          },
+        });
+      }
+
+      if (current.appearsResolvedAt !== null) {
+        return res.status(409).json({
+          error: {
+            code: "ALREADY_SIGNALLED",
+            message: "This ticket is already marked as appears resolved",
+          },
+        });
+      }
+
+      // The write touches the timestamp alone: the signal never changes
+      // status, whatever the ticket's current state [BR-05, D3].
+      const updated = await prisma.ticket.update({
+        where: { id: ticketId },
+        data: { appearsResolvedAt: new Date() },
+      });
+
+      return res.status(200).json({
+        appearsResolvedAt: updated.appearsResolvedAt,
+      });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to mark the ticket as appears resolved",
+        },
+      });
+    }
+  }
+);
+
+// POST /api/tickets/:id/reopen [FR-21, BR-13, D4]
+ticketsRouter.post(
+  "/:id/reopen",
+  ...requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const user = req.authUser!;
+    const ticketId = parsePositiveIntParam(req.params.id);
+
+    if (!ticketId) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_ID",
+          message: "Ticket ID must be a positive integer",
+        },
+      });
+    }
+
+    try {
+      // One lookup serves both gates, as above: missing -> 404, foreign
+      // owner -> 403, before the state refusal below.
+      const current = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+        select: { id: true, requesterId: true, status: true },
+      });
+
+      if (!current) {
+        return res.status(404).json({
+          error: { code: "NOT_FOUND", message: "Ticket not found" },
+        });
+      }
+
+      if (current.requesterId !== user.id) {
+        return res.status(403).json({
+          error: { code: "FORBIDDEN", message: "Access denied" },
+        });
+      }
+
+      // Only Resolved reopens -- notably not Closed, which is terminal
+      // [BR-13, D4]. The requester check above already ran, so a 403 here
+      // would be wrong: this is a state refusal, not an identity one.
+      if (current.status !== "RESOLVED") {
+        return res.status(422).json({
+          error: {
+            code: "INVALID_TRANSITION",
+            message: "Only a Resolved ticket can be reopened",
+          },
+        });
+      }
+
+      // Reopening clears the signal and the summary alike, so the next
+      // resolution cycle cannot reuse the explanation the requester has just
+      // rejected by reopening [BR-26].
+      const updated = await prisma.ticket.update({
+        where: { id: ticketId },
+        data: {
+          status: "REOPENED",
+          appearsResolvedAt: null,
+          resolutionSummary: null,
+        },
+      });
+
+      return res.status(200).json({ status: updated.status });
+    } catch {
+      return res.status(500).json({
+        error: {
+          code: "UNEXPECTED",
+          message: "Failed to reopen the ticket",
         },
       });
     }
