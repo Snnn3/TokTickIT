@@ -1,6 +1,6 @@
 # AI Use Log — Lab 3
 
-Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
+Version: 2.4 | Date: 2026-09-15 | Companion to `specification.md`.
 
 LLMs used:
 - **Muse Spark 1.3** (accessed via opencode CLI) — Sprint 3 grilling, spec contract v1.0, and implementation/review loop
@@ -52,6 +52,18 @@ The distinct value of this prompt was the *question asked*. Three earlier review
 ### Prompt 10 — Peer-review loop (2026-09-10)
 
 Peer review by @YummieGG returned `CHANGES_REQUESTED` twice. Both rounds found defects that all prior agent reviews had missed, and each round found a defect introduced by the previous round's fix. Full detail in `reviewer.md`.
+
+### Prompt 11 — lab3-3 closeout (2026-09-15)
+
+Verbatim prompts: `use this plan c:\KMUTT\Y3T1\CPE334\ToktikIT\docs\lab-03\plan.md now it in lab3-3` and `dont forget to move kanban and save the prompt in lab-03 ai-use.md` (+ `and update the lab-03 reviewer.md`).
+
+The agent found PR #46 already MERGED (approved by @YummieGG at `2f17550`, 2026-09-14 11:31, merged 11:38) while issue #37 was still OPEN and `reviewer.md` still read OPEN/fixes-pending. It synced `lab3-staging`, re-verified the slice evidence (server 89: 88 stubbed-pass + 1 DB-gated `API-02.categories`; client 84/84), recorded Rounds 5–7 plus the merge in `reviewer.md`, bumped the doc set to v2.3, moved Kanban #37 → Done and #38 → Started, and closed #37 with the evidence. The closeout rode the new `feature/lab3-4-requester-regression` branch so no commit landed on `lab3-staging` directly. This section is the prompt-as-it-happened record the plan requires; the 10-row grading table above is left unchanged.
+
+### Prompt 12 — lab3-4 reviewer + kanban (2026-09-15)
+
+Verbatim prompts: `PR46 is already merge. dont forget to move kanban and save the prompt` and `now it in lab3-4 update reviewer.md lab-03 and the partner`.
+
+The agent verified PR #46 already MERGED (2026-09-14 11:38, approved by @YummieGG at `2f17550`) and issue #37 already CLOSED, so no merge work remained. It moved Kanban #37 → Done and #38 → PR Review (PR #47 open, three `CHANGES_REQUESTED` rounds from @YummieGG with fixes pushed, awaiting re-review), recorded this section as the prompt-as-it-happened log, and updated `reviewer.md` to v2.4 with the PR #47 rounds plus the partner's PR #48 (staff queue & workflow) and #49 (admin user management), both reviewed APPROVED by me and merged. The 10-row grading table above is left unchanged.
 
 ### Attribution decision (2026-09-10)
 

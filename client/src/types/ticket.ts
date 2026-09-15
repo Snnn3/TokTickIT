@@ -86,4 +86,29 @@ export interface TicketDetail {
   createdAt: string;
   updatedAt: string;
   attachments: AttachmentMetadata[];
+  /**
+   * Lab 3 requester additions [FR-21, FR-28, D3]. Optional so the Lab 2
+   * suites -- which build this shape without them -- keep compiling and
+   * passing untouched; the detail screen treats absence as empty.
+   */
+  appearsResolvedAt?: string | null;
+  resolutionSummary?: string | null;
+  publicComments?: PublicComment[];
+}
+
+/**
+ * A public discussion entry [FR-25, BR-14]. Author and timestamp are always
+ * backend-set; the client never sends them and never renders raw HTML --
+ * React escapes the body, whitespace is preserved with pre-wrap, and long
+ * unbroken runs wrap with overflow-wrap: anywhere.
+ */
+export interface PublicComment {
+  id: number;
+  body: string;
+  author: {
+    id: number;
+    name: string;
+    role?: string;
+  };
+  createdAt: string;
 }
