@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
+Version: 2.3 | Date: 2026-09-15 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -14,7 +14,7 @@ Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/43 | feature/lab3-1-contract | Closed (unmerged) |
 | https://github.com/Snnn3/TokTickIT/pull/44 | feature/lab3-1-contract | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/45 | feature/lab3-2-refactor | Commented → Approved |
-| https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Open — Commented, fixes pending |
+| https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Commented → Approved |
 | TBD | feature/lab3-4-requester-regression | TBD |
 | TBD | feature/lab3-5-staff-queue | TBD |
 | TBD | feature/lab3-6-staff-operations | TBD |
@@ -43,9 +43,15 @@ Version: 2.2 | Date: 2026-09-14 | Companion to `specification.md`.
 - **Reviewer review Round 2 (YummieGG, APPROVED, 2026-09-12 12:07):** "All checks and test suites are passing green, and the mechanical formatting pass strictly maintains zero behavior change on product code. Documentation and tooling configurations conform to Issue #36 acceptance criteria. Ready to merge into `lab3-staging`. Approved!"
 - **My comment Round 2 (2026-09-12):** No fix needed; approved at head `757038c`. Merged into `lab3-staging`, closing issue #36 and unblocking #37.
 
-**PR #46 — feature/lab3-3-auth-foundation** (OPEN, fixes pending)
+**PR #46 — feature/lab3-3-auth-foundation** (MERGED)
 - **Reviewer review Round 4 (reviewer-tester + external cross-check, CHANGES_REQUESTED, 2026-09-14):** Three blocking rows at head `e82d2ea`: (B-03) stale test counts — `docs/lab-03/tests.md:140` and two PR-body figures say 73 server tests, actual is 75 across 10 files; (B-04) logout answers 204 when `tokenVersion` revocation failed, against AC-06/FR-30, with a failing-loudly fix that costs nothing since the client signs out unconditionally; (B-05) malformed JSON returns an HTML stack trace with absolute paths (no Express error handler in `server/src`), against the response-shape contract. Non-blocking: N-11 migration-script attachment check (closed empirically, AC-17 holds), N-12 global multipart guard (fails safe), N-13 `/api/categories` needs a numbered spec exception beside BR-28. Full detail in `.reviews/review-feature-lab3-3-auth-foundation.md` (local-only).
-- **My comment:** Fixes pending — coder task queued for B-03/B-04/B-05 plus N-08/N-11/N-13 doc fixes.
+- **My comment Round 4 (2026-09-14):** Fixed in `add8d4d`/`9a1d95b`: atomic throttle admission, gate exemptions, password-trim mirror, logout UX, oxlint harness exports; logout-500, BR-29 gate exception and test counts aligned between code, `tests.md` and README.
+- **Reviewer review Round 5 (reviewer-tester gate, CHANGES_REQUESTED, 2026-09-14):** Stale test counts again (B-01), dead `isThrottled`/`recordFailure` throttle API (N-01), change-password confirmation not comparing trimmed values like the server (N-02).
+- **My comment Round 5 (2026-09-14):** Fixed in `3e8c221`: README/`tests.md` counts synced, dead throttle API removed, trimmed-confirm parity plus new trim/ceiling tests, plan untracked with references dropped.
+- **Reviewer review Round 6 (merge gate, 2026-09-14):** Two rows at head `3e8c221`: (B-01) README counts still behind the measured 89 server / 84 client; (B-02) PR head not yet pushed, gate reviewed a stale commit.
+- **My comment Round 6 (2026-09-14):** Fixed in `2f17550` (docs-only README count sync) and pushed, so PR head == local HEAD; gate re-verified green at `2f17550` (server 89: 88 stubbed-pass + 1 DB-gated `API-02.categories`; client 84/84).
+- **Reviewer review Round 7 (YummieGG, APPROVED, 2026-09-14 11:31):** "All Previous Findings Resolved ... Zero blocking findings remain. Excellent engineering and clean documentation! Verdict: APPROVED" at head `2f17550`.
+- **My comment Round 7 (2026-09-14):** No fix needed; approved at head `2f17550`. Merged into `lab3-staging` at 11:38. Issue #37 used `refs` rather than `closes`, so it was closed manually with the green evidence, unblocking #38, #39 and #41.
 ---
 
 ## Pull Requests I reviewed for my partner

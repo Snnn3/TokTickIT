@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.2 | Date: 2026-09-14
+Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.3 | Date: 2026-09-15
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder). **All tracked documents in `docs/lab-03/` carry the same version number and bump together**, so any file whose header differs from the others is out of date by definition — three review rounds each caught a stale version stamp somewhere in the set, and a single shared number makes that failure visible at a glance instead of requiring a cross-check.
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
@@ -29,6 +29,8 @@ Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24
 **Changes in v2.1** (recording what the auth-foundation slice actually did, not new contract content): `tests.md` gains a section recording the BR-28 disposition **as executed**, against what the table predicted. Four corrections are recorded there, of which two matter. The disposition ran in this slice rather than the one after it, because the change-password gate and the `AUTH_REQUIRED` criterion in #37 cannot hold while a header is still able to identify a caller, so the header had to be removed together with the cookie that replaces it. And the three `e2e/evidence/` capture specs had to retire alongside `e2e/lab-02/requester-ticket-flow.spec.ts`, because all four drive the selector end to end; the Lab 2 figures they produced are unaffected and stay committed under `artifacts/lab-02/`. No FR, BR, AC or decision changed.
 
 **Changes in v2.2** (addressing review Round 5 on PR #46, not new contract content): `tests.md` test counts corrected to the measured totals in both places with the §2 delta arithmetic fixed; the dead `isThrottled`/`recordFailure` throttle API removed; the change-password confirmation compares trimmed values like the server; the Lab 2 disposition line moved from the #38 row to the #37 row. No FR, BR, AC or decision changed.
+
+**Changes in v2.3** (recording the outcome of the peer review on PR #46, not new contract content): @YummieGG approved PR #46 (the Lab3-03 auth-foundation slice) at head `2f17550` on 2026-09-14 11:31, and the PR merged into `lab3-staging` at 11:38. Issue #37 was closed manually after the merge (the PR used `refs`, not `closes`), unblocking #38, #39 and #41. No FR, BR, AC or decision changed; the peer-review record in `reviewer.md` did, and the whole set bumps with it because it shares one version number.
 
 ## 1. Sprint Goal
 
