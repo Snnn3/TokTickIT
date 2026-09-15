@@ -264,3 +264,76 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
     expect(calls.some((c) => c.url.endsWith("/comments"))).toBe(false);
   });
 });
+
+describe("Requester confirm dialogs keyboard (ui-spec §10)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("traps Tab inside the appears-resolved dialog and closes on Escape", async () => {
+    mockApi(BASE_TICKET);
+    render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("appears-resolved-btn"));
+    expect(screen.getByTestId("appears-resolved-confirm")).toBeInTheDocument();
+
+    const confirmBtn = screen.getByTestId("appears-resolved-confirm-btn");
+    const cancelBtn = screen.getByTestId("appears-resolved-cancel-btn");
+
+    // Initial focus lands on the confirm action, same as the removal modal.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(confirmBtn);
+    });
+
+    // Tab from the last control wraps to the first; Shift+Tab reverses it.
+    cancelBtn.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(confirmBtn);
+
+    confirmBtn.focus();
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(cancelBtn);
+
+    // Escape closes the dialog without calling the API.
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("appears-resolved-confirm")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("traps Tab inside the reopen dialog and closes on Escape", async () => {
+    mockApi({ ...BASE_TICKET, status: "RESOLVED" });
+    render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("reopen-btn"));
+    expect(screen.getByTestId("reopen-confirm")).toBeInTheDocument();
+
+    const confirmBtn = screen.getByTestId("reopen-confirm-btn");
+    const cancelBtn = screen.getByTestId("reopen-cancel-btn");
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(confirmBtn);
+    });
+
+    cancelBtn.focus();
+    fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(confirmBtn);
+
+    confirmBtn.focus();
+    fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(cancelBtn);
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByTestId("reopen-confirm")).not.toBeInTheDocument();
+    });
+  });
+});

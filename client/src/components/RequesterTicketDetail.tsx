@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type {
   TicketDetail,
   AttachmentMetadata,
@@ -44,6 +44,91 @@ export function RequesterTicketDetail({
   const [reopenBusy, setReopenBusy] = useState(false);
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopenSuccess, setReopenSuccess] = useState(false);
+
+  // Confirm-dialog refs for the focus-trap + Escape pattern reused from the
+  // attachment-removal modal [ui-spec §10]. Duplicated per dialog rather than
+  // extracted: sharing the modal hook would touch AttachmentSection and risk
+  // regression for a two-dialog use.
+  const signalDialogRef = useRef<HTMLDivElement>(null);
+  const signalConfirmBtnRef = useRef<HTMLButtonElement>(null);
+  const reopenDialogRef = useRef<HTMLDivElement>(null);
+  const reopenConfirmBtnRef = useRef<HTMLButtonElement>(null);
+
+  const closeSignalDialog = useCallback(() => {
+    if (!signalBusy) setSignalConfirm(false);
+  }, [signalBusy]);
+
+  const closeReopenDialog = useCallback(() => {
+    if (!reopenBusy) setReopenConfirm(false);
+  }, [reopenBusy]);
+
+  useEffect(() => {
+    if (!signalConfirm) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (!signalBusy) setSignalConfirm(false);
+      } else if (e.key === "Tab" && signalDialogRef.current) {
+        const focusableElements =
+          signalDialogRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    setTimeout(() => signalConfirmBtnRef.current?.focus(), 50);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [signalConfirm, signalBusy]);
+
+  useEffect(() => {
+    if (!reopenConfirm) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (!reopenBusy) setReopenConfirm(false);
+      } else if (e.key === "Tab" && reopenDialogRef.current) {
+        const focusableElements =
+          reopenDialogRef.current.querySelectorAll<HTMLElement>(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    setTimeout(() => reopenConfirmBtnRef.current?.focus(), 50);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [reopenConfirm, reopenBusy]);
 
   const { categories, systems } = useReferenceData();
 
@@ -535,6 +620,7 @@ export function RequesterTicketDetail({
                   data-testid="appears-resolved-confirm"
                   role="dialog"
                   aria-label="Confirm appears resolved"
+                  ref={signalDialogRef}
                 >
                   <p className="small mb-3">
                     Mark this ticket as appears resolved? Your ticket stays open
@@ -547,6 +633,7 @@ export function RequesterTicketDetail({
                       disabled={signalBusy}
                       onClick={handleSignalConfirm}
                       data-testid="appears-resolved-confirm-btn"
+                      ref={signalConfirmBtnRef}
                     >
                       {signalBusy ? "Marking…" : "Yes, it looks fixed"}
                     </button>
@@ -554,7 +641,7 @@ export function RequesterTicketDetail({
                       type="button"
                       className="btn btn-zen-secondary btn-sm"
                       disabled={signalBusy}
-                      onClick={() => setSignalConfirm(false)}
+                      onClick={closeSignalDialog}
                       data-testid="appears-resolved-cancel-btn"
                     >
                       Cancel
@@ -578,6 +665,7 @@ export function RequesterTicketDetail({
                   data-testid="reopen-confirm"
                   role="dialog"
                   aria-label="Confirm reopen"
+                  ref={reopenDialogRef}
                 >
                   <p className="small mb-3">
                     Reopen this resolved ticket? It returns to the queue for IT
@@ -590,6 +678,7 @@ export function RequesterTicketDetail({
                       disabled={reopenBusy}
                       onClick={handleReopenConfirm}
                       data-testid="reopen-confirm-btn"
+                      ref={reopenConfirmBtnRef}
                     >
                       {reopenBusy ? "Reopening…" : "Yes, reopen it"}
                     </button>
@@ -597,7 +686,7 @@ export function RequesterTicketDetail({
                       type="button"
                       className="btn btn-zen-secondary btn-sm"
                       disabled={reopenBusy}
-                      onClick={() => setReopenConfirm(false)}
+                      onClick={closeReopenDialog}
                       data-testid="reopen-cancel-btn"
                     >
                       Cancel
