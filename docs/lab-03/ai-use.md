@@ -59,6 +59,12 @@ Verbatim prompts: `use this plan c:\KMUTT\Y3T1\CPE334\ToktikIT\docs\lab-03\plan.
 
 The agent found PR #46 already MERGED (approved by @YummieGG at `2f17550`, 2026-09-14 11:31, merged 11:38) while issue #37 was still OPEN and `reviewer.md` still read OPEN/fixes-pending. It synced `lab3-staging`, re-verified the slice evidence (server 89: 88 stubbed-pass + 1 DB-gated `API-02.categories`; client 84/84), recorded Rounds 5–7 plus the merge in `reviewer.md`, bumped the doc set to v2.3, moved Kanban #37 → Done and #38 → Started, and closed #37 with the evidence. The closeout rode the new `feature/lab3-4-requester-regression` branch so no commit landed on `lab3-staging` directly. This section is the prompt-as-it-happened record the plan requires; the 10-row grading table above is left unchanged.
 
+### Prompt 12 — lab3-4 reviewer + kanban (2026-09-15)
+
+Verbatim prompts: `PR46 is already merge. dont forget to move kanban and save the prompt` and `now it in lab3-4 update reviewer.md lab-03 and the partner`.
+
+The agent verified PR #46 already MERGED (2026-09-14 11:38, approved by @YummieGG at `2f17550`) and issue #37 already CLOSED, so no merge work remained. It moved Kanban #37 → Done and #38 → PR Review (PR #47 open, three `CHANGES_REQUESTED` rounds from @YummieGG with fixes pushed, awaiting re-review), recorded this section as the prompt-as-it-happened log, and updated `reviewer.md` to v2.4 with the PR #47 rounds plus the partner's PR #48 (staff queue & workflow) and #49 (admin user management), both reviewed APPROVED by me and merged. The 10-row grading table above is left unchanged.
+
 ### Attribution decision (2026-09-10)
 
 Asked that commits "not make you co-author", the agent rewrote the two unpushed commits to strip `Co-Authored-By` and session trailers before pushing, and this file remains the sole disclosure channel for AI assistance in this repository. Commits and PR descriptions carry no AI attribution; authorship of the submitted work is the student's.
