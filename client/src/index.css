@@ -430,4 +430,24 @@ body {
   [data-testid="ticket-detail-view"] .zg-action-link {
     min-width: 44px;
   }
+
+  /* Staff queue controls keep btn-sm density on desktop but meet the 44x44
+     mobile hit-area target (ui-spec §10, AC-18): scoped to the queue root so
+     every toolbar select, Clear/Retry/pagination button and row Open action
+     is covered without touching other screens. .form-select is included
+     alongside .form-control because the toolbar is select-heavy; both are
+     full-width already, so only height is raised and no horizontal scroll is
+     introduced. The short-text Open link gains the same 44px hit-slop as the
+     detail filename control above. */
+  [data-testid="staff-queue-view"] .btn,
+  [data-testid="staff-queue-view"] .form-control,
+  [data-testid="staff-queue-view"] .form-select,
+  [data-testid="staff-queue-view"] .zg-action-link {
+    min-height: 44px;
+  }
+
+  [data-testid="staff-queue-view"] .btn,
+  [data-testid="staff-queue-view"] .zg-action-link {
+    min-width: 44px;
+  }
 }

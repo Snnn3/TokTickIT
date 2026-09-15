@@ -12,6 +12,7 @@ import { Login } from "./components/Login";
 import { MyTickets } from "./components/MyTickets";
 import { NotFound, ScreenPanel } from "./components/ScreenPanel";
 import { RequesterTicketDetail } from "./components/RequesterTicketDetail";
+import { StaffTicketQueue } from "./components/StaffTicketQueue";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
   RedirectIfSignedIn,
@@ -88,6 +89,20 @@ function TicketDetailRoute() {
 }
 
 /**
+ * Staff queue [FR-22, ui-spec section 6]. Any row opens for action on the
+ * staff detail screen, which lands in the staff-operations slice (#40); until
+ * then the address renders the pending panel behind its real guard.
+ */
+function StaffQueueRoute() {
+  const navigate = useNavigate();
+  return (
+    <StaffTicketQueue
+      onSelectTicket={(ticketId) => navigate(`/staff/tickets/${ticketId}`)}
+    />
+  );
+}
+
+/**
  * The staff and administrator screens land in later slices (#39, #40 and #41).
  * Their routes and guards exist now because this slice owns the shell, and
  * because a role whose landing address rendered nothing would leave an IT Staff
@@ -135,15 +150,7 @@ export function AppRoutes() {
         <Route
           element={<RequireRole allowed={["IT_STAFF", "ADMINISTRATOR"]} />}
         >
-          <Route
-            element={
-              <PendingSlice
-                issue="the staff queue slice"
-                title="Ticket Queue"
-              />
-            }
-            path="/staff/queue"
-          />
+          <Route element={<StaffQueueRoute />} path="/staff/queue" />
           <Route
             element={
               <PendingSlice

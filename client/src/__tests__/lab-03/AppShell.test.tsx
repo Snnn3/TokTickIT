@@ -130,7 +130,7 @@ describe("C-08 shell navigation and route guards", () => {
     renderAt("/staff/queue", "IT_STAFF");
 
     await waitFor(() => {
-      expect(screen.getByTestId("pending-slice-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("staff-queue-view")).toBeInTheDocument();
     });
     expect(screen.queryByTestId("forbidden-panel")).toBeNull();
   });
@@ -150,7 +150,9 @@ describe("C-08 shell navigation and route guards", () => {
   it("lands each role on its own destination from the root address", async () => {
     const cases: [Role, string][] = [
       ["REQUESTER", "identity-chip"],
-      ["IT_STAFF", "pending-slice-panel"],
+      // IT Staff land on the queue, which shipped in the queue slice (#39);
+      // the administrator landing is still the pending Users screen (#41).
+      ["IT_STAFF", "staff-queue-view"],
       ["ADMINISTRATOR", "pending-slice-panel"],
     ];
 
