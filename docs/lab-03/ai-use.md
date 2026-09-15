@@ -1,6 +1,6 @@
 # AI Use Log — Lab 3
 
-Version: 2.4 | Date: 2026-09-15 | Companion to `specification.md`.
+Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 
 LLMs used:
 - **Muse Spark 1.3** (accessed via opencode CLI) — Sprint 3 grilling, spec contract v1.0, and implementation/review loop
@@ -64,6 +64,12 @@ The agent found PR #46 already MERGED (approved by @YummieGG at `2f17550`, 2026-
 Verbatim prompts: `PR46 is already merge. dont forget to move kanban and save the prompt` and `now it in lab3-4 update reviewer.md lab-03 and the partner`.
 
 The agent verified PR #46 already MERGED (2026-09-14 11:38, approved by @YummieGG at `2f17550`) and issue #37 already CLOSED, so no merge work remained. It moved Kanban #37 → Done and #38 → PR Review (PR #47 open, three `CHANGES_REQUESTED` rounds from @YummieGG with fixes pushed, awaiting re-review), recorded this section as the prompt-as-it-happened log, and updated `reviewer.md` to v2.4 with the PR #47 rounds plus the partner's PR #48 (staff queue & workflow) and #49 (admin user management), both reviewed APPROVED by me and merged. The 10-row grading table above is left unchanged.
+
+### Prompt 13 — PR47 merge + issue #39 kickoff (2026-09-15)
+
+Verbatim prompts: `reply my peer thank you him in pr47`, `update reviewer.md and save prompt in ai use`, `show the plan in todo`, `since the PR#47 is already merge update the kanban and close issue#38, @coder next you will implement the issue#39. dont open the PR.`
+
+The agent posted a thank-you reply on PR #47 citing each round's findings, synced the plan into the todo list (#35–#37 done, #38 in progress), then found PR #47 already MERGED (approved by @YummieGG at `44ea0e9`, merged 16:29) with issue #38 still OPEN. It moved Kanban #38 → Done, closed #38 with the green evidence, recorded the merge in `reviewer.md` (v2.5), and dispatched the coder to implement issue #39 on `feature/lab3-5-staff-queue` with strict no-PR instructions. The coder shipped the queue API + responsive UI (server 134/134, client 113/113) and pushed without opening a PR. The 10-row grading table above is left unchanged.
 
 ### Attribution decision (2026-09-10)
 
