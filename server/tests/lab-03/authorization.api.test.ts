@@ -259,12 +259,9 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...resolvedTicket,
     } as any);
-    const update = vi.spyOn(prisma.ticket, "update").mockResolvedValue({
-      ...resolvedTicket,
-      status: "REOPENED",
-      appearsResolvedAt: null,
-      resolutionSummary: null,
-    } as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockResolvedValue({ count: 1 } as any);
 
     const res = await request(app)
       .post("/api/tickets/5/reopen")
@@ -273,9 +270,13 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "REOPENED" });
-    expect(update).toHaveBeenCalledWith(
+    expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 5 },
+        where: expect.objectContaining({
+          id: 5,
+          requesterId: 1,
+          status: "RESOLVED",
+        }),
         data: expect.objectContaining({
           status: "REOPENED",
           appearsResolvedAt: null,
@@ -293,7 +294,7 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
       ...resolvedTicket,
       requesterId: 2,
     } as any);
-    const update = vi.spyOn(prisma.ticket, "update");
+    const updateMany = vi.spyOn(prisma.ticket, "updateMany");
 
     const res = await request(app)
       .post("/api/tickets/5/reopen")
@@ -302,14 +303,14 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("FORBIDDEN");
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("refuses a reopen from Closed -- and from any other non-Resolved status -- with 422", async () => {
     vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
       sessionUser({ id: 1, mustChangePassword: false })
     );
-    const update = vi.spyOn(prisma.ticket, "update");
+    const updateMany = vi.spyOn(prisma.ticket, "updateMany");
 
     for (const status of ["CLOSED", "CANCELLED", "OPEN", "NEW", "REOPENED"]) {
       vi.spyOn(prisma.ticket, "findUnique").mockResolvedValueOnce({
@@ -325,7 +326,7 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
       expect(res.status).toBe(422);
       expect(res.body.error.code).toBe("INVALID_TRANSITION");
     }
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("answers 404 for an unknown ticket and 400 for a non-numeric id", async () => {
@@ -347,6 +348,84 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
       .send({});
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe("INVALID_ID");
+  });
+});
+
+describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
+  const resolvedTicket = {
+    id: 5,
+    requesterId: 1,
+    status: "RESOLVED",
+    appearsResolvedAt: new Date("2026-09-10T10:00:00.000Z"),
+    resolutionSummary: "Rebooted the server.",
+  };
+
+  function authOwner() {
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 1, mustChangePassword: false })
+    );
+    return sessionCookie({ id: 1 });
+  }
+
+  it("admits two parallel reopens but only one wins: the loser sees 422 INVALID_TRANSITION", async () => {
+    // Same TOCTOU window as the signal case: both pre-checks read RESOLVED,
+    // the conditional updateMany lets exactly one through, and the loser's
+    // re-read observes REOPENED so it reports 422 instead of a second 200.
+    // The first two reads are pinned stale to emulate parallel admission; the
+    // stub otherwise serialises the requests (cf. login-throttle test).
+    const cookie = authOwner();
+    let reads = 0;
+    let writes = 0;
+    vi.spyOn(prisma.ticket, "findUnique").mockImplementation((async () => {
+      reads += 1;
+      if (reads <= 2) {
+        return { ...resolvedTicket } as any;
+      }
+      return { ...resolvedTicket, status: "REOPENED" } as any;
+    }) as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockImplementation((async () => {
+        writes += 1;
+        return { count: writes === 1 ? 1 : 0 } as any;
+      }) as any);
+
+    const [first, second] = await Promise.all([
+      request(app).post("/api/tickets/5/reopen").set("Cookie", cookie).send({}),
+      request(app).post("/api/tickets/5/reopen").set("Cookie", cookie).send({}),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([200, 422]);
+    const loser = first.status === 422 ? first : second;
+    expect(loser.body.error.code).toBe("INVALID_TRANSITION");
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    for (const call of updateMany.mock.calls) {
+      expect(call[0].where).toEqual(
+        expect.objectContaining({ id: 5, requesterId: 1, status: "RESOLVED" })
+      );
+    }
+  });
+
+  it("does not resurrect a terminal transition that lands mid-reopen: 422 and no second write", async () => {
+    // Pre-check sees RESOLVED, but staff close the ticket before the write, so
+    // the conditional write matches nothing and the re-read reports CLOSED.
+    const cookie = authOwner();
+    vi.spyOn(prisma.ticket, "findUnique")
+      .mockResolvedValueOnce({ ...resolvedTicket } as any)
+      .mockResolvedValue({ ...resolvedTicket, status: "CLOSED" } as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockResolvedValue({ count: 0 } as any);
+
+    const res = await request(app)
+      .post("/api/tickets/5/reopen")
+      .set("Cookie", cookie)
+      .send({});
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("INVALID_TRANSITION");
+    expect(updateMany).toHaveBeenCalledTimes(1);
   });
 });
 

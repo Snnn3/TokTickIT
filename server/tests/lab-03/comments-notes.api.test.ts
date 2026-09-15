@@ -43,10 +43,9 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...OWN_OPEN_TICKET,
     } as any);
-    const update = vi.spyOn(prisma.ticket, "update").mockResolvedValue({
-      ...OWN_OPEN_TICKET,
-      appearsResolvedAt: new Date("2026-09-12T08:00:00.000Z"),
-    } as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockResolvedValue({ count: 1 } as any);
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
@@ -54,14 +53,19 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     expect(res.status).toBe(200);
     expect(typeof res.body.appearsResolvedAt).toBe("string");
-    // The signal never changes status: the write touches the timestamp alone.
-    expect(update).toHaveBeenCalledWith(
+    // The signal never changes status: the write touches the timestamp alone,
+    // and the ownership plus expected state travel in the WHERE atomically.
+    expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 7 },
+        where: expect.objectContaining({
+          id: 7,
+          requesterId: 1,
+          appearsResolvedAt: null,
+        }),
         data: { appearsResolvedAt: expect.any(Date) },
       })
     );
-    expect(update.mock.calls[0][0].data).not.toHaveProperty("status");
+    expect(updateMany.mock.calls[0][0].data).not.toHaveProperty("status");
   });
 
   it("accepts an explicit empty JSON body the same way as no body at all", async () => {
@@ -69,9 +73,8 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...OWN_OPEN_TICKET,
     } as any);
-    vi.spyOn(prisma.ticket, "update").mockResolvedValue({
-      ...OWN_OPEN_TICKET,
-      appearsResolvedAt: new Date("2026-09-12T08:00:00.000Z"),
+    vi.spyOn(prisma.ticket, "updateMany").mockResolvedValue({
+      count: 1,
     } as any);
 
     const res = await request(app)
@@ -89,7 +92,7 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
       ...OWN_OPEN_TICKET,
       appearsResolvedAt: new Date("2026-09-12T08:00:00.000Z"),
     } as any);
-    const update = vi.spyOn(prisma.ticket, "update");
+    const updateMany = vi.spyOn(prisma.ticket, "updateMany");
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
@@ -97,7 +100,7 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("ALREADY_SIGNALLED");
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("refuses another user's ticket with 403 and changes nothing", async () => {
@@ -106,7 +109,7 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
       ...OWN_OPEN_TICKET,
       requesterId: 2,
     } as any);
-    const update = vi.spyOn(prisma.ticket, "update");
+    const updateMany = vi.spyOn(prisma.ticket, "updateMany");
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
@@ -114,12 +117,12 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("FORBIDDEN");
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("refuses a Closed or Cancelled ticket with 422", async () => {
     const cookie = authAs(1);
-    const update = vi.spyOn(prisma.ticket, "update");
+    const updateMany = vi.spyOn(prisma.ticket, "updateMany");
 
     for (const status of ["CLOSED", "CANCELLED"]) {
       vi.spyOn(prisma.ticket, "findUnique").mockResolvedValueOnce({
@@ -133,7 +136,7 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
       expect(res.status).toBe(422);
     }
-    expect(update).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it("answers 404 for an unknown ticket and 400 for a non-numeric id", async () => {
@@ -151,6 +154,79 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
       .set("Cookie", cookie);
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe("INVALID_ID");
+  });
+});
+
+describe("API-16 atomic signal regression (AC-07, ALREADY_SIGNALLED)", () => {
+  it("admits two parallel signals but only one wins: the loser sees 409 ALREADY_SIGNALLED", async () => {
+    // Both requests read the same stale pre-check state (OPEN, unsignalled),
+    // exactly the TOCTOU window the old findUnique-then-update let through.
+    // The stub cannot interleave real I/O, so the first two reads are pinned
+    // stale (parallel admission, cf. the login-throttle parallel test) while
+    // the loser's re-read observes the winner's signal. The conditional
+    // updateMany serialises them: first count 1, second count 0.
+    const cookie = authAs(1);
+    const signalledAt = new Date("2026-09-12T08:00:00.000Z");
+    let reads = 0;
+    let writes = 0;
+    vi.spyOn(prisma.ticket, "findUnique").mockImplementation((async () => {
+      reads += 1;
+      if (reads <= 2) {
+        return { ...OWN_OPEN_TICKET } as any;
+      }
+      return { ...OWN_OPEN_TICKET, appearsResolvedAt: signalledAt } as any;
+    }) as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockImplementation((async () => {
+        writes += 1;
+        return { count: writes === 1 ? 1 : 0 } as any;
+      }) as any);
+
+    const [first, second] = await Promise.all([
+      request(app)
+        .post("/api/tickets/7/appears-resolved")
+        .set("Cookie", cookie),
+      request(app)
+        .post("/api/tickets/7/appears-resolved")
+        .set("Cookie", cookie),
+    ]);
+
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([200, 409]);
+    const loser = first.status === 409 ? first : second;
+    expect(loser.body.error.code).toBe("ALREADY_SIGNALLED");
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    // The conditional WHERE carried the expected state both times.
+    for (const call of updateMany.mock.calls) {
+      expect(call[0].where).toEqual(
+        expect.objectContaining({
+          id: 7,
+          requesterId: 1,
+          appearsResolvedAt: null,
+        })
+      );
+    }
+  });
+
+  it("does not overwrite a terminal transition that lands mid-signal: 422 INVALID_TRANSITION", async () => {
+    // Pre-check sees OPEN, but by write time staff have closed the ticket, so
+    // the conditional write matches nothing and the re-read reports terminal.
+    const cookie = authAs(1);
+    vi.spyOn(prisma.ticket, "findUnique")
+      .mockResolvedValueOnce({ ...OWN_OPEN_TICKET } as any)
+      .mockResolvedValue({ ...OWN_OPEN_TICKET, status: "CLOSED" } as any);
+    const updateMany = vi
+      .spyOn(prisma.ticket, "updateMany")
+      .mockResolvedValue({ count: 0 } as any);
+
+    const res = await request(app)
+      .post("/api/tickets/7/appears-resolved")
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("INVALID_TRANSITION");
+    expect(updateMany).toHaveBeenCalledTimes(1);
   });
 });
 
