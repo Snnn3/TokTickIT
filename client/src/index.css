@@ -402,12 +402,16 @@ body {
     min-height: 44px;
   }
 
-  /* Requester detail actions keep btn-sm density on desktop but meet the 44px
-     mobile target: signal/reopen triggers + confirms and the comment poster
-     live under these two test ids, so the rule reaches every btn-sm the
-     review flagged without touching other screens. */
-  [data-testid="requester-actions"] .btn,
-  [data-testid="comments-section"] .btn {
+  /* Requester detail controls keep btn-sm density on desktop but meet the
+     44px mobile target: the rule scopes to the detail root (unique to the
+     requester screen) so every button and form control -- Back nav,
+     signal/reopen triggers + confirms, comment composer + poster, and the
+     embedded attachment controls -- is covered without touching other
+     screens. The filename text-link is excluded on purpose: it is inline
+     text, not a touch-target button. */
+  [data-testid="ticket-detail-view"] .btn,
+  [data-testid="ticket-detail-view"] .form-control,
+  [data-testid="ticket-detail-view"] .btn-close {
     min-height: 44px;
   }
 }

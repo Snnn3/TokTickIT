@@ -9,6 +9,7 @@ import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { AttachmentSection } from "./AttachmentSection";
 import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 import { useReferenceData } from "../hooks/useReferenceData";
+import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -45,10 +46,10 @@ export function RequesterTicketDetail({
   const [reopenError, setReopenError] = useState<string | null>(null);
   const [reopenSuccess, setReopenSuccess] = useState(false);
 
-  // Confirm-dialog refs for the focus-trap + Escape pattern reused from the
-  // attachment-removal modal [ui-spec §10]. Duplicated per dialog rather than
-  // extracted: sharing the modal hook would touch AttachmentSection and risk
-  // regression for a two-dialog use.
+  // Confirm-dialog refs for the focus-trap + Escape + containment pattern
+  // shared with the attachment-removal modal [ui-spec §10]. Both dialogs run
+  // through useConfirmDialogFocus below; the containers carry tabIndex -1 so
+  // the containment guard has a fallback target.
   const signalDialogRef = useRef<HTMLDivElement>(null);
   const signalConfirmBtnRef = useRef<HTMLButtonElement>(null);
   const reopenDialogRef = useRef<HTMLDivElement>(null);
@@ -62,73 +63,21 @@ export function RequesterTicketDetail({
     if (!reopenBusy) setReopenConfirm(false);
   }, [reopenBusy]);
 
-  useEffect(() => {
-    if (!signalConfirm) return;
+  useConfirmDialogFocus({
+    open: signalConfirm,
+    busy: signalBusy,
+    dialogRef: signalDialogRef,
+    initialFocusRef: signalConfirmBtnRef,
+    onRequestClose: closeSignalDialog,
+  });
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (!signalBusy) setSignalConfirm(false);
-      } else if (e.key === "Tab" && signalDialogRef.current) {
-        const focusableElements =
-          signalDialogRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    setTimeout(() => signalConfirmBtnRef.current?.focus(), 50);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [signalConfirm, signalBusy]);
-
-  useEffect(() => {
-    if (!reopenConfirm) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (!reopenBusy) setReopenConfirm(false);
-      } else if (e.key === "Tab" && reopenDialogRef.current) {
-        const focusableElements =
-          reopenDialogRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    setTimeout(() => reopenConfirmBtnRef.current?.focus(), 50);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [reopenConfirm, reopenBusy]);
+  useConfirmDialogFocus({
+    open: reopenConfirm,
+    busy: reopenBusy,
+    dialogRef: reopenDialogRef,
+    initialFocusRef: reopenConfirmBtnRef,
+    onRequestClose: closeReopenDialog,
+  });
 
   const { categories, systems } = useReferenceData();
 
@@ -620,6 +569,7 @@ export function RequesterTicketDetail({
                   data-testid="appears-resolved-confirm"
                   role="dialog"
                   aria-label="Confirm appears resolved"
+                  tabIndex={-1}
                   ref={signalDialogRef}
                 >
                   <p className="small mb-3">
@@ -665,6 +615,7 @@ export function RequesterTicketDetail({
                   data-testid="reopen-confirm"
                   role="dialog"
                   aria-label="Confirm reopen"
+                  tabIndex={-1}
                   ref={reopenDialogRef}
                 >
                   <p className="small mb-3">
@@ -718,7 +669,9 @@ export function RequesterTicketDetail({
 
       {/* Public Comments [FR-25, ui-spec section 5]. Rendered safely: React
           escapes the body and whitespace is preserved, never raw HTML
-          [BR-14]. There is deliberately no Internal Notes section anywhere in
+          [BR-14]. Long unbroken bodies additionally wrap with
+          overflow-wrap: anywhere so a 2000-char run cannot overflow a 375px
+          viewport. There is deliberately no Internal Notes section anywhere in
           this component -- a requester never sees one, whatever their role
           [BR-04]. */}
       <div className="zg-card p-4 mb-4" data-testid="comments-section">
@@ -748,7 +701,7 @@ export function RequesterTicketDetail({
                 </div>
                 <div
                   className="small text-zen-body"
-                  style={{ whiteSpace: "pre-wrap" }}
+                  style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
                 >
                   {comment.body}
                 </div>

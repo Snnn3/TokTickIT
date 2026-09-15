@@ -99,7 +99,8 @@ export interface TicketDetail {
 /**
  * A public discussion entry [FR-25, BR-14]. Author and timestamp are always
  * backend-set; the client never sends them and never renders raw HTML --
- * React escapes the body and whitespace is preserved with pre-wrap.
+ * React escapes the body, whitespace is preserved with pre-wrap, and long
+ * unbroken runs wrap with overflow-wrap: anywhere.
  */
 export interface PublicComment {
   id: number;

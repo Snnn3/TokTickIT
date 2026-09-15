@@ -179,4 +179,31 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       ).not.toBeInTheDocument();
     });
   });
+
+  it("contains focus inside the removal modal when focus moves outside (ui-spec §10)", async () => {
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <AttachmentSection ticketId={10} attachments={mockAttachments} />
+      </div>
+    );
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    const dialog = screen.getByTestId("remove-attachment-dialog");
+    const reasonInput = screen.getByTestId("removal-reason-input");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(reasonInput);
+    });
+
+    // A click-away or programmatic focus outside is pulled back inside.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+  });
 });

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { AttachmentMetadata } from "../types/ticket";
 import { formatDateTime, formatFileSize } from "../utils/format";
 import { validateFile, MAX_ATTACHMENTS } from "../utils/validation";
+import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 
 export interface AttachmentRemovalUpdate {
   attachmentId: number;
@@ -60,43 +61,17 @@ export function AttachmentSection({
     setIsRemoving(false);
   }, []);
 
-  // Focus trap & Escape listener for modal [ui-spec §10, BR-18]
-  // closeRemoveModal is stable (setters only) so the effect stays subscribed correctly.
-  useEffect(() => {
-    if (!removingAttachment) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (!isRemoving) {
-          closeRemoveModal();
-        }
-      } else if (e.key === "Tab" && modalRef.current) {
-        const focusableElements =
-          modalRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-
-        if (e.shiftKey && document.activeElement === firstElement) {
-          lastElement.focus();
-          e.preventDefault();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          firstElement.focus();
-          e.preventDefault();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    setTimeout(() => reasonInputRef.current?.focus(), 50);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [removingAttachment, isRemoving, closeRemoveModal]);
+  // Focus trap, Escape, and containment for the removal modal [ui-spec §10,
+  // BR-18], shared with the requester confirm dialogs. closeRemoveModal is
+  // stable (setters only) so the hook stays subscribed correctly; the busy
+  // guard inside the hook preserves the in-flight Escape lockout.
+  useConfirmDialogFocus({
+    open: removingAttachment !== null,
+    busy: isRemoving,
+    dialogRef: modalRef,
+    initialFocusRef: reasonInputRef,
+    onRequestClose: closeRemoveModal,
+  });
 
   const activeAttachments = fileList.filter((a) => !a.removedAt);
   const isLimitReached = activeAttachments.length >= MAX_ATTACHMENTS;
@@ -559,7 +534,11 @@ export function AttachmentSection({
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           data-testid="remove-attachment-dialog"
         >
-          <div className="modal-dialog modal-dialog-centered" ref={modalRef}>
+          <div
+            className="modal-dialog modal-dialog-centered"
+            tabIndex={-1}
+            ref={modalRef}
+          >
             <div className="modal-content">
               <div className="modal-header">
                 <h3 className="modal-title h5 text-zen-primary fw-bold">

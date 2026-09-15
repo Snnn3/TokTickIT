@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { RequesterTicketDetail } from "../../components/RequesterTicketDetail";
 import type { TicketDetail } from "../../types/ticket";
 
@@ -244,6 +250,44 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
     expect(String(postCall?.init?.body)).toContain("Still broken.");
   });
 
+  it("wraps a 2000-char unbroken comment and still escapes markup (BR-14)", async () => {
+    const unbroken = "x".repeat(2000);
+    const markup = "<img src=x onerror=alert(1)>";
+    await renderDetail({
+      ...BASE_TICKET,
+      publicComments: [
+        {
+          id: 9,
+          body: unbroken,
+          author: { id: 1, name: "Anucha Wongchai", role: "REQUESTER" },
+          createdAt: "2026-09-12T09:00:00.000Z",
+        },
+        {
+          id: 10,
+          body: markup,
+          author: { id: 9, name: "Kittipong Saelim", role: "IT_STAFF" },
+          createdAt: "2026-09-12T09:05:00.000Z",
+        },
+      ],
+    });
+
+    const items = screen.getAllByTestId("comment-item");
+    expect(items).toHaveLength(2);
+
+    // jsdom cannot measure overflow, so assert the wrapping rule itself,
+    // following the S-01 whitespace style-assertion convention: pre-wrap is
+    // kept and overflow-wrap breaks the unbroken run at 375px.
+    const longBody = within(items[0]).getByText(unbroken);
+    expect(longBody).toHaveStyle({
+      whiteSpace: "pre-wrap",
+      overflowWrap: "anywhere",
+    });
+
+    // Safe rendering intact: markup lands as text, never as an element.
+    expect(within(items[1]).getByText(markup)).toBeInTheDocument();
+    expect(items[1].querySelector("img")).toBeNull();
+  });
+
   it("shows the empty state with no comments and refuses an empty post without calling the API", async () => {
     const calls = mockApi(BASE_TICKET);
     render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
@@ -335,5 +379,66 @@ describe("Requester confirm dialogs keyboard (ui-spec §10)", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("reopen-confirm")).not.toBeInTheDocument();
     });
+  });
+
+  it("pulls focus back inside when it escapes the appears-resolved dialog", async () => {
+    mockApi(BASE_TICKET);
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <RequesterTicketDetail ticketId={42} onBack={vi.fn()} />
+      </div>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("appears-resolved-btn"));
+    const dialog = screen.getByTestId("appears-resolved-confirm");
+    const confirmBtn = screen.getByTestId("appears-resolved-confirm-btn");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(confirmBtn);
+    });
+
+    // A click-away or programmatic focus outside is contained back inside.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("appears-resolved-confirm")).toBeInTheDocument();
+  });
+
+  it("pulls focus back inside when it escapes the reopen dialog", async () => {
+    mockApi({ ...BASE_TICKET, status: "RESOLVED" });
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <RequesterTicketDetail ticketId={42} onBack={vi.fn()} />
+      </div>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("reopen-btn"));
+    const dialog = screen.getByTestId("reopen-confirm");
+    const confirmBtn = screen.getByTestId("reopen-confirm-btn");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(confirmBtn);
+    });
+
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("reopen-confirm")).toBeInTheDocument();
   });
 });
