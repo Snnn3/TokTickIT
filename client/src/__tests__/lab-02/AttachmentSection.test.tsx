@@ -206,4 +206,77 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     });
     expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
   });
+
+  it("keeps focus contained in the removal modal while busy, and Escape still does not close (ui-spec §10, BR-18)", async () => {
+    // The DELETE stays in flight so the modal sits in its busy state.
+    let resolveDeletePromise: (val: any) => void = () => {};
+    const deletePromise = new Promise((resolve) => {
+      resolveDeletePromise = resolve;
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () => deletePromise as any
+    );
+
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <AttachmentSection ticketId={10} attachments={mockAttachments} />
+      </div>
+    );
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    const dialog = screen.getByTestId("remove-attachment-dialog");
+    const reasonInput = screen.getByTestId("removal-reason-input");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(reasonInput);
+    });
+
+    fireEvent.change(reasonInput, { target: { value: "Sensitive data" } });
+
+    // Confirm: the removal is now in flight (busy), proven by aria-busy,
+    // while the modal stays open.
+    const confirmBtn = screen.getByTestId("confirm-remove-button");
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(confirmBtn).toHaveAttribute("aria-busy", "true");
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Let the busy re-focus timer (50ms, targets the still-enabled reason
+    // input) fire before moving focus outside: its deadline is earlier than
+    // the sleep below, so afterwards no timer is pending and the assertion
+    // proves the containment guard itself rather than the timer.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Focus escaping mid-request is still pulled back inside the open modal.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Escape mid-request still does not close (BR-18 in-flight lockout).
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Settle the flight: the modal closes on success.
+    resolveDeletePromise({
+      ok: true,
+      json: async () => ({
+        removed: true,
+        removedAt: new Date().toISOString(),
+      }),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
+    });
+  });
 });

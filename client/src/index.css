@@ -407,11 +407,14 @@ body {
      requester screen) so every button and form control -- Back nav,
      signal/reopen triggers + confirms, comment composer + poster, and the
      embedded attachment controls -- is covered without touching other
-     screens. The filename text-link is excluded on purpose: it is inline
-     text, not a touch-target button. */
+     screens. The filename download control is included on purpose: it is a
+     real <button> touch target (ui-spec §10), only styled as an inline
+     text-link. Desktop is unchanged because this stays inside the mobile
+     query. */
   [data-testid="ticket-detail-view"] .btn,
   [data-testid="ticket-detail-view"] .form-control,
-  [data-testid="ticket-detail-view"] .btn-close {
+  [data-testid="ticket-detail-view"] .btn-close,
+  [data-testid="ticket-detail-view"] .zg-action-link {
     min-height: 44px;
   }
 }

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   render,
@@ -6,8 +7,17 @@ import {
   fireEvent,
   within,
 } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { RequesterTicketDetail } from "../../components/RequesterTicketDetail";
 import type { TicketDetail } from "../../types/ticket";
+
+// S-01 style-assertion convention: jsdom has no layout and cannot evaluate
+// media queries, so the touch-target regression test below asserts the
+// stylesheet rule text (read from disk -- vitest mocks `?raw` CSS imports
+// to an empty string) rather than measured pixels. Resolved from the
+// client package root, which is the working directory for `npm test`.
+const indexCss = readFileSync(join(process.cwd(), "src", "index.css"), "utf8");
 
 /**
  * C-07 from tests.md (AC-22, FR-21).
@@ -440,5 +450,139 @@ describe("Requester confirm dialogs keyboard (ui-spec §10)", () => {
       expect(dialog).toContainElement(document.activeElement as HTMLElement);
     });
     expect(screen.getByTestId("reopen-confirm")).toBeInTheDocument();
+  });
+
+  it("keeps focus contained in the appears-resolved dialog while busy, and Escape still does not close (ui-spec §10, BR-18)", async () => {
+    // The signal POST stays in flight so the dialog sits in its busy state.
+    let resolveSignal!: (value: Response) => void;
+    const signalFlight = new Promise<Response>((resolve) => {
+      resolveSignal = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/appears-resolved") && init?.method === "POST") {
+        return await signalFlight;
+      }
+      if (url.includes("/api/reference/categories")) {
+        return {
+          ok: true,
+          json: async () => ({ categories: [{ id: 4, name: "Network" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/reference/systems")) {
+        return {
+          ok: true,
+          json: async () => ({ systems: [{ id: 2, name: "Corporate VPN" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/tickets/42")) {
+        return {
+          ok: true,
+          json: async () => ({ ticket: BASE_TICKET }),
+        } as Response;
+      }
+      return { ok: false, status: 404, json: async () => ({}) } as Response;
+    });
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <RequesterTicketDetail ticketId={42} onBack={vi.fn()} />
+      </div>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("appears-resolved-btn"));
+    const dialog = screen.getByTestId("appears-resolved-confirm");
+    const confirmBtn = screen.getByTestId("appears-resolved-confirm-btn");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(confirmBtn);
+    });
+
+    // Confirm: the request is now in flight (busy), proven by the disabled
+    // confirm action, while the dialog stays open.
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(confirmBtn).toBeDisabled();
+    });
+    expect(screen.getByTestId("appears-resolved-confirm")).toBeInTheDocument();
+
+    // Focus escaping mid-request is still pulled back inside the open dialog.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("appears-resolved-confirm")).toBeInTheDocument();
+
+    // Escape mid-request still does not close (BR-18 in-flight lockout).
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("appears-resolved-confirm")).toBeInTheDocument();
+
+    // Settle the flight: success reports and the dialog closes.
+    resolveSignal({
+      ok: true,
+      status: 200,
+      json: async () => ({ appearsResolvedAt: "2026-09-12T08:00:00.000Z" }),
+    } as Response);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("appears-resolved-success")
+      ).toBeInTheDocument();
+    });
+  });
+});
+
+describe("Requester detail mobile touch targets (ui-spec §10, AC-18)", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("covers the attachment filename download control with the 44px mobile rule at 375px", async () => {
+    await renderDetail({
+      ...BASE_TICKET,
+      attachments: [
+        {
+          id: 101,
+          ticketId: 42,
+          filename: "report.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 2048,
+          uploadedAt: "2026-08-30T10:00:00.000Z",
+          removedAt: null,
+          removedReason: null,
+        },
+      ],
+    });
+
+    // (a) The filename download control is a real <button> carrying the
+    // covered class, rendered inside the scoped detail root.
+    const detailView = screen.getByTestId("ticket-detail-view");
+    const filenameButton = screen.getByTitle("Download report.pdf");
+    expect(filenameButton.tagName).toBe("BUTTON");
+    expect(filenameButton).toHaveClass("zg-action-link");
+    expect(detailView).toContainElement(filenameButton);
+
+    // (b) S-01 style-assertion convention: jsdom has no layout and cannot
+    // evaluate media queries, so assert the stylesheet rule itself rather
+    // than measured pixels -- the declaration block holding the covering
+    // selector inside the below-768px query must set min-height: 44px.
+    const queryStart = indexCss.indexOf("@media (max-width: 767.98px)");
+    expect(queryStart).toBeGreaterThan(-1);
+    const mobileQuery = indexCss.slice(queryStart);
+    const selector = '[data-testid="ticket-detail-view"] .zg-action-link';
+    const atSelector = mobileQuery.indexOf(selector);
+    expect(atSelector).toBeGreaterThan(-1);
+    const blockOpen = mobileQuery.indexOf("{", atSelector);
+    const blockClose = mobileQuery.indexOf("}", blockOpen);
+    expect(blockOpen).toBeGreaterThan(atSelector);
+    expect(blockClose).toBeGreaterThan(blockOpen);
+    expect(mobileQuery.slice(blockOpen, blockClose)).toMatch(
+      /min-height:\s*44px/
+    );
   });
 });

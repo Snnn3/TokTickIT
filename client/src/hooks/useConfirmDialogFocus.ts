@@ -22,8 +22,9 @@ function focusablesIn(root: HTMLElement): HTMLElement[] {
  * The containment guard pulls focus back inside when it escapes via a click
  * outside or a programmatic .focus() elsewhere -- Tab wrapping alone cannot
  * catch those. The dialog container itself carries tabIndex -1 so the guard
- * always has a fallback target. While `busy` the guard and Escape stay out of
- * the way so an in-flight confirm cannot be closed or have focus stolen.
+ * always has a fallback target. Containment stays active while `busy` so
+ * focus cannot escape an open dialog mid-request; only the Escape-to-close
+ * path is gated by `busy` (BR-18 in-flight lockout), never the containment.
  */
 export function useConfirmDialogFocus({
   open,
@@ -58,13 +59,18 @@ export function useConfirmDialogFocus({
     };
 
     const handleFocusIn = (e: FocusEvent) => {
-      if (busy) return;
       const dialog = dialogRef.current;
       if (!dialog) return;
       const target = e.target as Node | null;
       if (target && !dialog.contains(target)) {
         const items = focusablesIn(dialog);
         (items[0] ?? dialog).focus();
+        // While busy every action is disabled, and focusing a disabled
+        // control is a no-op (jsdom and browsers alike) -- fall back to the
+        // dialog container itself so focus still cannot escape mid-request.
+        if (!dialog.contains(document.activeElement)) {
+          dialog.focus();
+        }
       }
     };
 
