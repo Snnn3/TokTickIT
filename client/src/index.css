@@ -401,4 +401,13 @@ body {
   .zg-auth-card .form-control {
     min-height: 44px;
   }
+
+  /* Requester detail actions keep btn-sm density on desktop but meet the 44px
+     mobile target: signal/reopen triggers + confirms and the comment poster
+     live under these two test ids, so the rule reaches every btn-sm the
+     review flagged without touching other screens. */
+  [data-testid="requester-actions"] .btn,
+  [data-testid="comments-section"] .btn {
+    min-height: 44px;
+  }
 }
