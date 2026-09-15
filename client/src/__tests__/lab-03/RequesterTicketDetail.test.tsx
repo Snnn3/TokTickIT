@@ -653,9 +653,9 @@ describe("Requester detail mobile touch targets (ui-spec §10, AC-18)", () => {
     const queryStart = indexCss.indexOf("@media (max-width: 767.98px)");
     expect(queryStart).toBeGreaterThan(-1);
     const mobileQuery = indexCss.slice(queryStart);
-    const widthBlocks = [...mobileQuery.matchAll(/([^{}]+)\{[^}]*min-width:\s*44px[^}]*\}/g)].map(
-      (m) => m[1]
-    );
+    const widthBlocks = [
+      ...mobileQuery.matchAll(/([^{}]+)\{[^}]*min-width:\s*44px[^}]*\}/g),
+    ].map((m) => m[1]);
     expect(widthBlocks.length).toBeGreaterThan(0);
     for (const selector of [
       '[data-testid="ticket-detail-view"] .btn-close',
