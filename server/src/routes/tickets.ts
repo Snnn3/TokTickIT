@@ -599,6 +599,22 @@ ticketsRouter.post(
 );
 
 /**
+ * One author projection and one comment include for every public-comment
+ * read, so the detail embed and the comment list endpoint can never drift
+ * apart [FR-25]. The TicketDetailOptions type below derives from the same
+ * consts.
+ */
+const publicCommentAuthorSelect = {
+  id: true,
+  name: true,
+  role: true,
+} as const;
+
+const publicCommentInclude = {
+  author: { select: publicCommentAuthorSelect },
+};
+
+/**
  * Shared helper to load a ticket and enforce requester ownership [BR-06, AC-03]
  *
  * The detail include carries the requester's public discussion with it
@@ -625,9 +641,7 @@ type TicketDetailOptions = {
     };
     publicComments: {
       orderBy: { createdAt: "asc" };
-      include: {
-        author: { select: { id: true; name: true; role: true } };
-      };
+      include: typeof publicCommentInclude;
     };
   };
 };
@@ -778,9 +792,7 @@ ticketsRouter.get(
           },
           publicComments: {
             orderBy: { createdAt: "asc" },
-            include: {
-              author: { select: { id: true, name: true, role: true } },
-            },
+            include: publicCommentInclude,
           },
         },
       });
@@ -994,9 +1006,7 @@ ticketsRouter.get(
       const comments = await prisma.publicComment.findMany({
         where: { ticketId },
         orderBy: { createdAt: "asc" },
-        include: {
-          author: { select: { id: true, name: true, role: true } },
-        },
+        include: publicCommentInclude,
       });
 
       return res.status(200).json({
@@ -1048,7 +1058,10 @@ ticketsRouter.post(
       }
 
       // Author and timestamp are backend-set; anything the client sent for
-      // them is ignored outright, never merged [FR-25].
+      // them is ignored outright, never merged [FR-25]. The row is authored
+      // by the caller, so the session identity feeds the shared serializer
+      // directly -- no re-read needed, and the shape cannot drift from the
+      // other two producers.
       const created = await prisma.publicComment.create({
         data: {
           ticketId,
@@ -1057,12 +1070,14 @@ ticketsRouter.post(
         },
       });
 
-      return res.status(201).json({
-        id: created.id,
-        body: created.body,
-        author: { id: user.id, name: user.name, role: user.role },
-        createdAt: created.createdAt,
-      });
+      return res.status(201).json(
+        serializePublicComment({
+          id: created.id,
+          body: created.body,
+          author: { id: user.id, name: user.name, role: user.role },
+          createdAt: created.createdAt,
+        })
+      );
     } catch {
       return res.status(500).json({
         error: {
