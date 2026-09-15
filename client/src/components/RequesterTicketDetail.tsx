@@ -509,7 +509,7 @@ export function RequesterTicketDetail({
             </h2>
             <div
               className="text-zen-body small"
-              style={{ whiteSpace: "pre-wrap" }}
+              style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}
               data-testid="resolution-summary-body"
             >
               {ticket.resolutionSummary}

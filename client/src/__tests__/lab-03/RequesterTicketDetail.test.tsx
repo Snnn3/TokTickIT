@@ -298,6 +298,26 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
     expect(items[1].querySelector("img")).toBeNull();
   });
 
+  it("wraps a 2000-char unbroken resolution summary the same way (P2-1)", async () => {
+    const unbroken = "y".repeat(2000);
+    await renderDetail({
+      ...BASE_TICKET,
+      status: "RESOLVED",
+      resolutionSummary: unbroken,
+    });
+
+    // Mirror of the comment-body case above, same S-01 whitespace
+    // style-assertion convention: jsdom cannot measure overflow, so assert
+    // the wrapping rule itself -- pre-wrap kept and overflow-wrap breaks
+    // the unbroken run at 375px.
+    const summaryBody = screen.getByTestId("resolution-summary-body");
+    expect(summaryBody).toHaveTextContent(unbroken);
+    expect(summaryBody).toHaveStyle({
+      whiteSpace: "pre-wrap",
+      overflowWrap: "anywhere",
+    });
+  });
+
   it("shows the empty state with no comments and refuses an empty post without calling the API", async () => {
     const calls = mockApi(BASE_TICKET);
     render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
@@ -584,5 +604,68 @@ describe("Requester detail mobile touch targets (ui-spec §10, AC-18)", () => {
     expect(mobileQuery.slice(blockOpen, blockClose)).toMatch(
       /min-height:\s*44px/
     );
+  });
+
+  it("guarantees the 44px width half of 44x44 for the Close and filename buttons at 375px (P2-2)", async () => {
+    await renderDetail({
+      ...BASE_TICKET,
+      attachments: [
+        {
+          id: 101,
+          ticketId: 42,
+          filename: "a.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 2048,
+          uploadedAt: "2026-08-30T10:00:00.000Z",
+          removedAt: null,
+          removedReason: null,
+        },
+      ],
+    });
+
+    // (a) Both cited controls are real <button> targets inside the scoped
+    // detail root. The short filename ("a.pdf") is deliberate: a long name
+    // is already wider than 44px, so only a short name proves the width
+    // guarantee matters. The Close control lives in the removal dialog.
+    const detailView = screen.getByTestId("ticket-detail-view");
+    const filenameButton = screen.getByTitle("Download a.pdf");
+    expect(filenameButton.tagName).toBe("BUTTON");
+    expect(filenameButton).toHaveClass("zg-action-link");
+    expect(detailView).toContainElement(filenameButton);
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    const closeButton = document.querySelector(
+      '[data-testid="ticket-detail-view"] .btn-close'
+    );
+    expect(closeButton).not.toBeNull();
+    expect(closeButton?.tagName).toBe("BUTTON");
+    expect(detailView).toContainElement(closeButton as HTMLElement);
+
+    // (b) S-01 style-assertion convention: jsdom has no layout and cannot
+    // evaluate media queries, so assert the stylesheet rule itself rather
+    // than measured pixels -- a declaration block inside the below-768px
+    // query covering the button-like selectors must set min-width: 44px.
+    // .form-control is excluded on purpose (full-width already; min-width
+    // there could block flex shrinking), so the width rule covers .btn,
+    // .btn-close and .zg-action-link only. A selector may appear in more
+    // than one rule (min-height + min-width), so collect every min-width
+    // block first instead of stopping at the first occurrence.
+    const queryStart = indexCss.indexOf("@media (max-width: 767.98px)");
+    expect(queryStart).toBeGreaterThan(-1);
+    const mobileQuery = indexCss.slice(queryStart);
+    const widthBlocks = [...mobileQuery.matchAll(/([^{}]+)\{[^}]*min-width:\s*44px[^}]*\}/g)].map(
+      (m) => m[1]
+    );
+    expect(widthBlocks.length).toBeGreaterThan(0);
+    for (const selector of [
+      '[data-testid="ticket-detail-view"] .btn-close',
+      '[data-testid="ticket-detail-view"] .zg-action-link',
+      '[data-testid="ticket-detail-view"] .btn',
+    ]) {
+      expect(
+        widthBlocks.some((list) => list.includes(selector)),
+        `expected a mobile min-width: 44px rule to cover ${selector}`
+      ).toBe(true);
+    }
   });
 });
