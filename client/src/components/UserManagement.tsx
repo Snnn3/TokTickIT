@@ -132,6 +132,7 @@ function AccountStatusBadge({ isActive }: { isActive: boolean }) {
 async function responseError(response: Response) {
   const data = await response.json().catch(() => ({}));
   return {
+    code: typeof data?.error?.code === "string" ? data.error.code : undefined,
     message:
       data?.error?.message || "The server could not complete that action.",
     details: Array.isArray(data?.error?.details)
@@ -262,8 +263,13 @@ export function UserManagement() {
     const error = await responseError(response);
     const nextErrors: Record<string, string> = {};
     for (const detail of error.details) {
-      if (detail.field && detail.issue) nextErrors[detail.field] = detail.issue;
+      const field =
+        detail.field === "initialPassword" || detail.field === "newPassword"
+          ? "password"
+          : detail.field;
+      if (field && detail.issue) nextErrors[field] = detail.issue;
     }
+    if (error.code === "EMAIL_TAKEN") nextErrors.email = error.message;
     setFormErrors(nextErrors);
     setDialogError(error.message);
   };
@@ -620,14 +626,26 @@ export function UserManagement() {
                     <label className="form-label fw-semibold" htmlFor="user-name">
                       Name
                     </label>
+                    <span aria-hidden="true" className="text-danger">
+                      {" "}
+                      *
+                    </span>
                     <input
-                      aria-describedby={formErrors.name ? "user-name-error" : undefined}
+                      aria-describedby={
+                        formErrors.name ? "user-name-error" : undefined
+                      }
+                      aria-required="true"
                       className={`form-control ${formErrors.name ? "is-invalid" : ""}`}
+                      disabled={saving}
                       id="user-name"
                       onChange={(event) =>
-                        setForm((previous) => ({ ...previous, name: event.target.value }))
+                        setForm((previous) => ({
+                          ...previous,
+                          name: event.target.value,
+                        }))
                       }
                       ref={initialFocusRef}
+                      required
                       value={form.name}
                     />
                     {formErrors.name && (
@@ -641,14 +659,26 @@ export function UserManagement() {
                     <label className="form-label fw-semibold" htmlFor="user-email">
                       Email
                     </label>
+                    <span aria-hidden="true" className="text-danger">
+                      {" "}
+                      *
+                    </span>
                     <input
-                      aria-describedby={formErrors.email ? "user-email-error" : undefined}
+                      aria-describedby={
+                        formErrors.email ? "user-email-error" : undefined
+                      }
+                      aria-required="true"
                       className={`form-control ${formErrors.email ? "is-invalid" : ""}`}
+                      disabled={saving}
                       id="user-email"
                       onChange={(event) =>
-                        setForm((previous) => ({ ...previous, email: event.target.value }))
+                        setForm((previous) => ({
+                          ...previous,
+                          email: event.target.value,
+                        }))
                       }
                       type="email"
+                      required
                       value={form.email}
                     />
                     {formErrors.email && (
@@ -662,9 +692,17 @@ export function UserManagement() {
                     <label className="form-label fw-semibold" htmlFor="user-role">
                       Role
                     </label>
+                    <span aria-hidden="true" className="text-danger">
+                      {" "}
+                      *
+                    </span>
                     <select
-                      aria-describedby={formErrors.role ? "user-role-error" : undefined}
+                      aria-describedby={
+                        formErrors.role ? "user-role-error" : undefined
+                      }
+                      aria-required="true"
                       className={`form-select ${formErrors.role ? "is-invalid" : ""}`}
+                      disabled={saving}
                       id="user-role"
                       onChange={(event) =>
                         setForm((previous) => ({
@@ -673,6 +711,7 @@ export function UserManagement() {
                         }))
                       }
                       value={form.role}
+                      required
                     >
                       {ROLE_OPTIONS.map((role) => (
                         <option key={role} value={role}>
@@ -690,6 +729,7 @@ export function UserManagement() {
                   <div className="form-check form-switch mb-3">
                     <input
                       className="form-check-input"
+                      disabled={saving}
                       id="user-active"
                       onChange={(event) =>
                         setForm((previous) => ({
@@ -712,9 +752,17 @@ export function UserManagement() {
                   <label className="form-label fw-semibold" htmlFor="user-password">
                     {dialog === "create" ? "Initial password" : "New password"}
                   </label>
+                  <span aria-hidden="true" className="text-danger">
+                    {" "}
+                    *
+                  </span>
                   <input
-                    aria-describedby={formErrors.password ? "user-password-error" : undefined}
+                    aria-describedby={
+                      formErrors.password ? "user-password-error" : undefined
+                    }
+                    aria-required="true"
                     className={`form-control ${formErrors.password ? "is-invalid" : ""}`}
+                    disabled={saving}
                     id="user-password"
                     onChange={(event) =>
                       setForm((previous) => ({
@@ -724,6 +772,7 @@ export function UserManagement() {
                     }
                     type="password"
                     ref={initialFocusRef}
+                    required
                     value={form.password}
                   />
                   {formErrors.password && (

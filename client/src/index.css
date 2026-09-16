@@ -618,6 +618,14 @@ body {
     min-width: 44px;
   }
 
+  [data-testid="user-management-view"] .zg-dialog .btn-close {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
   .zg-dialog-backdrop {
     padding: 0.5rem;
   }

@@ -253,6 +253,35 @@ const USER_MUTATION_SELECT = {
   mustChangePassword: true,
 } as const;
 
+const MAX_SERIALIZATION_RETRIES = 3;
+
+/**
+ * Last-administrator changes must be serialized. PostgreSQL's serializable
+ * isolation rejects the losing concurrent write with P2034; retrying that
+ * transaction makes the second attempt observe the committed administrator
+ * count and return LAST_ADMIN instead of allowing zero active administrators.
+ */
+async function runSerializableTransaction<T>(
+  callback: (tx: Prisma.TransactionClient) => Promise<T>
+): Promise<T> {
+  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt += 1) {
+    try {
+      return await prisma.$transaction(callback, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (
+        !isPrismaError(error, "P2034") ||
+        attempt === MAX_SERIALIZATION_RETRIES - 1
+      ) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error("Serializable transaction retry loop exhausted");
+}
+
 // GET /api/admin/users [FR-26, AC-13]
 adminRouter.get(
   "/users",
@@ -423,7 +452,7 @@ adminRouter.patch(
     const actor = req.authUser!;
 
     try {
-      const result = await prisma.$transaction(async (tx) => {
+      const result = await runSerializableTransaction(async (tx) => {
         const current = await tx.user.findUnique({
           where: { id },
           select: {

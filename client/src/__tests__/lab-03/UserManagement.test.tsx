@@ -33,6 +33,14 @@ function jsonResponse(body: unknown, status = 200): Response {
   } as Response;
 }
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 function renderUsers() {
   return render(
     withAuthRouter(<UserManagement />, {
@@ -142,6 +150,171 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       );
     });
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("maps server password and duplicate-email errors to inline fields", async () => {
+    let postAttempt = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      if ((init?.method ?? "GET") === "POST") {
+        postAttempt += 1;
+        if (postAttempt === 1) {
+          return jsonResponse(
+            {
+              error: {
+                code: "VALIDATION_FAILED",
+                message: "Validation failed",
+                details: [
+                  {
+                    field: "initialPassword",
+                    issue: "Password must contain an uppercase letter",
+                  },
+                ],
+              },
+            },
+            400
+          );
+        }
+        return jsonResponse(
+          {
+            error: { code: "EMAIL_TAKEN", message: "Email is already in use" },
+          },
+          409
+        );
+      }
+      return jsonResponse({ users: USERS });
+    });
+
+    renderUsers();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-1")).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create user" }));
+
+    let dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Name"), {
+      target: { value: "New Requester" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Email"), {
+      target: { value: "new.requester@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Initial password"), {
+      target: { value: PASSWORD },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Create user" })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Password must contain an uppercase letter")
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Initial password")).toHaveClass(
+        "is-invalid"
+      );
+    });
+    expect(screen.getByLabelText("Initial password")).toHaveAttribute(
+      "aria-describedby",
+      "user-password-error"
+    );
+
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create user" }));
+    dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Name"), {
+      target: { value: "New Requester" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Email"), {
+      target: { value: "new.requester@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Initial password"), {
+      target: { value: PASSWORD },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Create user" })
+    );
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("dialog")).getByText(
+          "Email is already in use",
+          {
+            selector: ".invalid-feedback",
+          }
+        )
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Email")).toHaveClass("is-invalid");
+    });
+    expect(screen.getByLabelText("Email")).toHaveAttribute(
+      "aria-describedby",
+      "user-email-error"
+    );
+  });
+
+  it("disables every dialog control while a save is pending", async () => {
+    const pendingPost = deferred<Response>();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      if ((init?.method ?? "GET") === "POST") return pendingPost.promise;
+      return jsonResponse({ users: USERS });
+    });
+
+    renderUsers();
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-1")).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create user" }));
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Name"), {
+      target: { value: "New Requester" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Email"), {
+      target: { value: "new.requester@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Initial password"), {
+      target: { value: PASSWORD },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Create user" })
+    );
+
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText("Name")).toBeDisabled();
+    });
+    expect(within(dialog).getByLabelText("Name")).toBeRequired();
+    expect(within(dialog).getByLabelText("Email")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Email")).toBeRequired();
+    expect(within(dialog).getByLabelText("Role")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Active account")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Initial password")).toBeDisabled();
+    expect(within(dialog).getByLabelText("Initial password")).toBeRequired();
+    expect(
+      within(dialog).getByRole("button", { name: "Close dialog" })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Cancel" })
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Saving..." })
+    ).toBeDisabled();
+
+    pendingPost.resolve(
+      jsonResponse(
+        {
+          user: {
+            ...USERS[0],
+            id: 3,
+            name: "New Requester",
+            email: "new.requester@example.com",
+            role: "REQUESTER",
+            mustChangePassword: true,
+          },
+        },
+        201
+      )
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   it("confirms a deactivation cascade and reports released tickets", async () => {

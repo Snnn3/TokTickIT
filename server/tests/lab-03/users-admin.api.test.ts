@@ -299,13 +299,104 @@ describe("API-19 administrator guards and reset (AC-15, AC-16)", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("resets a password, forces the next change and invalidates outstanding sessions", async () => {
+  it("serializes concurrent removal of two active Administrators", async () => {
+    const activeAdminIds = new Set([1, 2]);
+    const rows = new Map([
+      [1, adminRow(1)],
+      [2, adminRow(2)],
+    ]);
+    let countCalls = 0;
+    let releaseFirstCounts!: () => void;
+    const bothCountsStarted = new Promise<void>((resolve) => {
+      releaseFirstCounts = resolve;
+    });
+    let transactionCalls = 0;
+
     vi.spyOn(prisma.user, "findUnique").mockImplementation(
-      (async (args: any) =>
-        args.where?.id === ADMIN_ID
-          ? adminRow()
-          : userRow(2, { role: Role.REQUESTER, tokenVersion: 4 })) as never
+      (async (args: any) => rows.get(args.where?.id) ?? null) as never
     );
+    vi.spyOn(prisma, "$transaction").mockImplementation(
+      async (callback: any) => {
+        transactionCalls += 1;
+        let targetId: number | undefined;
+        let stagedDeactivation = false;
+        const tx = {
+          user: {
+            findUnique: async (args: any) => {
+              targetId = args.where?.id;
+              const row = rows.get(targetId!);
+              return row
+                ? { ...row, isActive: activeAdminIds.has(targetId!) }
+                : null;
+            },
+            count: async () => {
+              countCalls += 1;
+              if (countCalls <= 2) {
+                if (countCalls === 2) releaseFirstCounts();
+                await bothCountsStarted;
+                return 2;
+              }
+              return activeAdminIds.size;
+            },
+            findFirst: async () => null,
+            update: async () => {
+              stagedDeactivation = true;
+              const row = rows.get(targetId!);
+              return {
+                id: targetId,
+                name: row?.name,
+                email: row?.email,
+                role: Role.ADMINISTRATOR,
+                isActive: false,
+                mustChangePassword: false,
+              };
+            },
+          },
+          ticket: {
+            updateMany: async () => ({ count: 0 }),
+          },
+        };
+
+        const result = await callback(tx);
+        if (stagedDeactivation && targetId !== undefined) {
+          if (activeAdminIds.size <= 1) {
+            throw Object.assign(new Error("serialization conflict"), {
+              code: "P2034",
+            });
+          }
+          activeAdminIds.delete(targetId);
+        }
+        return result;
+      }
+    );
+
+    const [deactivateSecond, deactivateFirst] = await Promise.all([
+      request(app)
+        .patch("/api/admin/users/2")
+        .set("Cookie", sessionCookie({ id: 1, role: Role.ADMINISTRATOR }))
+        .send({ isActive: false }),
+      request(app)
+        .patch("/api/admin/users/1")
+        .set("Cookie", sessionCookie({ id: 2, role: Role.ADMINISTRATOR }))
+        .send({ isActive: false }),
+    ]);
+
+    expect([deactivateSecond.status, deactivateFirst.status].sort()).toEqual([
+      200, 409,
+    ]);
+    const refused = [deactivateSecond, deactivateFirst].find(
+      (response) => response.status === 409
+    );
+    expect(refused?.body.error.code).toBe("LAST_ADMIN");
+    expect(activeAdminIds.size).toBe(1);
+    expect(transactionCalls).toBe(3);
+  });
+
+  it("resets a password, forces the next change and invalidates outstanding sessions", async () => {
+    const target = userRow(2, { role: Role.REQUESTER, tokenVersion: 4 });
+    vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+      args: any
+    ) => (args.where?.id === ADMIN_ID ? adminRow() : target)) as never);
     const update = vi.spyOn(prisma.user, "update").mockResolvedValue({
       id: 2,
     } as never);
@@ -330,6 +421,21 @@ describe("API-19 administrator guards and reset (AC-15, AC-16)", () => {
     await expect(hashPassword(GOOD_PASSWORD)).resolves.toBeTypeOf("string");
     expect(hash).toMatch(/^\$2[aby]?\$/);
     expect(JSON.stringify(res.body)).not.toContain(GOOD_PASSWORD);
+
+    target.mustChangePassword = true;
+    target.tokenVersion = 5;
+    const gatedRequest = await request(app)
+      .get("/api/reference/categories")
+      .set(
+        "Cookie",
+        sessionCookie({
+          id: 2,
+          role: Role.REQUESTER,
+          tokenVersion: target.tokenVersion,
+        })
+      );
+    expect(gatedRequest.status).toBe(403);
+    expect(gatedRequest.body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
   });
 
   it("rejects an invalid reset password before writing", async () => {
