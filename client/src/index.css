@@ -395,6 +395,30 @@ body {
   border: 1px solid var(--zg-warning);
 }
 
+/* Staff detail discussion surfaces (ui-spec 1, 7). Public comments stay
+   white; internal notes are amber-tinted with a lock and an INTERNAL marker
+   so private content can never be mistaken for public. */
+.zg-comment-card {
+  background-color: #ffffff;
+}
+
+.zg-note-card {
+  background-color: #fdf6e8;
+  border-color: rgba(183, 121, 31, 0.35);
+}
+
+.zg-note-item {
+  background-color: #fdf6e8;
+  border-color: rgba(183, 121, 31, 0.35);
+}
+
+.badge-zen-internal {
+  background-color: #fbf0dc;
+  color: var(--zg-warning);
+  font-weight: 700;
+  border: 1px solid var(--zg-warning);
+}
+
 /* 44px touch targets below the tablet breakpoint (ui-spec 10) */
 @media (max-width: 767.98px) {
   .zg-auth-card .btn,
@@ -448,6 +472,22 @@ body {
 
   [data-testid="staff-queue-view"] .btn,
   [data-testid="staff-queue-view"] .zg-action-link {
+    min-width: 44px;
+  }
+
+  /* Staff detail controls keep desktop density but meet the 44x44 mobile
+     hit-area target (ui-spec §10, AC-18): scoped to the staff detail root so
+     every operational select, Claim/Save/Retry action and composer button is
+     covered without touching other screens. */
+  [data-testid="staff-detail-view"] .btn,
+  [data-testid="staff-detail-view"] .form-control,
+  [data-testid="staff-detail-view"] .form-select,
+  [data-testid="staff-detail-view"] .zg-action-link {
+    min-height: 44px;
+  }
+
+  [data-testid="staff-detail-view"] .btn,
+  [data-testid="staff-detail-view"] .zg-action-link {
     min-width: 44px;
   }
 }

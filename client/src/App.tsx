@@ -12,6 +12,7 @@ import { Login } from "./components/Login";
 import { MyTickets } from "./components/MyTickets";
 import { NotFound, ScreenPanel } from "./components/ScreenPanel";
 import { RequesterTicketDetail } from "./components/RequesterTicketDetail";
+import { StaffTicketDetail } from "./components/StaffTicketDetail";
 import { StaffTicketQueue } from "./components/StaffTicketQueue";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
@@ -90,8 +91,7 @@ function TicketDetailRoute() {
 
 /**
  * Staff queue [FR-22, ui-spec section 6]. Any row opens for action on the
- * staff detail screen, which lands in the staff-operations slice (#40); until
- * then the address renders the pending panel behind its real guard.
+ * staff detail screen.
  */
 function StaffQueueRoute() {
   const navigate = useNavigate();
@@ -103,12 +103,26 @@ function StaffQueueRoute() {
 }
 
 /**
- * The staff and administrator screens land in later slices (#39, #40 and #41).
- * Their routes and guards exist now because this slice owns the shell, and
- * because a role whose landing address rendered nothing would leave an IT Staff
- * or Administrator sign-in looking broken. The guard in front of each is real
- * and tested; only the body is a placeholder.
+ * Staff detail [FR-23, FR-24, ui-spec section 7]. The queue's Open action
+ * lands here; a ticket the viewer filed themselves still loads with the
+ * operational card replaced by an explanation and no notes [BR-25].
  */
+function StaffTicketDetailRoute() {
+  const navigate = useNavigate();
+  const { ticketId } = useParams();
+  const parsed = Number(ticketId);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return <NotFound backTo="/staff/queue" />;
+  }
+
+  return (
+    <StaffTicketDetail
+      onBack={() => navigate("/staff/queue")}
+      ticketId={parsed}
+    />
+  );
+}
 function PendingSlice({ title, issue }: { title: string; issue: string }) {
   return (
     <ScreenPanel
@@ -152,12 +166,7 @@ export function AppRoutes() {
         >
           <Route element={<StaffQueueRoute />} path="/staff/queue" />
           <Route
-            element={
-              <PendingSlice
-                issue="the staff operations slice"
-                title="Staff Ticket Detail"
-              />
-            }
+            element={<StaffTicketDetailRoute />}
             path="/staff/tickets/:ticketId"
           />
         </Route>
