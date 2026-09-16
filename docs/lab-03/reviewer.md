@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
+Version: 2.6 | Date: 2026-09-16 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -16,8 +16,8 @@ Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/45 | feature/lab3-2-refactor | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/47 | feature/lab3-4-requester-regression | Commented ×3 → Approved (merged 2026-09-15) |
-| TBD | feature/lab3-5-staff-queue | TBD |
-| TBD | feature/lab3-6-staff-operations | TBD |
+| https://github.com/Snnn3/TokTickIT/pull/48 | feature/lab3-5-staff-queue | Approved |
+| https://github.com/Snnn3/TokTickIT/pull/49 | feature/lab3-6-staff-operations | Approved |
 | TBD | feature/lab3-7-user-management | TBD |
 | TBD | feature/lab3-8-e2e-visual | TBD |
 
@@ -53,7 +53,7 @@ Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 - **Reviewer review Round 7 (YummieGG, APPROVED, 2026-09-14 11:31):** "All Previous Findings Resolved ... Zero blocking findings remain. Excellent engineering and clean documentation! Verdict: APPROVED" at head `2f17550`.
 - **My comment Round 7 (2026-09-14):** No fix needed; approved at head `2f17550`. Merged into `lab3-staging` at 11:38. Issue #37 used `refs` rather than `closes`, so it was closed manually with the green evidence, unblocking #38, #39 and #41.
 
-**PR #47 — feature/lab3-4-requester-regression** (OPEN, 3 rounds, fixes pushed)
+**PR #47 — feature/lab3-4-requester-regression** (MERGED)
 - **Reviewer review Round 1 (YummieGG, CHANGES_REQUESTED, 2026-09-15):** Three findings at head `8928782`: (P1) appears-resolved and reopen validate with `findUnique` then unconditional `update` by id — a TOCTOU race reproduced as `200, 200` on concurrent requests, risking `ALREADY_SIGNALLED`, terminal-state guard and AC-07/AC-22 violations; make validation and mutation atomic (conditional update, transaction or row lock) with `403`/`409`/`422` on failed conditions; (P2) new confirm dialogs have `role="dialog"` but no focus trap and no Escape handling, against `ui-spec.md` §10 — reuse the attachment-removal modal pattern plus tests; (P2) new action/comment buttons use `btn-sm` below the 44px mobile touch-target requirement — drop `btn-sm` or add a scoped `min-height: 44px` rule, verify at 375px.
 - **My comment Round 1 (2026-09-15):** Quoted the review, then replied with fixes: atomic appears-resolved/reopen via conditional `updateMany` (`3e7c32e`), focus trap + Escape for the requester confirm dialogs (`5e444c9`), 44px mobile touch targets for requester actions (`dc8de73`).
 - **Reviewer review Round 2 (YummieGG, CHANGES_REQUESTED, 2026-09-15):** Race fixed and all checks green (server 118/118, client 93/93), three findings before approval: (P2) 2,000-char unbroken comment overflows — `white-space: pre-wrap` alone is not enough, add `overflow-wrap: anywhere` + 375px test; (P2) focus trap only cycles first/last control, focus still escapes via click or programmatic focus — contain it + regression test; (P2) 44px rule misses the Back button and Attachment controls — cover all requester-detail controls, verify at 375px. Non-blocking: extract the duplicated focus-trap logic, centralize repeated public-comment query/response shapes.
@@ -63,6 +63,14 @@ Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 - **Merge-gate + round 4 (2026-09-15):** Agent gate found code P2s + Security Guard all passing with one blocking docs row (B-01: `reviewer.md` at 2.4 vs five docs at 2.3). Fixed in `8de9dd8` (five one-line version bumps), PR body figures corrected, server 118/118 + client 102/102 green. Ultracite gate then failed on 2 lines (F-01); fixed formatting-only in `44ea0e9`, check clean. Thanked the reviewer on the PR thread for all three rounds.
 - **Reviewer review Round 4 (YummieGG, APPROVED, 2026-09-15 16:29):** "I re-reviewed this PR against the AC, Spec, and Security Guard requirements from Issue #38. The previously identified formatting and mobile filename overflow issues have been addressed. The requester flows, authorization checks, public comments, appears-resolved action, reopen flow, resolution summary, and internal notes protection are working as expected. The test suite and build checks pass. No remaining blocking issues were found."
 - **My comment Round 4 (2026-09-15):** No fix needed. Merged by @YummieGG at 16:29 into `lab3-staging`; issue #38 closed, unblocking #39, #40 and #41.
+
+**PR #48 — feature/lab3-5-staff-queue** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-09-16 08:20):** "All acceptance criteria and specifications for Issue #39 are fully met: Staff ticket queue with search, multi-filters, sorting, and pagination works smoothly. Role-based access control and security guards (401, 403, 400 validation) are robust and strictly enforced. All test suites are passing green (Server 134/134, Client 113/113) with zero linter or build errors. Ready to merge into `lab3-staging`. Great work! Approved."
+- **My comment (2026-09-16):** Thanked the reviewer on the PR thread. Merged into `lab3-staging` at 08:20.
+
+**PR #49 — feature/lab3-6-staff-operations** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-09-16 12:55):** "Zero blocking issues, zero regressions, and 100% compliant with specifications and security constraints. LGTM! Approved." Full Spec + Security Guard audit (access control, ownership, transitions, resolution summary, comments vs notes, self-service ban) with 298/298 tests green (server 171/171 incl. 37 staff-operations tests, client 127/127) and clean lint/format/builds.
+- **My comment (2026-09-16):** Thanked the reviewer on the PR thread for the thorough audit. Merged into `lab3-staging` at 12:55.
 ---
 
 ## Pull Requests I reviewed for my partner

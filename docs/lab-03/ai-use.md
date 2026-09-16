@@ -1,6 +1,6 @@
 # AI Use Log — Lab 3
 
-Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
+Version: 2.6 | Date: 2026-09-16 | Companion to `specification.md`.
 
 LLMs used:
 - **Muse Spark 1.3** (accessed via opencode CLI) — Sprint 3 grilling, spec contract v1.0, and implementation/review loop
