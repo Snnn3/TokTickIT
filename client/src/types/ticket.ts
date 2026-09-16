@@ -114,6 +114,72 @@ export interface PublicComment {
 }
 
 /**
+ * An internal operational note [FR-25, BR-04, BR-14]. Same shape as a public
+ * comment by design (api-spec.md section 5): author and timestamp are always
+ * backend-set, the collection is append-only, and the client renders the two
+ * unmistakably apart (white versus amber) so private content is never mistaken
+ * for public.
+ */
+export interface InternalNote {
+  id: number;
+  body: string;
+  author: {
+    id: number;
+    name: string;
+    role?: string;
+  };
+  createdAt: string;
+}
+
+/**
+ * A user who may legally own a ticket: active IT Staff or Administrators only,
+ * name-ascending [FR-24, BR-10]. Populates the Owner select IT Staff could
+ * never fill from the Administrator-only user list.
+ */
+export interface StaffAssignee {
+  id: number;
+  name: string;
+  role: string;
+}
+
+/**
+ * One staff detail payload [api-spec.md section 4, FR-23]. The operational
+ * fields (owner, IT Priority, permitted status, Resolution Summary) are the
+ * only editable ones; everything else renders read-only. When the viewer
+ * filed the ticket themselves the server omits internalNotes entirely and
+ * carries selfService so the client replaces the operational card with an
+ * explanation instead of dead-ending the queue's Open action [BR-25].
+ */
+export interface StaffTicketDetail {
+  id: number;
+  number: string;
+  ticketDate: string;
+  status: TicketStatus;
+  requestedPriority: TicketPriority;
+  itPriority: TicketPriority;
+  summary: string;
+  description: string;
+  categoryId: number;
+  systemId: number;
+  requester: {
+    id: number;
+    name: string;
+  };
+  owner: {
+    id: number;
+    name: string;
+  } | null;
+  appearsResolvedAt: string | null;
+  resolutionSummary: string | null;
+  publicComments: PublicComment[];
+  internalNotes?: InternalNote[];
+  attachments: AttachmentMetadata[];
+  createdAt: string;
+  updatedAt: string;
+  selfService?: boolean;
+}
+
+/**
  * The staff queue owner filter [BR-16, ui-spec section 6]. Opt-in only: the
  * empty (All owners) default is not a validated value and is never sent, so
  * the queue opens on every ticket including unassigned ones [D12].
