@@ -7,6 +7,7 @@ import { requireAuth, requireJsonBody } from "./middleware/auth";
 import { prisma } from "./prisma";
 import { attachmentsRouter } from "./routes/attachments";
 import { authRouter } from "./routes/auth";
+import { staffRouter } from "./routes/staff";
 import { ticketsRouter } from "./routes/tickets";
 
 export const app = express();
@@ -100,6 +101,11 @@ app.get("/api/reference/systems", ...requireAuth, async (_req, res) => {
 // Requester ticket and attachment routes, carried over from Lab 2 with the
 // identity mechanism replaced: the owner is the authenticated user, never a
 // value the client supplied [FR-20, BR-03].
+// Staff queue and assignee reads, carried by the staff slice [FR-22, BR-16].
+// Mounted after the requester routes; the /api/staff/* prefix keeps the two
+// from ever colliding, and the router's role guard makes Administrator a
+// superset of IT Staff here (D2).
+app.use("/api/staff", staffRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/attachments", attachmentsRouter);
 

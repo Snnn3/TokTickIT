@@ -112,3 +112,45 @@ export interface PublicComment {
   };
   createdAt: string;
 }
+
+/**
+ * The staff queue owner filter [BR-16, ui-spec section 6]. Opt-in only: the
+ * empty (All owners) default is not a validated value and is never sent, so
+ * the queue opens on every ticket including unassigned ones [D12].
+ */
+export type QueueOwnerFilter = "assigned" | "unassigned" | "mine";
+
+/**
+ * One staff queue row [api-spec.md section 4]: who filed it, who owns it (or
+ * an explicit null for unassigned), both urgencies, workflow status and the
+ * appears-resolved signal. No description, notes or credential material.
+ */
+export interface StaffQueueTicket {
+  id: number;
+  number: string;
+  summary: string;
+  categoryId: number;
+  categoryName: string;
+  requestedPriority: TicketPriority;
+  itPriority: TicketPriority;
+  status: TicketStatus;
+  requester: {
+    id: number;
+    name: string;
+  };
+  owner: {
+    id: number;
+    name: string;
+  } | null;
+  appearsResolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffQueueResponse {
+  tickets: StaffQueueTicket[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}

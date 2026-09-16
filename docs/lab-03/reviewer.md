@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 2.4 | Date: 2026-09-15 | Companion to `specification.md`.
+Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -15,7 +15,7 @@ Version: 2.4 | Date: 2026-09-15 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/44 | feature/lab3-1-contract | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/45 | feature/lab3-2-refactor | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Commented → Approved |
-| https://github.com/Snnn3/TokTickIT/pull/47 | feature/lab3-4-requester-regression | Commented → Commented → Commented (3 rounds, fixes pushed, awaiting re-review) |
+| https://github.com/Snnn3/TokTickIT/pull/47 | feature/lab3-4-requester-regression | Commented ×3 → Approved (merged 2026-09-15) |
 | TBD | feature/lab3-5-staff-queue | TBD |
 | TBD | feature/lab3-6-staff-operations | TBD |
 | TBD | feature/lab3-7-user-management | TBD |
@@ -60,6 +60,9 @@ Version: 2.4 | Date: 2026-09-15 | Companion to `specification.md`.
 - **My comment Round 2 (2026-09-15):** Quoted the review, then replied with fixes: round-2 client fixes incl. comment wrap, dialog containment, 44px root scope and shared focus hook (`3307b60`), centralized public-comment select and serializer (`8974171`).
 - **Reviewer review Round 3 (YummieGG, CHANGES_REQUESTED, 2026-09-15):** Two Spec/AC issues remain at head `8974171`: (P2) attachment filename download is a `<button>` without `.btn`, outside the 44px rule (`AttachmentSection.tsx`, `index.css`) — violates `ui-spec.md` §10 and AC-18, add a 375px test; (P2) `useConfirmDialogFocus.ts` disables containment when `busy=true`, letting focus escape while the dialog is open — violates §10 and AC-18, add a busy-state test.
 - **My comment Round 3 (2026-09-15):** Quoted the review, then replied with fixes: busy focus containment and filename 44px touch target (`00744c9`), resolution summary wrap and 44x44 touch hit area (`d30c9c1`). Awaiting re-review.
+- **Merge-gate + round 4 (2026-09-15):** Agent gate found code P2s + Security Guard all passing with one blocking docs row (B-01: `reviewer.md` at 2.4 vs five docs at 2.3). Fixed in `8de9dd8` (five one-line version bumps), PR body figures corrected, server 118/118 + client 102/102 green. Ultracite gate then failed on 2 lines (F-01); fixed formatting-only in `44ea0e9`, check clean. Thanked the reviewer on the PR thread for all three rounds.
+- **Reviewer review Round 4 (YummieGG, APPROVED, 2026-09-15 16:29):** "I re-reviewed this PR against the AC, Spec, and Security Guard requirements from Issue #38. The previously identified formatting and mobile filename overflow issues have been addressed. The requester flows, authorization checks, public comments, appears-resolved action, reopen flow, resolution summary, and internal notes protection are working as expected. The test suite and build checks pass. No remaining blocking issues were found."
+- **My comment Round 4 (2026-09-15):** No fix needed. Merged by @YummieGG at 16:29 into `lab3-staging`; issue #38 closed, unblocking #39, #40 and #41.
 ---
 
 ## Pull Requests I reviewed for my partner
