@@ -10,10 +10,11 @@ import { ChangePassword } from "./components/ChangePassword";
 import { CreateTicket } from "./components/CreateTicket";
 import { Login } from "./components/Login";
 import { MyTickets } from "./components/MyTickets";
-import { NotFound, ScreenPanel } from "./components/ScreenPanel";
+import { NotFound } from "./components/ScreenPanel";
 import { RequesterTicketDetail } from "./components/RequesterTicketDetail";
 import { StaffTicketDetail } from "./components/StaffTicketDetail";
 import { StaffTicketQueue } from "./components/StaffTicketQueue";
+import { UserManagement } from "./components/UserManagement";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
   RedirectIfSignedIn,
@@ -123,18 +124,6 @@ function StaffTicketDetailRoute() {
     />
   );
 }
-function PendingSlice({ title, issue }: { title: string; issue: string }) {
-  return (
-    <ScreenPanel
-      backLabel="Back to my tickets"
-      backTo="/tickets"
-      description={`This screen arrives with ${issue}. Signing in, the role-aware navigation and the route guard around this address are in place already.`}
-      testId="pending-slice-panel"
-      title={title}
-    />
-  );
-}
-
 export function AppRoutes() {
   return (
     <Routes>
@@ -172,15 +161,7 @@ export function AppRoutes() {
         </Route>
 
         <Route element={<RequireRole allowed={["ADMINISTRATOR"]} />}>
-          <Route
-            element={
-              <PendingSlice
-                issue="the user management slice"
-                title="User Management"
-              />
-            }
-            path="/admin/users"
-          />
+          <Route element={<UserManagement />} path="/admin/users" />
         </Route>
 
         <Route element={<NotFound backTo="/tickets" />} path="*" />
