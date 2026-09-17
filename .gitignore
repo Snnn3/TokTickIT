@@ -42,6 +42,7 @@ docs/lab-03/plan.md
 
 # Local-only agent scaffolding (never commit)
 .agents/
+AGENTS.md
 opencode.json
 
 # Local migration-evidence capture (machine-specific; the run is recorded in
