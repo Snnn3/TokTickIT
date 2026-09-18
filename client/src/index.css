@@ -602,7 +602,9 @@ body {
     border-top: 1px solid var(--zg-border);
   }
 
-  [data-testid="user-management-view"] .zg-user-table td[data-label="Actions"]::before {
+  [data-testid="user-management-view"]
+    .zg-user-table
+    td[data-label="Actions"]::before {
     display: block;
     margin-bottom: 0.5rem;
   }

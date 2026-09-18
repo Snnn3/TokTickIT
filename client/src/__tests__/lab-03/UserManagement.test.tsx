@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UserManagement } from "../../components/UserManagement";
 import { userWithRole, withAuthRouter } from "../../test/authHarness";
@@ -64,18 +70,27 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("user-row-2")).toBeInTheDocument();
     });
-    expect(screen.getByRole("columnheader", { name: "Open tickets" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "Open tickets" })
+    ).toBeInTheDocument();
     expect(screen.getByTestId("user-row-2")).toHaveTextContent("3");
     expect(screen.getByTestId("user-row-2")).toHaveTextContent("IT Staff");
     expect(
-      screen.getByRole("button", { name: "Reset password for Kittipong Saelim" })
+      screen.getByRole("button", {
+        name: "Reset password for Kittipong Saelim",
+      })
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search name or email" }), {
-      target: { value: "kittipong" },
-    });
+    fireEvent.change(
+      screen.getByRole("searchbox", { name: "Search name or email" }),
+      {
+        target: { value: "kittipong" },
+      }
+    );
     await waitFor(() => {
-      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain("search=kittipong");
+      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain(
+        "search=kittipong"
+      );
     });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Filter by role" }), {
@@ -94,22 +109,27 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       .mockImplementation(async (input, init) => {
         const url = String(input);
         if ((init?.method ?? "GET") === "POST" && url === "/api/admin/users") {
-          return jsonResponse({
-            user: {
-              id: 3,
-              name: "New Requester",
-              email: "new.requester@example.com",
-              role: "REQUESTER",
-              isActive: true,
-              mustChangePassword: true,
+          return jsonResponse(
+            {
+              user: {
+                id: 3,
+                name: "New Requester",
+                email: "new.requester@example.com",
+                role: "REQUESTER",
+                isActive: true,
+                mustChangePassword: true,
+              },
             },
-          }, 201);
+            201
+          );
         }
         return jsonResponse({ users: USERS });
       });
 
     renderUsers();
-    await waitFor(() => expect(screen.getByTestId("user-row-1")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-1")).toBeInTheDocument()
+    );
     fireEvent.click(screen.getByRole("button", { name: "Create user" }));
 
     const dialog = screen.getByRole("dialog");
@@ -124,16 +144,25 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
     });
 
     expect(screen.getByTestId("password-rule-length")).toHaveTextContent("met");
-    expect(screen.getByTestId("password-rule-letterCase")).toHaveTextContent("met");
+    expect(screen.getByTestId("password-rule-letterCase")).toHaveTextContent(
+      "met"
+    );
     expect(screen.getByTestId("password-rule-digit")).toHaveTextContent("met");
-    expect(screen.getByTestId("password-rule-special")).toHaveTextContent("met");
-    expect(screen.getByTestId("password-rule-maxBytes")).toHaveTextContent("met");
+    expect(screen.getByTestId("password-rule-special")).toHaveTextContent(
+      "met"
+    );
+    expect(screen.getByTestId("password-rule-maxBytes")).toHaveTextContent(
+      "met"
+    );
 
-    fireEvent.click(within(dialog).getByRole("button", { name: "Create user" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Create user" })
+    );
 
     await waitFor(() => {
       const postCall = fetchSpy.mock.calls.find(
-        ([input, init]) => String(input) === "/api/admin/users" && init?.method === "POST"
+        ([input, init]) =>
+          String(input) === "/api/admin/users" && init?.method === "POST"
       );
       expect(postCall).toBeDefined();
       expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
@@ -331,12 +360,18 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       });
 
     renderUsers();
-    await waitFor(() => expect(screen.getByTestId("user-row-2")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Edit Kittipong Saelim" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-2")).toBeInTheDocument()
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit Kittipong Saelim" })
+    );
 
     const dialog = screen.getByRole("dialog");
     fireEvent.click(within(dialog).getByLabelText("Active account"));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save changes" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Save changes" })
+    );
 
     expect(screen.getByTestId("deactivation-confirmation")).toHaveTextContent(
       "currently owns 3 open tickets"
@@ -346,9 +381,12 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
     ).toBe(false);
 
     fireEvent.click(
-      within(screen.getByTestId("deactivation-confirmation")).getByRole("button", {
-        name: "Confirm change",
-      })
+      within(screen.getByTestId("deactivation-confirmation")).getByRole(
+        "button",
+        {
+          name: "Confirm change",
+        }
+      )
     );
 
     await waitFor(() => {
@@ -356,7 +394,9 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
         fetchSpy.mock.calls.some(([, init]) => init?.method === "PATCH")
       ).toBe(true);
     });
-    const patchCall = fetchSpy.mock.calls.find(([, init]) => init?.method === "PATCH");
+    const patchCall = fetchSpy.mock.calls.find(
+      ([, init]) => init?.method === "PATCH"
+    );
     expect(JSON.parse(String(patchCall?.[1]?.body))).toMatchObject({
       isActive: false,
     });
@@ -382,21 +422,30 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       });
 
     renderUsers();
-    await waitFor(() => expect(screen.getByTestId("user-row-2")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-2")).toBeInTheDocument()
+    );
     fireEvent.click(
-      screen.getByRole("button", { name: "Reset password for Kittipong Saelim" })
+      screen.getByRole("button", {
+        name: "Reset password for Kittipong Saelim",
+      })
     );
 
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("must choose a new password at next login");
+    expect(dialog).toHaveTextContent(
+      "must choose a new password at next login"
+    );
     fireEvent.change(within(dialog).getByLabelText("New password"), {
       target: { value: PASSWORD },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Reset password" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Reset password" })
+    );
 
     await waitFor(() => {
       const postCall = fetchSpy.mock.calls.find(
-        ([input, init]) => String(input).endsWith("/reset-password") && init?.method === "POST"
+        ([input, init]) =>
+          String(input).endsWith("/reset-password") && init?.method === "POST"
       );
       expect(postCall).toBeDefined();
       expect(JSON.parse(String(postCall?.[1]?.body))).toEqual({
@@ -416,8 +465,12 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
     );
 
     renderUsers();
-    await waitFor(() => expect(screen.getByTestId("user-row-1")).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Edit Apinya Ratchada" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("user-row-1")).toBeInTheDocument()
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit Apinya Ratchada" })
+    );
 
     const dialog = screen.getByRole("dialog");
     const focusable = within(dialog).getAllByRole("button");
@@ -439,7 +492,9 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       jsonResponse({ error: { message: "You do not have access" } }, 403)
     );
     renderUsers();
-    await waitFor(() => expect(screen.getByTestId("users-forbidden")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByTestId("users-forbidden")).toBeInTheDocument()
+    );
     expect(screen.getByTestId("create-user-btn")).toBeDisabled();
 
     vi.restoreAllMocks();
@@ -447,8 +502,12 @@ describe("UserManagement (C-06, AC-13..AC-16, AC-21)", () => {
       jsonResponse({ error: { message: "Service unavailable" } }, 500)
     );
     const view = renderUsers();
-    await waitFor(() => expect(screen.getByTestId("users-failure")).toBeInTheDocument());
-    expect(screen.getByTestId("users-failure")).toHaveTextContent("Service unavailable");
+    await waitFor(() =>
+      expect(screen.getByTestId("users-failure")).toBeInTheDocument()
+    );
+    expect(screen.getByTestId("users-failure")).toHaveTextContent(
+      "Service unavailable"
+    );
     view.unmount();
   });
 });

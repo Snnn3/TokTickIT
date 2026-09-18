@@ -43,8 +43,8 @@ function userRow(
 }
 
 function transactionOnPrisma() {
-  vi.spyOn(prisma, "$transaction").mockImplementation(
-    async (callback: any) => callback(prisma as any)
+  vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+    callback(prisma as any)
   );
 }
 
@@ -102,9 +102,7 @@ describe("API-18 administrator list and create (AC-13, AC-14)", () => {
 
   it("refuses a Requester without querying or exposing user data", async () => {
     const findMany = vi.spyOn(prisma.user, "findMany");
-    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
-      userRow(9) as never
-    );
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(userRow(9) as never);
 
     const res = await request(app)
       .get("/api/admin/users")
@@ -130,10 +128,9 @@ describe("API-18 administrator list and create (AC-13, AC-14)", () => {
   });
 
   it("normalizes email, hashes the initial password and forces a first-login change", async () => {
-    vi.spyOn(prisma.user, "findUnique").mockImplementation(
-      (async (args: any) =>
-        args.where?.id === ADMIN_ID ? adminRow() : null) as never
-    );
+    vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+      args: any
+    ) => (args.where?.id === ADMIN_ID ? adminRow() : null)) as never);
     const create = vi.spyOn(prisma.user, "create").mockResolvedValue({
       id: 12,
       name: "New Staff",
@@ -184,12 +181,12 @@ describe("API-18 administrator list and create (AC-13, AC-14)", () => {
   });
 
   it("rejects case-insensitive duplicate emails and invalid roles without creating", async () => {
-    vi.spyOn(prisma.user, "findUnique").mockImplementation(
-      (async (args: any) =>
-        args.where?.id === ADMIN_ID
-          ? adminRow()
-          : ({ id: 22 } as never)) as never
-    );
+    vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+      args: any
+    ) =>
+      args.where?.id === ADMIN_ID
+        ? adminRow()
+        : ({ id: 22 } as never)) as never);
     const create = vi.spyOn(prisma.user, "create");
 
     const duplicate = await request(app)
@@ -239,7 +236,10 @@ describe("API-18 administrator list and create (AC-13, AC-14)", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.details).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ field: "initialPassword", rule: "uppercase" }),
+        expect.objectContaining({
+          field: "initialPassword",
+          rule: "uppercase",
+        }),
         expect.objectContaining({ field: "initialPassword", rule: "digit" }),
         expect.objectContaining({ field: "initialPassword", rule: "special" }),
       ])
@@ -251,9 +251,9 @@ describe("API-18 administrator list and create (AC-13, AC-14)", () => {
 describe("API-19 administrator guards and reset (AC-15, AC-16)", () => {
   it("checks self-deactivation before LAST_ADMIN and leaves the user untouched", async () => {
     transactionOnPrisma();
-    const findUnique = vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
-      adminRow() as never
-    );
+    const findUnique = vi
+      .spyOn(prisma.user, "findUnique")
+      .mockResolvedValue(adminRow() as never);
     const count = vi.spyOn(prisma.user, "count");
     const update = vi.spyOn(prisma.user, "update");
 
@@ -271,15 +271,15 @@ describe("API-19 administrator guards and reset (AC-15, AC-16)", () => {
 
   it("refuses deactivation or role removal of the last active Administrator", async () => {
     transactionOnPrisma();
-    vi.spyOn(prisma.user, "findUnique").mockImplementation(
-      (async (args: any) =>
-        args.where?.id === ADMIN_ID
-          ? adminRow()
-          : userRow(2, {
-              role: Role.ADMINISTRATOR,
-              isActive: true,
-            })) as never
-    );
+    vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+      args: any
+    ) =>
+      args.where?.id === ADMIN_ID
+        ? adminRow()
+        : userRow(2, {
+            role: Role.ADMINISTRATOR,
+            isActive: true,
+          })) as never);
     vi.spyOn(prisma.user, "count").mockResolvedValue(1);
     const update = vi.spyOn(prisma.user, "update");
 
@@ -457,59 +457,65 @@ describe("API-21 deactivation and demotion cascade (AC-21, BR-24)", () => {
   it.each<[string, { isActive?: boolean; role?: Role }]>([
     ["deactivation", { isActive: false }],
     ["staff-role demotion", { role: Role.REQUESTER }],
-  ])("releases non-terminal tickets and bumps tokenVersion on %s", async (_label, body) => {
-    transactionOnPrisma();
-    vi.spyOn(prisma.user, "findUnique").mockImplementation(
-      (async (args: any) =>
+  ])(
+    "releases non-terminal tickets and bumps tokenVersion on %s",
+    async (_label, body) => {
+      transactionOnPrisma();
+      vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+        args: any
+      ) =>
         args.where?.id === ADMIN_ID
           ? adminRow()
           : userRow(2, {
               role: Role.IT_STAFF,
               isActive: true,
               tokenVersion: 6,
-            })) as never
-    );
-    vi.spyOn(prisma.user, "count").mockResolvedValue(2);
-    const update = vi.spyOn(prisma.user, "update").mockResolvedValue({
-      id: 2,
-      name: "User 2",
-      email: "user2@example.com",
-      role: body.role ?? Role.IT_STAFF,
-      isActive: body.isActive ?? true,
-      mustChangePassword: false,
-    } as never);
-    const updateMany = vi
-      .spyOn(prisma.ticket, "updateMany")
-      .mockResolvedValue({ count: 3 });
-
-    const res = await request(app)
-      .patch("/api/admin/users/2")
-      .set("Cookie", sessionCookie({ id: ADMIN_ID, role: Role.ADMINISTRATOR }))
-      .send(body);
-
-    expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
-      user: {
+            })) as never);
+      vi.spyOn(prisma.user, "count").mockResolvedValue(2);
+      const update = vi.spyOn(prisma.user, "update").mockResolvedValue({
         id: 2,
         name: "User 2",
         email: "user2@example.com",
-      },
-      unassignedTicketCount: 3,
-    });
-    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|tokenVersion/);
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ tokenVersion: { increment: 1 } }),
-      })
-    );
-    expect(updateMany).toHaveBeenCalledWith({
-      where: {
-        ownerId: 2,
-        status: { notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED] },
-      },
-      data: { ownerId: null },
-    });
-  });
+        role: body.role ?? Role.IT_STAFF,
+        isActive: body.isActive ?? true,
+        mustChangePassword: false,
+      } as never);
+      const updateMany = vi
+        .spyOn(prisma.ticket, "updateMany")
+        .mockResolvedValue({ count: 3 });
+
+      const res = await request(app)
+        .patch("/api/admin/users/2")
+        .set(
+          "Cookie",
+          sessionCookie({ id: ADMIN_ID, role: Role.ADMINISTRATOR })
+        )
+        .send(body);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        user: {
+          id: 2,
+          name: "User 2",
+          email: "user2@example.com",
+        },
+        unassignedTicketCount: 3,
+      });
+      expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|tokenVersion/);
+      expect(update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ tokenVersion: { increment: 1 } }),
+        })
+      );
+      expect(updateMany).toHaveBeenCalledWith({
+        where: {
+          ownerId: 2,
+          status: { notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED] },
+        },
+        data: { ownerId: null },
+      });
+    }
+  );
 
   it("does not expose a user deletion route", async () => {
     vi.spyOn(prisma.user, "findUnique").mockResolvedValue(adminRow() as never);

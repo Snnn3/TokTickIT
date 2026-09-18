@@ -412,7 +412,9 @@ export function UserManagement() {
       <div className="zg-card p-4 mb-4">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <div>
-            <h1 className="h4 fw-bold mb-1 text-zen-primary">User Management</h1>
+            <h1 className="h4 fw-bold mb-1 text-zen-primary">
+              User Management
+            </h1>
             <p className="text-muted small mb-0">
               Manage accounts, roles, access and initial passwords.
             </p>
@@ -487,7 +489,11 @@ export function UserManagement() {
         )}
 
         {!loading && forbidden && (
-          <div className="alert alert-danger" data-testid="users-forbidden" role="alert">
+          <div
+            className="alert alert-danger"
+            data-testid="users-forbidden"
+            role="alert"
+          >
             You do not have access to user management.
           </div>
         )}
@@ -527,7 +533,10 @@ export function UserManagement() {
 
         {!loading && !forbidden && !loadError && users.length > 0 && (
           <div className="zg-user-table-wrap">
-            <table className="table align-middle mb-0 zg-user-table" data-testid="users-table">
+            <table
+              className="table align-middle mb-0 zg-user-table"
+              data-testid="users-table"
+            >
               <thead>
                 <tr>
                   <th scope="col">Name</th>
@@ -542,7 +551,9 @@ export function UserManagement() {
                 {users.map((user) => (
                   <tr data-testid={`user-row-${user.id}`} key={user.id}>
                     <td data-label="Name">
-                      <span className="fw-semibold text-zen-body">{user.name}</span>
+                      <span className="fw-semibold text-zen-body">
+                        {user.name}
+                      </span>
                     </td>
                     <td data-label="Email" className="text-zen-body">
                       {user.email}
@@ -597,7 +608,10 @@ export function UserManagement() {
           >
             <div className="d-flex justify-content-between align-items-start gap-3 mb-3">
               <div>
-                <h2 className="h5 fw-bold text-zen-primary mb-1" id="user-dialog-title">
+                <h2
+                  className="h5 fw-bold text-zen-primary mb-1"
+                  id="user-dialog-title"
+                >
                   {dialog === "create"
                     ? "Create user"
                     : dialog === "edit"
@@ -623,7 +637,10 @@ export function UserManagement() {
               {dialog !== "reset" && (
                 <>
                   <div className="mb-3">
-                    <label className="form-label fw-semibold" htmlFor="user-name">
+                    <label
+                      className="form-label fw-semibold"
+                      htmlFor="user-name"
+                    >
                       Name
                     </label>
                     <span aria-hidden="true" className="text-danger">
@@ -656,7 +673,10 @@ export function UserManagement() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-semibold" htmlFor="user-email">
+                    <label
+                      className="form-label fw-semibold"
+                      htmlFor="user-email"
+                    >
                       Email
                     </label>
                     <span aria-hidden="true" className="text-danger">
@@ -689,7 +709,10 @@ export function UserManagement() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label fw-semibold" htmlFor="user-role">
+                    <label
+                      className="form-label fw-semibold"
+                      htmlFor="user-role"
+                    >
                       Role
                     </label>
                     <span aria-hidden="true" className="text-danger">
@@ -749,7 +772,10 @@ export function UserManagement() {
 
               {dialog !== "edit" && (
                 <div className="mb-3">
-                  <label className="form-label fw-semibold" htmlFor="user-password">
+                  <label
+                    className="form-label fw-semibold"
+                    htmlFor="user-password"
+                  >
                     {dialog === "create" ? "Initial password" : "New password"}
                   </label>
                   <span aria-hidden="true" className="text-danger">
@@ -785,7 +811,11 @@ export function UserManagement() {
               )}
 
               {dialogError && (
-                <div className="alert alert-danger" data-testid="user-dialog-error" role="alert">
+                <div
+                  className="alert alert-danger"
+                  data-testid="user-dialog-error"
+                  role="alert"
+                >
                   {dialogError}
                 </div>
               )}
@@ -803,9 +833,9 @@ export function UserManagement() {
                   </h3>
                   <p className="small mb-3">
                     {selectedUser.name} currently owns{" "}
-                    <strong>{selectedUser.ownedOpenTicketCount}</strong> open tickets.
-                    This change will return them to the unassigned pool and end the
-                    user&apos;s active sessions.
+                    <strong>{selectedUser.ownedOpenTicketCount}</strong> open
+                    tickets. This change will return them to the unassigned pool
+                    and end the user&apos;s active sessions.
                   </p>
                   <div className="d-flex flex-wrap gap-2">
                     <button

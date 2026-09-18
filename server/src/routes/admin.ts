@@ -26,7 +26,11 @@ type ValidationDetail = {
 class AdminApiError extends Error {
   constructor(
     readonly status: 404 | 409,
-    readonly code: "NOT_FOUND" | "EMAIL_TAKEN" | "SELF_DEACTIVATION" | "LAST_ADMIN",
+    readonly code:
+      | "NOT_FOUND"
+      | "EMAIL_TAKEN"
+      | "SELF_DEACTIVATION"
+      | "LAST_ADMIN",
     message: string
   ) {
     super(message);
@@ -59,7 +63,10 @@ function isStaffRole(role: Role): boolean {
   return role === Role.IT_STAFF || role === Role.ADMINISTRATOR;
 }
 
-function validateName(raw: unknown, field = "name"): {
+function validateName(
+  raw: unknown,
+  field = "name"
+): {
   value?: string;
   issue?: ValidationDetail;
 } {
@@ -101,7 +108,10 @@ function validateEmail(raw: unknown): {
   return { value };
 }
 
-function validateRoleValue(raw: unknown, required: boolean): {
+function validateRoleValue(
+  raw: unknown,
+  required: boolean
+): {
   value?: Role;
   issue?: ValidationDetail;
 } {
@@ -127,7 +137,10 @@ function validateRoleValue(raw: unknown, required: boolean): {
   return { value: raw as Role };
 }
 
-function validateActiveValue(raw: unknown, required: boolean): {
+function validateActiveValue(
+  raw: unknown,
+  required: boolean
+): {
   value?: boolean;
   issue?: ValidationDetail;
 } {
@@ -182,7 +195,10 @@ function validateSearchQuery(query: Record<string, unknown>): {
   return { search, role, details };
 }
 
-function passwordDetails(raw: unknown, field: "initialPassword" | "newPassword") {
+function passwordDetails(
+  raw: unknown,
+  field: "initialPassword" | "newPassword"
+) {
   return validatePassword(raw).failures.map((failure) => ({
     field,
     rule: failure.rule,
