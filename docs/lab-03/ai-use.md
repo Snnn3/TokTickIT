@@ -71,6 +71,22 @@ Verbatim prompts: `reply my peer thank you him in pr47`, `update reviewer.md and
 
 The agent posted a thank-you reply on PR #47 citing each round's findings, synced the plan into the todo list (#35–#37 done, #38 in progress), then found PR #47 already MERGED (approved by @YummieGG at `44ea0e9`, merged 16:29) with issue #38 still OPEN. It moved Kanban #38 → Done, closed #38 with the green evidence, recorded the merge in `reviewer.md` (v2.5), and dispatched the coder to implement issue #39 on `feature/lab3-5-staff-queue` with strict no-PR instructions. The coder shipped the queue API + responsive UI (server 134/134, client 113/113) and pushed without opening a PR. The 10-row grading table above is left unchanged.
 
+### Prompt 14 — PR50 review, manual test, and handout cross-check (2026-09-18)
+
+Verbatim prompts: `reviewer review PR#50 feature/lab3-7-user-management following issue#41`,
+`can you do the manual test for me`, and `test all of mannual test and
+c:\KMUTT\Y3T1\CPE334\ToktikIT\material\Lab_3_sheet.pdf check is it contain all of feature.`
+
+The reviewer workflow pinned `origin/lab3-staging`, inspected the complete three-dot PR diff,
+and recorded the merge-gate report under `.reviews/`. The real seeded stack was then tested in a
+browser across Administrator, IT Staff, and Requester flows: account management and safety guards,
+password-change gating, role navigation and forbidden routes, queue/detail operations, comments versus
+internal notes, resolution workflow, requester reopen/appears-resolved, and ticket creation. The
+server suite passed 185/185 and the client suite 135/135. The Lab 3 handout was rendered and visually
+checked across all 18 pages; its user-management requirements are covered by the current slice, but
+the final E2E specs, full responsive evidence matrix, and backend-down capture are still absent from
+the repository. Temporary test data was removed and the local database was re-seeded afterward.
+
 ### Attribution decision (2026-09-10)
 
 Asked that commits "not make you co-author", the agent rewrote the two unpushed commits to strip `Co-Authored-By` and session trailers before pushing, and this file remains the sole disclosure channel for AI assistance in this repository. Commits and PR descriptions carry no AI attribution; authorship of the submitted work is the student's.

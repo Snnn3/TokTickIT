@@ -30,6 +30,16 @@ export interface AuthContextType {
   applyUser: (user: AuthUser) => void;
 }
 
+/** Administrator's safe user-list projection [FR-26, BR-19, BR-24]. */
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  role: Role;
+  isActive: boolean;
+  ownedOpenTicketCount: number;
+}
+
 export type SignInResult =
   | { ok: true; user: AuthUser }
   | { ok: false; message: string };

@@ -151,9 +151,9 @@ describe("C-08 shell navigation and route guards", () => {
     const cases: [Role, string][] = [
       ["REQUESTER", "identity-chip"],
       // IT Staff land on the queue, which shipped in the queue slice (#39);
-      // the administrator landing is still the pending Users screen (#41).
+      // Administrators land on the User Management screen (#41).
       ["IT_STAFF", "staff-queue-view"],
-      ["ADMINISTRATOR", "pending-slice-panel"],
+      ["ADMINISTRATOR", "user-management-view"],
     ];
 
     for (const [role, marker] of cases) {

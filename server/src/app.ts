@@ -6,6 +6,7 @@ import type { NextFunction, Request, Response } from "express";
 import { requireAuth, requireJsonBody } from "./middleware/auth";
 import { prisma } from "./prisma";
 import { attachmentsRouter } from "./routes/attachments";
+import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { staffRouter } from "./routes/staff";
 import { ticketsRouter } from "./routes/tickets";
@@ -97,6 +98,10 @@ app.get("/api/reference/systems", ...requireAuth, async (_req, res) => {
     });
   }
 });
+
+// Administrator user management [FR-26]. The router applies the
+// Administrator-only role guard to every endpoint, including direct URLs.
+app.use("/api/admin", adminRouter);
 
 // Requester ticket and attachment routes, carried over from Lab 2 with the
 // identity mechanism replaced: the owner is the authenticated user, never a
