@@ -258,6 +258,11 @@ notes 403, cross-owner ticket access 403, and staff self-filed owner/note
 operations 403. The clipping and clean-data assertions are recorded in
 `visual-state-evidence.json` and `clean-user-management.json`.
 
+After the automated run, screenshot-only follow-ups `cf5aad8` and `e08dbf6`
+corrected the Administrator page backgrounds and removed the fixed green
+navigation bar from the staff-detail post-action and validation split panels.
+These artifact-only changes do not alter the recorded automated test results.
+
 ### Lab 2 disposition and migration evidence
 
 The Lab 2 disposition is complete under BR-28: the selector-driven evidence-capture

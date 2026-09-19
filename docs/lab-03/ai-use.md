@@ -103,13 +103,10 @@ coder answer my peer comment thank you to him and move kanban close issue#41 the
 
 ## My Reflection
 
-The most effective use of AI in this lab was turning ambiguous requirements
-into explicit decisions, then asking for a separate cross-document consistency
-check before implementation. Peer review and browser evidence supplied a
-different validation layer: the reviewer found issues that the planning and
-implementation passes did not, while the E2E run verified the real role-based
-flows at the required viewports. I made the final scope and release decision,
-reviewed the changes, and ran the verification commands myself.
-
-AI assistance is disclosed here; commits do not include a Co-Authored-By
-attribution.
+During the lab, I used AI skills to define issues and specifications and
+experimented with specialized agents for writing and reviewing code. This
+helped me organize requirements, identify inconsistencies, and improve the
+implementation process. However, I learned that AI suggestions still need to
+be checked against the specification, tests, peer feedback, and actual
+application behavior. I remained responsible for making the final decisions
+and verifying the completed work.

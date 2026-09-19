@@ -19,7 +19,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/48 | feature/lab3-5-staff-queue | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/49 | feature/lab3-6-staff-operations | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/50 | feature/lab3-7-user-management | Commented → Approved (merged 2026-09-19) |
-| https://github.com/Snnn3/TokTickIT/pull/51 | feature/lab3-8-e2e-visual | Open — pending peer review |
+| https://github.com/Snnn3/TokTickIT/pull/51 | feature/lab3-8-e2e-visual | Open — pending peer review (head `e08dbf6`) |
 
 ### Reviewer comments I received and how I responded
 
@@ -82,7 +82,16 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 **PR #51 — feature/lab3-8-e2e-visual** (OPEN)
 - Implemented the three authenticated Playwright journeys plus a release visual-state journey, restored the session-adapted Lab 2 requester regression, captured desktop/tablet/mobile screenshots, added scoped E2E cleanup, and recorded API authorization, migration and final test-plan evidence.
 - Verified server 185/185, client 135/135, Lab 2 requester regression 3/3, Lab 3 Playwright 10/10 across four specs, the complete browser suite 13/13 across five specs, client lint, both production builds and the repository formatter check. The queue Updated-column check and clean User Management assertion are recorded in `artifacts/lab-03/visual-state-evidence.json` and `clean-user-management.json`.
-- Current head is `505afc1` plus the Lab 2 restoration update; PR #51 targets `lab3-staging`. Issue #42 remains open/Started pending peer review and merge.
+- Screenshot-only follow-ups `cf5aad8` and `e08dbf6` corrected the Administrator backgrounds and removed the fixed navigation bar from the staff-detail post-action and validation split panels; no source or test behavior changed.
+- Current head is `e08dbf6`; PR #51 targets `lab3-staging`. Issue #42 remains open/Started pending peer review and merge.
+
+#### Reviewer-test Definition of Done (PR #51)
+
+- [x] Automated evidence is recorded: server 185/185, client 135/135, Lab 2 requester regression 3/3, Lab 3 browser tests 10/10, and full browser suite 13/13; lint, builds and formatter checks passed.
+- [x] Visual evidence is complete for the requested authentication, queue, staff-detail and administrator states, including readable split panels and clean administrator backgrounds.
+- [x] Screenshot-only cleanup is present at the current head `e08dbf6`; the fixed green navigation bar is absent from `staff-detail-post-action-1/2.png` and `staff-detail-validation-1/2.png`.
+- [ ] Peer review approval is recorded on PR #51.
+- [ ] PR #51 is merged into `lab3-staging` and Issue #42 is moved to Done.
 ---
 
 ## Pull Requests I reviewed for my partner
@@ -94,7 +103,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/YummieGG/toktickit/pull/47 | feat(authz) | Approved — MERGED 2026-09-12 |
 | https://github.com/YummieGG/toktickit/pull/50 | test(lab-03) Issue #43 verification and evidence | Changes requested → Approved — MERGED 2026-09-16 |
 | https://github.com/YummieGG/toktickit/pull/53 | test(lab-03) staged integration verification | Changes requested → Approved — MERGED 2026-09-18 |
-| https://github.com/YummieGG/toktickit/pull/54 | docs(lab-03) documentation and submission packaging | Pending review — OPEN 2026-09-19 |
+| https://github.com/YummieGG/toktickit/pull/54 | docs(lab-03) documentation and submission packaging | Approved — merged 2026-09-19 |
 
 ### My comments and partner's responses
 
@@ -120,6 +129,6 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - **Partner's comments (2026-09-17):** Thanked me and recorded the fixes for cross-platform startup, evidence scope, reporting headings, and Docker commands: [reply 1](https://github.com/YummieGG/toktickit/pull/53#issuecomment-5716060536) and [reply 2](https://github.com/YummieGG/toktickit/pull/53#issuecomment-5720157946).
 - **Merge:** Merged into `lab3-staging` as `bf5a97f`.
 
-**PR #54 — docs(lab-03): documentation, repository hygiene, and submission packaging** (OPEN 2026-09-19)
-- **Review status:** No review has been recorded yet; the PR remains open against `lab3-staging`.
-- **Scope:** Peer PR #54 proposes the bilateral reviewer/AI-use updates, README and `.gitignore` cleanup, and Lab 3 submission packaging. It is listed here as pending rather than marked approved.
+**PR #54 — docs(lab-03): documentation, repository hygiene, and submission packaging** (MERGED 2026-09-19)
+- **My review (Snnn3, APPROVED, 2026-09-19):** Approved after verifying that the nonexistent `docs/agents/` path was removed, the PR title and summary matched Issue #51, and all seven acceptance criteria were satisfied. The reviewer logs, AI-use reflection, test counts and `.gitignore` hygiene were consistent.
+- **Merge:** Merged into `lab3-staging` as `f965c478` from reviewed head `712302c`.

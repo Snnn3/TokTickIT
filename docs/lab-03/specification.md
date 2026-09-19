@@ -262,7 +262,7 @@ Delivery:
 * [ ] Feature branches only; peer-reviewed PRs into `lab3-staging`; release PR to `main` approved.
 * [x] Contract docs version-controlled and merged **before** implementation PRs (handout Part 2 evidence; peer PR #45 precedes the implementation PRs).
 * [x] Peer approval recorded on PR #44 and this document's status changed from Draft to Approved. Until that happens the contract is not approved, whatever this file's header says — the reviewer's verdict on the PR is the authority, not the label. *Satisfied in v1.9: @YummieGG approved at head `d09355b` on 2026-09-10 16:01 and the PR merged at 16:04; the record is the PR #44 row in `reviewer.md`.*
-* [x] `reviewer.md` complete with reviews given and received, links and approvals through peer PR #54's pending/open state.
+* [x] `reviewer.md` complete with reviews given and received, links and approvals through peer PR #54's approved/merged state.
 * [ ] Submission PDF using the literal headings "Answer Part 1" through "Answer Part 9" with working links.
 
 ## 11. Assumptions and Decisions
