@@ -92,7 +92,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - [x] Visual evidence is complete for the requested authentication, queue, staff-detail and administrator states, including readable split panels and clean administrator backgrounds.
 - [x] Screenshot-only cleanup is present at the current head `8f9efc0`; the fixed green navigation bar is absent from `staff-detail-post-action-1/2.png` and `staff-detail-validation-1/2.png`.
 - [x] Peer review approval is recorded on PR #51 at reviewed head `8f9efc0`.
-- [ ] PR #51 is merged into `lab3-staging` and Issue #42 is moved to Done.
+- [x] PR #51 is merged into `lab3-staging` and Issue #42 is moved to Done.
 ---
 
 ## Pull Requests I reviewed for my partner
