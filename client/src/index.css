@@ -636,3 +636,80 @@ body {
     max-height: calc(100vh - 1rem);
   }
 }
+
+/* The tablet evidence viewport uses the same readable user cards as mobile.
+   Keeping this separate from the mobile block preserves the exact media
+   query used by the requester-detail touch-target regression tests. */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  [data-testid="user-management-view"] .zg-user-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  [data-testid="user-management-view"] .zg-user-table,
+  [data-testid="user-management-view"] .zg-user-table tbody,
+  [data-testid="user-management-view"] .zg-user-table tr,
+  [data-testid="user-management-view"] .zg-user-table td {
+    display: block;
+    width: 100%;
+  }
+
+  [data-testid="user-management-view"] .zg-user-table tr {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--zg-border);
+    border-radius: 8px;
+    background-color: var(--zg-surface);
+  }
+
+  [data-testid="user-management-view"] .zg-user-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.45rem 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  [data-testid="user-management-view"] .zg-user-table td::before {
+    flex: 0 0 auto;
+    color: var(--zg-text-muted);
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  [data-testid="user-management-view"] .zg-user-table td[data-label="Actions"] {
+    display: block;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--zg-border);
+  }
+
+  [data-testid="user-management-view"]
+    .zg-user-table
+    td[data-label="Actions"]::before {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  [data-testid="user-management-view"] .btn,
+  [data-testid="user-management-view"] .form-control,
+  [data-testid="user-management-view"] .form-select,
+  [data-testid="user-management-view"] .form-check-input {
+    min-height: 44px;
+  }
+
+  [data-testid="user-management-view"] .btn {
+    min-width: 44px;
+  }
+}

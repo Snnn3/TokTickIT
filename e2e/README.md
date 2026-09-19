@@ -3,10 +3,10 @@
 Playwright specs live here, one directory per lab. `playwright.config.ts` points
 at this directory and starts both dev servers itself.
 
-## Current state
+## Lab 3 browser regression (#42)
 
-`e2e/lab-03/` is not written yet. It arrives with the E2E and visual-evidence
-slice (#42) and will carry three specs plus the responsive assertions:
+`e2e/lab-03/` carries the authenticated browser regression and responsive
+evidence. It contains three specs plus a shared seeded-stack helper:
 
 | Spec | Covers |
 |---|---|
@@ -14,16 +14,38 @@ slice (#42) and will carry three specs plus the responsive assertions:
 | `staff-ticket-flow.spec.ts` | E-02: queue, claim, prioritise, advance, resolve, comment, note, reopen |
 | `user-administration.spec.ts` | E-03: admin search, create, edit, reset, guards, deactivation cascade |
 
-Until then there is no browser suite, and `npx playwright test` — including the
-root `npm run test:e2e` script, which is the same command — finds no specs and
-reports "No tests found". That is expected on this lineage, not a broken script;
-it starts passing when #42 lands. Server and client suites cover the behaviour in
-the meantime:
+The specs reset the documented local seed before each journey, use real session
+cookies, and write the required screenshots and authorization evidence under
+`artifacts/lab-03/`. The visual run covers 1366x768, 768x1024 and 375x667 and
+asserts that the document has no horizontal overflow.
+
+Run the complete browser suite after starting and seeding PostgreSQL:
+
+```bash
+npx playwright test e2e/lab-03
+```
+
+The same suite is available through the root script:
+
+```bash
+npm run test:e2e
+```
+
+Server and client suites remain useful regression checks:
 
 ```bash
 npm test --prefix server   # API, authorization and migration behaviour
 npm test --prefix client   # screens, guards and shell navigation
 ```
+
+Evidence written by the suite:
+
+- `artifacts/lab-03/screenshots/authentication/{desktop,tablet,mobile}.png` plus
+  the corresponding change-password captures
+- `artifacts/lab-03/screenshots/staff-queue/{desktop,tablet,mobile}.png`
+- `artifacts/lab-03/screenshots/staff-ticket-detail/{desktop,tablet,mobile}.png`
+- `artifacts/lab-03/screenshots/user-management/{desktop,tablet,mobile}.png`
+- `artifacts/lab-03/authorization.json`
 
 ## Why `e2e/lab-02/` is gone
 
