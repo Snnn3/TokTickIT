@@ -1,6 +1,6 @@
 # Lab 3 Test Plan and Results
 
-Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md` (AC refs) and `api-spec.md`.
+Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md` (AC refs) and `api-spec.md`.
 
 ## 1. Test Strategy
 

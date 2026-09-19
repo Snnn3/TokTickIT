@@ -1,6 +1,6 @@
 # Lab 3 — Peer Review Record
 
-Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
+Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -16,10 +16,10 @@ Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/45 | feature/lab3-2-refactor | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/47 | feature/lab3-4-requester-regression | Commented ×3 → Approved (merged 2026-09-15) |
-| TBD | feature/lab3-5-staff-queue | TBD |
-| TBD | feature/lab3-6-staff-operations | TBD |
-| TBD | feature/lab3-7-user-management | TBD |
-| TBD | feature/lab3-8-e2e-visual | TBD |
+| — (not opened) | feature/lab3-5-staff-queue | Implemented locally; no PR opened by instruction |
+| — (not opened) | feature/lab3-6-staff-operations | Implemented locally; no PR opened by instruction |
+| https://github.com/Snnn3/TokTickIT/pull/50 | feature/lab3-7-user-management | Commented → Approved (merged 2026-09-19) |
+| — (not opened) | feature/lab3-8-e2e-visual | Implemented locally; no PR opened by instruction |
 
 ### Reviewer comments I received and how I responded
 
@@ -63,6 +63,24 @@ Version: 2.5 | Date: 2026-09-15 | Companion to `specification.md`.
 - **Merge-gate + round 4 (2026-09-15):** Agent gate found code P2s + Security Guard all passing with one blocking docs row (B-01: `reviewer.md` at 2.4 vs five docs at 2.3). Fixed in `8de9dd8` (five one-line version bumps), PR body figures corrected, server 118/118 + client 102/102 green. Ultracite gate then failed on 2 lines (F-01); fixed formatting-only in `44ea0e9`, check clean. Thanked the reviewer on the PR thread for all three rounds.
 - **Reviewer review Round 4 (YummieGG, APPROVED, 2026-09-15 16:29):** "I re-reviewed this PR against the AC, Spec, and Security Guard requirements from Issue #38. The previously identified formatting and mobile filename overflow issues have been addressed. The requester flows, authorization checks, public comments, appears-resolved action, reopen flow, resolution summary, and internal notes protection are working as expected. The test suite and build checks pass. No remaining blocking issues were found."
 - **My comment Round 4 (2026-09-15):** No fix needed. Merged by @YummieGG at 16:29 into `lab3-staging`; issue #38 closed, unblocking #39, #40 and #41.
+
+**Issue #39 — feature/lab3-5-staff-queue** (LOCAL IMPLEMENTATION; NO PR)
+- Implemented the shared staff queue API and responsive desktop-table/mobile-card UI locally, with the queue search, filters, pagination and authorization coverage verified.
+- The implementation was kept on its feature branch and pushed without opening a pull request, following the task instruction.
+
+**Issue #40 — feature/lab3-6-staff-operations** (LOCAL IMPLEMENTATION; NO PR)
+- Implemented the staff ticket operations slice locally, including ownership, priority, status, resolution, comments, internal notes and self-service authorization behavior.
+- The implementation was kept on its feature branch without opening a pull request, following the task instruction.
+
+**PR #50 — feature/lab3-7-user-management** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-09-19):** Reviewed the user-management implementation against Issue #41 and the Lab 3 contract; the account safety, role guards, validation, reset flow and deactivation cascade were accepted.
+- **My comment:** Thanked @YummieGG for the thorough peer review and verification on the PR thread: [thank-you comment](https://github.com/Snnn3/TokTickIT/pull/50#issuecomment-5740777127).
+- **Closeout:** PR #50 merged into `lab3-staging`; issue #41 was closed and its Kanban item moved to Done.
+
+**Issue #42 — feature/lab3-8-e2e-visual** (LOCAL IMPLEMENTATION; NO PR)
+- Implemented the three authenticated Playwright journeys, desktop/tablet/mobile screenshots, responsive queue cards, API authorization evidence, Lab 2 disposition, migration evidence and final test-plan results.
+- Verified server 185/185, client 135/135, Playwright 6/6, client lint, both production builds and the touched-scope formatter check.
+- Committed locally as `0aa8bc3`, followed by documentation cleanup `75bf178`; issue #42 remains OPEN/Started because the requested release PR was intentionally not opened.
 ---
 
 ## Pull Requests I reviewed for my partner

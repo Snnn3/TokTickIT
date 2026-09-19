@@ -1,6 +1,6 @@
 # Lab 3 Sprint Engineering Specification — TokTickIT Auth, Staff Workflow, Admin
 
-Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.5 | Date: 2026-09-15
+Status: **Approved contract** — peer approval recorded on PR #44 by @YummieGG, 2026-09-10 16:01, merged into `lab3-staging` 16:04 | Version: 2.6 | Date: 2026-09-19
 Companion documents: `api-spec.md`, `ui-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md` (same folder). **All tracked documents in `docs/lab-03/` carry the same version number and bump together**, so any file whose header differs from the others is out of date by definition — three review rounds each caught a stale version stamp somewhere in the set, and a single shared number makes that failure visible at a glance instead of requiring a cross-check.
 Prior increment: `docs/lab-02/specification.md` (FR-01..15, BR-01..25, AC-01..24). This spec **increases** from Lab 2 — nothing below repeats Lab 2 verbatim; Lab 2 behavior is preserved as regression.
 
