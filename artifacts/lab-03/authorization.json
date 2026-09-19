@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-09-19T14:29:33.059Z",
+  "cases": [
+    {
+      "case": "requester-refused-internal-notes",
+      "method": "GET",
+      "path": "/api/staff/tickets/1/notes",
+      "status": 403,
+      "expectedStatus": 403,
+      "body": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Your role does not permit this operation"
+        }
+      }
+    },
+    {
+      "case": "requester-cross-owner-access-refused",
+      "method": "GET",
+      "path": "/api/tickets/2",
+      "status": 403,
+      "expectedStatus": 403,
+      "body": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Access denied"
+        }
+      }
+    },
+    {
+      "case": "staff-self-filed-owner-operation-refused",
+      "method": "PATCH",
+      "path": "/api/staff/tickets/695/owner",
+      "status": 403,
+      "expectedStatus": 403,
+      "body": {
+        "error": {
+          "code": "SELF_SERVICE_FORBIDDEN",
+          "message": "You filed this ticket, so it must be handled by another staff member"
+        }
+      }
+    },
+    {
+      "case": "staff-self-filed-internal-note-refused",
+      "method": "POST",
+      "path": "/api/staff/tickets/695/notes",
+      "status": 403,
+      "expectedStatus": 403,
+      "body": {
+        "error": {
+          "code": "SELF_SERVICE_FORBIDDEN",
+          "message": "You filed this ticket, so it must be handled by another staff member"
+        }
+      }
+    }
+  ]
+}

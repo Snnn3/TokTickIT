@@ -441,7 +441,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
         {!forbidden && !error && loading ? (
           <div data-testid="queue-loading" className="py-2">
             <div className="table-responsive d-none d-md-block">
-              <table className="table align-middle mb-0">
+              <table className="table align-middle mb-0 zg-queue-table">
                 <thead
                   className="table-light small text-muted text-uppercase"
                   style={{ fontSize: "0.75rem" }}
@@ -620,12 +620,12 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
           !forbidden &&
           !error && (
             <div>
-              {/* Desktop Table View (>= 768px; tablet drops Category) */}
+              {/* Desktop Table View (>= 992px; compact widths use cards) */}
               <div
-                className="table-responsive d-none d-md-block"
+                className="table-responsive d-none d-lg-block"
                 data-testid="queue-table"
               >
-                <table className="table table-hover align-middle mb-0">
+                <table className="table table-hover align-middle mb-0 zg-queue-table">
                   <thead
                     className="table-light small text-muted text-uppercase"
                     style={{ fontSize: "0.75rem" }}
@@ -735,7 +735,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                           )}
                         </td>
                         <td>
-                          <span className="small text-muted">
+                          <span className="small text-muted text-truncate d-block">
                             {formatDateTime(ticket.updatedAt)}
                           </span>
                         </td>
@@ -754,8 +754,8 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 </table>
               </div>
 
-              {/* Mobile Cards View (< 768px): tappable to detail */}
-              <div className="d-md-none" data-testid="queue-cards">
+              {/* Compact Cards View (< 992px): tappable to detail */}
+              <div className="d-lg-none" data-testid="queue-cards">
                 <div className="d-flex flex-column gap-3">
                   {tickets.map((ticket) => (
                     <div

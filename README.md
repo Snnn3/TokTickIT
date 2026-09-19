@@ -177,7 +177,7 @@ npm run dev --prefix server   # Express API at http://localhost:3000
 npm run dev --prefix client   # Vite UI at http://localhost:5173 (proxies /api to :3000)
 ```
 
-### Lab 3 - Authentication and roles (in progress)
+### Lab 3 - Authentication, staff workflow and release evidence
 
 Lab 3 replaces the development requester selector with real email-and-password
 authentication and three roles. The engineering contract in `docs/lab-03/` is the source of
@@ -189,11 +189,13 @@ describe identity:**
 - `RequesterUser` became `User`, carrying a role, an activation flag, a forced-password-change
   flag and a token version. `GET /api/requesters` and the Requester Selection screen are gone.
 - Every screen has a real, deep-linkable address behind a route guard.
-- `e2e/lab-02/` is retired along with its evidence-capture specs, all of which drove the
-  selector; browser regression moves to `e2e/lab-03/` in a later slice. See `e2e/README.md`.
-  The Lab 2 figures they produced remain committed under `artifacts/lab-02/`.
-- The staff queue, staff detail and administrator screens arrive in later slices. Their routes
-  and role guards exist and are enforced; the screens themselves are placeholders.
+- `e2e/lab-02/requester-ticket-flow.spec.ts` is restored as a session-adapted
+  requester regression; it keeps the Lab 2 ticket, ownership, attachment and
+  responsive coverage without the removed selector or `X-Requester-Id` header.
+  The three selector-driven `e2e/evidence/` capture specs remain retired. See
+  `e2e/README.md`; the original Lab 2 figures remain under `artifacts/lab-02/`.
+- The staff queue, staff detail and administrator user-management screens are implemented
+  with server-enforced role guards, responsive layouts, and end-to-end coverage for issue #42.
 
 ### Setup (Lab 3)
 
@@ -268,12 +270,13 @@ migration preserved every ticket, ticket number, attachment byte and requester r
 ### Test (Lab 3)
 
 ```bash
-cd server && npm test                    # 89 tests, 10 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
+cd server && npm test                    # 185 tests, 15 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
-cd client && npm test                    # 84 tests, 14 files
+cd client && npm test                    # 135 tests, 18 files
 npm run lint --prefix client             # oxlint
 npm run check                            # repository formatting
+npm run test:e2e                         # authenticated browser regression + screenshots
 ```
 
 Seed precondition (same as the Lab 2 section below): rebuild the dev DB with
@@ -314,15 +317,21 @@ Upload rules: jpeg/png/webp/pdf only, each max 5 MB, max 5 files per ticket; cre
 - Create Ticket (read-only System strip, Classification, Details, Attachments, Submit/Cancel)
 - My Tickets (search, category/priority/status filters, sort, pagination, empty vs no-results states)
 - Ticket Detail + Attachment section (read-only ticket card, add/download/soft-remove with reason)
+- Staff Ticket Queue (search, filters, ownership, priority, status and responsive cards)
+- Staff Ticket Detail (claim, IT priority, status transitions, public comments, internal notes)
+- Administrator User Management (search, role filter, create, edit, reset and deactivation cascade)
 
 Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/{desktop,tablet,mobile}.png` (viewports 1366x768, 768x1024, 375x667); selector states in `artifacts/lab-02/screenshots/requester-selection/`; submission proofs (Parts 6/7/8) in `artifacts/lab-02/evidence/`.
+Lab 3 visual evidence: `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/{desktop,tablet,mobile}.png` plus the session-adapted requester captures in `artifacts/lab-03/screenshots/requester-regression/`, the change-password captures, the requested state captures in `artifacts/lab-03/screenshots/release-evidence/`, `artifacts/lab-03/authorization.json`, `artifacts/lab-03/visual-state-evidence.json`, and `artifacts/lab-03/clean-user-management.json`.
 
 ### Test
 
 The Lab 2 server and client suites still run, adapted to the session cookie; see the Lab 3 test
-commands above. The Lab 2 Playwright suite and its evidence captures are retired, because they
-drove the selector end to end. See `e2e/README.md`. The figures they produced remain under
-`artifacts/lab-02/`.
+commands above. The Lab 2 Playwright requester regression is also session-adapted and runs from
+`e2e/lab-02/`; the selector-driven `e2e/evidence/` capture specs remain retired. See
+`e2e/README.md`. Current responsive captures are under
+`artifacts/lab-03/screenshots/requester-regression/`, while the original Lab 2 figures remain
+under `artifacts/lab-02/`.
 
 Seed precondition: rebuild the dev DB with `npx prisma migrate reset --force` plus
 `npm run db:seed` (from `server/`, container `toktickit-db` running) before API runs. Lab 1
@@ -338,3 +347,5 @@ precondition, not a code defect.
 - `docs/lab-02/plan.md` — delivery plan and submission evidence map
 - `docs/lab-02/reviewer.md` — reviews given/received
 - `docs/lab-02/ai-use.md` — AI use log
+- `docs/lab-03/specification.md`, `api-spec.md`, `ui-spec.md` — Lab 3 contracts
+- `docs/lab-03/tests.md` — Lab 3 test plan, regression disposition and final results
