@@ -5,6 +5,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to specification.md.
 LLMs used:
 - Muse Spark 1.3 (accessed via opencode CLI) — planning, contract drafting and implementation support
 - Claude Opus 5 (accessed via Claude Code CLI) — consistency checks, review responses and verification support
+- OpenAI Codex (GPT-5) — implementation, browser-test evidence, documentation updates and Git workflow support
 
 Only the six selected key prompts are retained here, following the Lab 2
 grading-table format. Historical session detail remains recoverable from Git
