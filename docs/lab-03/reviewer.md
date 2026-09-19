@@ -19,7 +19,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/48 | feature/lab3-5-staff-queue | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/49 | feature/lab3-6-staff-operations | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/50 | feature/lab3-7-user-management | Commented → Approved (merged 2026-09-19) |
-| https://github.com/Snnn3/TokTickIT/pull/51 | feature/lab3-8-e2e-visual | Open — pending peer review (head `e08dbf6`) |
+| https://github.com/Snnn3/TokTickIT/pull/51 | feature/lab3-8-e2e-visual | Approved by @YummieGG (head `8f9efc0`; merge pending) |
 
 ### Reviewer comments I received and how I responded
 
@@ -83,14 +83,15 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - Implemented the three authenticated Playwright journeys plus a release visual-state journey, restored the session-adapted Lab 2 requester regression, captured desktop/tablet/mobile screenshots, added scoped E2E cleanup, and recorded API authorization, migration and final test-plan evidence.
 - Verified server 185/185, client 135/135, Lab 2 requester regression 3/3, Lab 3 Playwright 10/10 across four specs, the complete browser suite 13/13 across five specs, client lint, both production builds and the repository formatter check. The queue Updated-column check and clean User Management assertion are recorded in `artifacts/lab-03/visual-state-evidence.json` and `clean-user-management.json`.
 - Screenshot-only follow-ups `cf5aad8` and `e08dbf6` corrected the Administrator backgrounds and removed the fixed navigation bar from the staff-detail post-action and validation split panels; no source or test behavior changed.
-- Current head is `e08dbf6`; PR #51 targets `lab3-staging`. Issue #42 remains open/Started pending peer review and merge.
+- Peer review: @YummieGG approved PR #51 on 2026-09-19 at reviewed head `8f9efc0`, with approval to merge into `lab3-staging`.
+- Current head is `8f9efc0`; PR #51 targets `lab3-staging` and remains open after peer approval. Issue #42 remains open pending merge.
 
 #### Reviewer-test Definition of Done (PR #51)
 
 - [x] Automated evidence is recorded: server 185/185, client 135/135, Lab 2 requester regression 3/3, Lab 3 browser tests 10/10, and full browser suite 13/13; lint, builds and formatter checks passed.
 - [x] Visual evidence is complete for the requested authentication, queue, staff-detail and administrator states, including readable split panels and clean administrator backgrounds.
-- [x] Screenshot-only cleanup is present at the current head `e08dbf6`; the fixed green navigation bar is absent from `staff-detail-post-action-1/2.png` and `staff-detail-validation-1/2.png`.
-- [ ] Peer review approval is recorded on PR #51.
+- [x] Screenshot-only cleanup is present at the current head `8f9efc0`; the fixed green navigation bar is absent from `staff-detail-post-action-1/2.png` and `staff-detail-validation-1/2.png`.
+- [x] Peer review approval is recorded on PR #51 at reviewed head `8f9efc0`.
 - [ ] PR #51 is merged into `lab3-staging` and Issue #42 is moved to Done.
 ---
 
