@@ -19,7 +19,7 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/48 | feature/lab3-5-staff-queue | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/49 | feature/lab3-6-staff-operations | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/50 | feature/lab3-7-user-management | Commented → Approved (merged 2026-09-19) |
-| — (not opened) | feature/lab3-8-e2e-visual | Implemented locally; no PR opened by instruction |
+| https://github.com/Snnn3/TokTickIT/pull/51 | feature/lab3-8-e2e-visual | Open — pending peer review |
 
 ### Reviewer comments I received and how I responded
 
@@ -79,10 +79,10 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - **My comment:** Thanked @YummieGG for the thorough peer review and verification on the PR thread: [thank-you comment](https://github.com/Snnn3/TokTickIT/pull/50#issuecomment-5740777127).
 - **Closeout:** PR #50 merged into `lab3-staging`; issue #41 was closed and its Kanban item moved to Done.
 
-**Issue #42 — feature/lab3-8-e2e-visual** (LOCAL IMPLEMENTATION; NO PR)
-- Implemented the three authenticated Playwright journeys plus a release visual-state journey, desktop/tablet/mobile screenshots, responsive queue cards, API authorization evidence, scoped E2E cleanup, Lab 2 disposition, migration evidence and final test-plan results.
-- Verified server 185/185, client 135/135, Playwright 10/10 across four specs, client lint, both production builds and the repository formatter check. The queue Updated-column check and clean User Management assertion are recorded in `artifacts/lab-03/visual-state-evidence.json` and `clean-user-management.json`.
-- Committed locally as `0aa8bc3`, followed by documentation cleanup `75bf178`; issue #42 remains OPEN/Started because the requested release PR was intentionally not opened.
+**PR #51 — feature/lab3-8-e2e-visual** (OPEN)
+- Implemented the three authenticated Playwright journeys plus a release visual-state journey, restored the session-adapted Lab 2 requester regression, captured desktop/tablet/mobile screenshots, added scoped E2E cleanup, and recorded API authorization, migration and final test-plan evidence.
+- Verified server 185/185, client 135/135, Lab 2 requester regression 3/3, Lab 3 Playwright 10/10 across four specs, the complete browser suite 13/13 across five specs, client lint, both production builds and the repository formatter check. The queue Updated-column check and clean User Management assertion are recorded in `artifacts/lab-03/visual-state-evidence.json` and `clean-user-management.json`.
+- Current head is `505afc1` plus the Lab 2 restoration update; PR #51 targets `lab3-staging`. Issue #42 remains open/Started pending peer review and merge.
 ---
 
 ## Pull Requests I reviewed for my partner

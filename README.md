@@ -189,10 +189,11 @@ describe identity:**
 - `RequesterUser` became `User`, carrying a role, an activation flag, a forced-password-change
   flag and a token version. `GET /api/requesters` and the Requester Selection screen are gone.
 - Every screen has a real, deep-linkable address behind a route guard.
-- `e2e/lab-02/` is retired along with its evidence-capture specs, all of which drove the
-  selector; authenticated browser regression now lives in `e2e/lab-03/`. See
-  `e2e/README.md`. The Lab 2 figures they produced remain committed under
-  `artifacts/lab-02/`.
+- `e2e/lab-02/requester-ticket-flow.spec.ts` is restored as a session-adapted
+  requester regression; it keeps the Lab 2 ticket, ownership, attachment and
+  responsive coverage without the removed selector or `X-Requester-Id` header.
+  The three selector-driven `e2e/evidence/` capture specs remain retired. See
+  `e2e/README.md`; the original Lab 2 figures remain under `artifacts/lab-02/`.
 - The staff queue, staff detail and administrator user-management screens are implemented
   with server-enforced role guards, responsive layouts, and end-to-end coverage for issue #42.
 
@@ -321,14 +322,16 @@ Upload rules: jpeg/png/webp/pdf only, each max 5 MB, max 5 files per ticket; cre
 - Administrator User Management (search, role filter, create, edit, reset and deactivation cascade)
 
 Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/{desktop,tablet,mobile}.png` (viewports 1366x768, 768x1024, 375x667); selector states in `artifacts/lab-02/screenshots/requester-selection/`; submission proofs (Parts 6/7/8) in `artifacts/lab-02/evidence/`.
-Lab 3 visual evidence: `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/{desktop,tablet,mobile}.png` plus the change-password captures, the requested state captures in `artifacts/lab-03/screenshots/release-evidence/`, `artifacts/lab-03/authorization.json`, `artifacts/lab-03/visual-state-evidence.json`, and `artifacts/lab-03/clean-user-management.json`.
+Lab 3 visual evidence: `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/{desktop,tablet,mobile}.png` plus the session-adapted requester captures in `artifacts/lab-03/screenshots/requester-regression/`, the change-password captures, the requested state captures in `artifacts/lab-03/screenshots/release-evidence/`, `artifacts/lab-03/authorization.json`, `artifacts/lab-03/visual-state-evidence.json`, and `artifacts/lab-03/clean-user-management.json`.
 
 ### Test
 
 The Lab 2 server and client suites still run, adapted to the session cookie; see the Lab 3 test
-commands above. The Lab 2 Playwright suite and its evidence captures are retired, because they
-drove the selector end to end. See `e2e/README.md`. The figures they produced remain under
-`artifacts/lab-02/`.
+commands above. The Lab 2 Playwright requester regression is also session-adapted and runs from
+`e2e/lab-02/`; the selector-driven `e2e/evidence/` capture specs remain retired. See
+`e2e/README.md`. Current responsive captures are under
+`artifacts/lab-03/screenshots/requester-regression/`, while the original Lab 2 figures remain
+under `artifacts/lab-02/`.
 
 Seed precondition: rebuild the dev DB with `npx prisma migrate reset --force` plus
 `npm run db:seed` (from `server/`, container `toktickit-db` running) before API runs. Lab 1

@@ -8,6 +8,7 @@ async function main() {
     where: {
       OR: [
         { summary: "Staff self-service evidence ticket" },
+        { summary: { startsWith: "E2E Lab2" } },
         { requester: { email: { startsWith: "e2e." } } },
       ],
     },

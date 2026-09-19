@@ -3,6 +3,23 @@
 Playwright specs live here, one directory per lab. `playwright.config.ts` points
 at this directory and starts both dev servers itself.
 
+## Lab 2 requester regression
+
+`e2e/lab-02/requester-ticket-flow.spec.ts` is restored as a session-adapted
+regression. It keeps the Lab 2 requester ticket, ownership isolation,
+attachment lifecycle and responsive coverage while using the Lab 3 session
+cookie instead of the retired requester selector and `X-Requester-Id` header.
+
+Run it with:
+
+```bash
+npx playwright test e2e/lab-02
+```
+
+Its current screenshots are written under
+`artifacts/lab-03/screenshots/requester-regression/`; the original Lab 2
+pre-auth figures remain under `artifacts/lab-02/`.
+
 ## Lab 3 browser regression (#42)
 
 `e2e/lab-03/` carries the authenticated browser regression and responsive
@@ -27,7 +44,7 @@ Run the complete browser suite after starting and seeding PostgreSQL:
 npx playwright test e2e/lab-03
 ```
 
-The same suite is available through the root script:
+Run all Lab 2 and Lab 3 browser suites through the root script:
 
 ```bash
 npm run test:e2e
@@ -54,17 +71,3 @@ Evidence written by the suite:
 - `artifacts/lab-03/authorization.json`
 - `artifacts/lab-03/visual-state-evidence.json` and
   `artifacts/lab-03/clean-user-management.json`
-
-## Why `e2e/lab-02/` is gone
-
-The Lab 2 suite and its three evidence-capture specs were driven end to end by
-the development requester selector and the `X-Requester-Id` header, both of
-which the auth foundation removes. BR-28 retires a test whose subject no longer
-exists rather than skipping it, because the Definition of Done permits no skipped
-or disabled tests, and a spec that throws on every run is neither passing nor
-skipped — it is broken evidence that looks live.
-
-The Lab 2 figures those specs produced are unaffected and remain committed under
-`artifacts/lab-02/`. They were captured against the pre-auth application, which
-is still reachable in git history, and they stay the evidence for the Lab 2
-submission. `docs/lab-02/tests.md` and the README are annotated to say so.

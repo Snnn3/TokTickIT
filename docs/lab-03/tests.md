@@ -14,7 +14,7 @@ Lab 3 reuses the seams already established in Lab 2 rather than introducing new 
 |---|---|---|
 | Supertest against the exported Express `app`, with the Prisma client stubbed via `vi.spyOn` | `server/tests/lab-02/create-ticket.api.test.ts`, `my-tickets.api.test.ts` | every Lab 2 and Lab 3 API, authorization and regression test — no live database required, so these run anywhere. **One exception, inherited:** `server/tests/lab-01/API-02.categories.test.ts` calls `GET /api/categories` without a stub and therefore needs the seeded database; `BR-28` classifies every Lab 1 test as unchanged, so it is left exactly as Lab 1 wrote it rather than retro-fitted with a stub |
 | React Testing Library rendering a component with `fetch` mocked | `client/src/__tests__/lab-02/MyTickets.test.tsx`, `CreateTicket.test.tsx` | every UI component and style test |
-| Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` (retired by BR-28 — the pattern is carried forward, the file is not) | the three end-to-end specs and responsive assertions |
+| Playwright driving the real stack against a seeded database | `e2e/lab-02/requester-ticket-flow.spec.ts` (session-adapted by BR-28) plus `e2e/lab-03/` | the Lab 2 requester regression, authenticated journeys and responsive assertions |
 
 Tests assert externally observable behaviour — status codes, response bodies, cookies, rendered text and roles — never internal call shapes. Two helpers are pure enough to test directly as units: the password policy validator and the status-transition matrix.
 
@@ -85,7 +85,7 @@ Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled 
 |---|---|
 | `server/tests/lab-02/requesters.api.test.ts` | Asserts `GET /api/requesters` returns 200 and stubs `prisma.requesterUser`; the endpoint is removed and the model dropped, so the stub target does not exist and the file cannot load |
 | `client/src/__tests__/lab-02/RequesterSelection.test.tsx` | Imports the Requester Selection component and its context, both deleted |
-| `e2e/lab-02/requester-ticket-flow.spec.ts` | Selector-driven throughout; this empties `e2e/lab-02/`, and E2E regression is carried entirely by `e2e/lab-03/` from here on |
+| `e2e/evidence/*.spec.ts` | Selector-driven capture specs; their pre-auth figures remain committed under `artifacts/lab-02/` |
 
 **Adapted (mechanically edited, assertions unchanged).** The subject survives; only how identity reaches it changes:
 
@@ -95,10 +95,11 @@ Every Lab 2 test falls into one of three groups. Nothing is skipped or disabled 
 | `client/src/__tests__/lab-02/{CreateTicket,MyTickets}.test.tsx` | The `RequesterProvider` test wrapper becomes the auth provider; the component assertions are untouched |
 | `client/src/__tests__/lab-02/{AttachmentSection,RequesterTicketDetail}.test.tsx` | Both render their component with a `requesterId` prop, and both components use it to build `X-Requester-Id` headers on four fetch calls. FR-20 deletes that header, so the prop disappears and these tests must drop it and rely on the session instead |
 | `client/src/__tests__/lab-02/{App,AppHeader}.test.tsx` | Shell assertions move from selector and Change Requester to authenticated identity and Logout — the heaviest of the adaptations, since the shell's whole premise changes |
+| `e2e/lab-02/requester-ticket-flow.spec.ts` | The selector-driven journey is restored as a session-adapted regression covering requester creation, ownership isolation, attachment lifecycle and responsive screenshots |
 
 **Unchanged.** Everything else, including all Lab 1 tests and `ticket-number.unit.test.ts`. Note that **every** Lab 2 file touching identity is now accounted for above; a file silently left in this bucket while depending on the selector or the identity header is the failure mode that broke earlier drafts of this plan twice.
 
-The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence. Retiring the Lab 2 browser spec also invalidates the `npx playwright test e2e/lab-02` command in the README and the evidence paths cited in `docs/lab-02/tests.md`; both must be annotated as superseded by `e2e/lab-03`, so the final `main` does not read as though graded Lab 2 evidence went missing.
+The disposition list, with before/after counts per group, is recorded in §6 as part of the regression evidence. The selector-only capture specs remain retired, while `e2e/lab-02/requester-ticket-flow.spec.ts` now runs the surviving requester regression through the session cookie. Its current captures are written under `artifacts/lab-03/screenshots/requester-regression/`; the original Lab 2 figures remain under `artifacts/lab-02/`.
 
 ### Disposition as executed (auth foundation slice, #37)
 
@@ -111,7 +112,7 @@ so the header had to go together with the cookie that replaces it.
 
 | Group | Predicted | Executed |
 |---|---|---|
-| Retired | `requesters.api.test.ts`, `RequesterSelection.test.tsx`, `e2e/lab-02/requester-ticket-flow.spec.ts` | All three, plus the three `e2e/evidence/` capture specs |
+| Retired | `requesters.api.test.ts`, `RequesterSelection.test.tsx`, and the three `e2e/evidence/` capture specs | Deleted selector/API subjects remain retired; the requester flow file is restored as the session-adapted regression listed above |
 | Adapted, server | 30 header calls, 14 `requesterUser` stubs | 29 header calls, 14 stub references |
 | Adapted, client | Provider swap on two files, prop removal on two, shell rewrite on two | The same six, plus five list assertions in `MyTickets.test.tsx` |
 | Unchanged | Everything else, Lab 1 included | Held: all Lab 1 tests and `ticket-number.unit.test.ts` untouched |
@@ -126,16 +127,21 @@ Four corrections to the predicted table:
   nothing else, so each of those five assertions had to drop its second argument. This is the
   third time a round of review has found the disposition table incomplete, and the cause is the
   same each time: the table tracks which files change and not which assertions do.
-* **`e2e/evidence/` had to retire with `e2e/lab-02/`.** The table named only the Lab 2 flow spec,
+* **The selector-only `e2e/evidence/` captures had to retire with the original `e2e/lab-02/` file.** The table named only the Lab 2 flow spec,
   but all three evidence-capture specs drive the selector and the identity header end to end -- 21
   references across the four files. A spec that throws on every run is neither passing nor
   skipped, and the Definition of Done permits no skipped test, so they are deleted under the same
   rule. The figures they produced are unaffected and stay committed under `artifacts/lab-02/`.
-  This leaves no browser suite until #42 writes `e2e/lab-03/`; `e2e/README.md` records that.
+  The release branch later restored the requester flow as a session-adapted regression; `e2e/README.md` records that distinction.
 * **`App.test.tsx` and `AppHeader.test.tsx` were adapted, not retired.** Their subject is the
   application shell, which survives; only the identity beneath it changed. They now ask the same
   questions of the session that they asked of the selector. `AppShell.test.tsx` under `lab-03/`
   carries C-08's role-filtering and guard assertions, which have no Lab 2 equivalent.
+
+The release branch subsequently restored `e2e/lab-02/requester-ticket-flow.spec.ts` as a
+session-adapted regression. The historical auth-foundation disposition above still records what
+PR #46 removed at that point in history; the current file no longer drives the deleted selector
+or sends `X-Requester-Id`.
 
 Counts after the slice: **78 server tests across 10 files** and **73 client tests across 13
 files**, all passing, none skipped. Lab 2 server tests went from 34 in 9 files to 26 in 8 files,
@@ -219,7 +225,8 @@ below are the final measured results for this branch; none were skipped or disab
   up -d db` + `prisma:migrate` + `db:seed`, per the §5 precondition). With the seeded DB it
   passes, giving 89/89.
 * Client: **84 tests across 14 files, all passing** (`fetch` mocked, no backend needed).
-* Lab 2 disposition as executed (§2): retired suites gone, adapted suites green under the
+* Lab 2 disposition as executed in the auth-foundation slice (§2): retired selector suites gone,
+  adapted suites green under the
   session cookie, unchanged suites (Lab 1 modulo the DB precondition above, plus
   `ticket-number.unit.test.ts`) untouched.
 
@@ -232,12 +239,16 @@ Run date: **2026-09-19**. The branch is based on `origin/lab3-staging` at
 |---|---|---|
 | Server | `npm test --prefix server` | **185/185 passed**, 15 files |
 | Client | `npm test --prefix client -- --maxWorkers=1` | **135/135 passed**, 18 files |
+| Lab 2 requester regression | `npx playwright test e2e/lab-02 --project=chromium` | **3/3 passed**, session-adapted requester creation, ownership isolation, attachment lifecycle and responsive captures |
 | Browser regression | `npx playwright test e2e/lab-03 --project=chromium` | **10/10 passed**, 4 specs; E-01, E-02, E-03 and release visual-state evidence |
-| Formatting | `npm run check` | **Pass**, 103 files |
+| Full browser suite | `npx playwright test --project=chromium` | **13/13 passed**, 5 specs across the restored Lab 2 regression and Lab 3 release suite |
+| Formatting | `npm run check` | **Pass**, 104 files |
 
 The browser run writes 3 viewport captures for authentication, staff queue,
 staff ticket detail and user management under `artifacts/lab-03/screenshots/`.
 Authentication also includes the three forced-change-password captures. The
+restored Lab 2 requester regression writes its responsive captures under
+`artifacts/lab-03/screenshots/requester-regression/`. The
 release evidence spec adds invalid/inactive/busy/logout authentication,
 queue loading/empty/error/feedback and Updated-column clipping, staff
 post-action/validation, administrator dialog/safety-guard, and clean-user
@@ -249,12 +260,13 @@ operations 403. The clipping and clean-data assertions are recorded in
 
 ### Lab 2 disposition and migration evidence
 
-The Lab 2 disposition is complete under BR-28: the selector-driven requester
-browser suite and evidence-capture specs were retired; surviving server/client
-tests were mechanically adapted to session-cookie identity; unchanged Lab 1
-and non-identity tests were left untouched. The Lab 2 server/client regression
-is included in the green counts above, and the retired command is annotated in
-`docs/lab-02/tests.md` and `e2e/README.md`.
+The Lab 2 disposition is complete under BR-28: the selector-driven evidence-capture
+specs remain retired; surviving server/client tests and the requester browser
+regression were adapted to session-cookie identity; unchanged Lab 1 and
+non-identity tests were left untouched. The Lab 2 server/client/browser
+regressions are included in the green counts above, and the distinction between
+the restored session-adapted spec and the retired selector captures is documented
+in `docs/lab-02/tests.md` and `e2e/README.md`.
 
 M-01 is recorded in
 `server/prisma/migration-evidence/README.md` from the real database:
