@@ -346,4 +346,3 @@ precondition, not a code defect.
 - `docs/lab-02/ai-use.md` — AI use log
 - `docs/lab-03/specification.md`, `api-spec.md`, `ui-spec.md` — Lab 3 contracts
 - `docs/lab-03/tests.md` — Lab 3 test plan, regression disposition and final results
-- `docs/lab-03/submission.md` — Answer Part 1 through Answer Part 9 evidence map
