@@ -16,8 +16,8 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/Snnn3/TokTickIT/pull/45 | feature/lab3-2-refactor | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/46 | feature/lab3-3-auth-foundation | Commented → Approved |
 | https://github.com/Snnn3/TokTickIT/pull/47 | feature/lab3-4-requester-regression | Commented ×3 → Approved (merged 2026-09-15) |
-| — (not opened) | feature/lab3-5-staff-queue | Implemented locally; no PR opened by instruction |
-| — (not opened) | feature/lab3-6-staff-operations | Implemented locally; no PR opened by instruction |
+| https://github.com/Snnn3/TokTickIT/pull/48 | feature/lab3-5-staff-queue | Approved by @YummieGG (merged 2026-09-16) |
+| https://github.com/Snnn3/TokTickIT/pull/49 | feature/lab3-6-staff-operations | Approved by @YummieGG (merged 2026-09-16) |
 | https://github.com/Snnn3/TokTickIT/pull/50 | feature/lab3-7-user-management | Commented → Approved (merged 2026-09-19) |
 | — (not opened) | feature/lab3-8-e2e-visual | Implemented locally; no PR opened by instruction |
 
@@ -64,13 +64,15 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - **Reviewer review Round 4 (YummieGG, APPROVED, 2026-09-15 16:29):** "I re-reviewed this PR against the AC, Spec, and Security Guard requirements from Issue #38. The previously identified formatting and mobile filename overflow issues have been addressed. The requester flows, authorization checks, public comments, appears-resolved action, reopen flow, resolution summary, and internal notes protection are working as expected. The test suite and build checks pass. No remaining blocking issues were found."
 - **My comment Round 4 (2026-09-15):** No fix needed. Merged by @YummieGG at 16:29 into `lab3-staging`; issue #38 closed, unblocking #39, #40 and #41.
 
-**Issue #39 — feature/lab3-5-staff-queue** (LOCAL IMPLEMENTATION; NO PR)
-- Implemented the shared staff queue API and responsive desktop-table/mobile-card UI locally, with the queue search, filters, pagination and authorization coverage verified.
-- The implementation was kept on its feature branch and pushed without opening a pull request, following the task instruction.
+**PR #48 — feature/lab3-5-staff-queue** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-09-16):** Approved the queue search, multi-filter, sorting, pagination and role/security guards against Issue #39, with server 134/134 and client 113/113 green.
+- **My comment:** Thanked @YummieGG for the review and approval: [thank-you comment](https://github.com/Snnn3/TokTickIT/pull/48#issuecomment-5694953728).
+- **Merge:** Merged into `lab3-staging` as `4d9d129` from final reviewed head `26c38c5`.
 
-**Issue #40 — feature/lab3-6-staff-operations** (LOCAL IMPLEMENTATION; NO PR)
-- Implemented the staff ticket operations slice locally, including ownership, priority, status, resolution, comments, internal notes and self-service authorization behavior.
-- The implementation was kept on its feature branch without opening a pull request, following the task instruction.
+**PR #49 — feature/lab3-6-staff-operations** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-09-16):** Approved ownership, priority, status transitions, resolution summary, comments, internal notes and self-service guards against Issue #40; reported server 171/171, client 127/127, clean checks across 93 files, lint and builds.
+- **My comment:** Thanked @YummieGG for the thorough review and approval: [thank-you comment](https://github.com/Snnn3/TokTickIT/pull/49#issuecomment-5697818271).
+- **Merge:** Merged into `lab3-staging` as `9092dbe` from final reviewed head `b58ac55`.
 
 **PR #50 — feature/lab3-7-user-management** (MERGED)
 - **Reviewer review (YummieGG, APPROVED, 2026-09-19):** Reviewed the user-management implementation against Issue #41 and the Lab 3 contract; the account safety, role guards, validation, reset flow and deactivation cascade were accepted.
@@ -78,8 +80,8 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - **Closeout:** PR #50 merged into `lab3-staging`; issue #41 was closed and its Kanban item moved to Done.
 
 **Issue #42 — feature/lab3-8-e2e-visual** (LOCAL IMPLEMENTATION; NO PR)
-- Implemented the three authenticated Playwright journeys, desktop/tablet/mobile screenshots, responsive queue cards, API authorization evidence, Lab 2 disposition, migration evidence and final test-plan results.
-- Verified server 185/185, client 135/135, Playwright 6/6, client lint, both production builds and the touched-scope formatter check.
+- Implemented the three authenticated Playwright journeys plus a release visual-state journey, desktop/tablet/mobile screenshots, responsive queue cards, API authorization evidence, scoped E2E cleanup, Lab 2 disposition, migration evidence and final test-plan results.
+- Verified server 185/185, client 135/135, Playwright 10/10 across four specs, client lint, both production builds and the repository formatter check. The queue Updated-column check and clean User Management assertion are recorded in `artifacts/lab-03/visual-state-evidence.json` and `clean-user-management.json`.
 - Committed locally as `0aa8bc3`, followed by documentation cleanup `75bf178`; issue #42 remains OPEN/Started because the requested release PR was intentionally not opened.
 ---
 
@@ -90,8 +92,9 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 | https://github.com/YummieGG/toktickit/pull/45 | lab3-1-engineering-contract | Approved |
 | https://github.com/YummieGG/toktickit/pull/46 | feat(auth) | Approved — MERGED 2026-09-11 |
 | https://github.com/YummieGG/toktickit/pull/47 | feat(authz) | Approved — MERGED 2026-09-12 |
-| https://github.com/YummieGG/toktickit/pull/48 | feat(staff) ticket queue and workflow | Approved — MERGED 2026-09-14 |
-| https://github.com/YummieGG/toktickit/pull/49 | feat(admin) scoped Administrator user management | Approved — MERGED 2026-09-15 |
+| https://github.com/YummieGG/toktickit/pull/50 | test(lab-03) Issue #43 verification and evidence | Changes requested → Approved — MERGED 2026-09-16 |
+| https://github.com/YummieGG/toktickit/pull/53 | test(lab-03) staged integration verification | Changes requested → Approved — MERGED 2026-09-18 |
+| https://github.com/YummieGG/toktickit/pull/54 | docs(lab-03) documentation and submission packaging | Pending review — OPEN 2026-09-19 |
 
 ### My comments and partner's responses
 
@@ -107,10 +110,16 @@ Version: 2.6 | Date: 2026-09-19 | Companion to `specification.md`.
 - **My review (Snnn3, APPROVED, 2026-09-12 17:45):** "Peer Review: Lab 3-3 Authorization, App Shell & Requester Regression. Great job on this PR! The transition from the development requester selector to authentic session-based identity and RBAC is clean, secure, and fully compliant with the Lab 3 handout. Highlights: session identity enforcement with no client requesterId; fail-closed scoping with safe 404s; PublicComment persistence with idempotent appears-resolved timestamps and terminal-status guards; role-scoped attachment policies; code hygiene with clean builds. Verified server 130/130 and client 76/76 green. Ready to merge. Approved!"
 - **Partner's comment (2026-09-13):** Quoted my review, then replied and merged the PR (merged 2026-09-12 17:47).
 
-**PR #48 — feat(staff)** (MERGED 2026-09-14)
-- **My review (Snnn3, APPROVED, 2026-09-14 07:04):** "Peer Review: Lab 3-4 IT Staff Queue & Workflow. Approved. Highlights: complete 8-state ticket lifecycle with confirmation prompts and 409 Conflict concurrency protection; multi-criteria staff queue search, filtering and deterministic pagination; independent IT Priority triage and active owner assignment; role-scoped Internal Notes with zero leakage to Requesters and read-only Admin policy; responsive Zen Green UI (desktop table + mobile cards). Verified server 255/255 and client 87/87 green with clean lint and builds. Ready to merge. Outstanding work!"
-- **Partner's comment (2026-09-14):** Quoted my review, then replied "thank you" and merged the PR (merged 2026-09-14 07:05).
+**PR #50 — test(lab-03): complete Issue #43 verification and evidence** (MERGED 2026-09-16)
+- **My reviews (Snnn3, CHANGES_REQUESTED then APPROVED, 2026-09-16):** Requested four fixes covering Windows-safe seed execution, distinct WCAG AA priority-badge contrast without changing the untouched Lab 2 baseline, missing authentication viewport/error/cooldown evidence, and the documented E2E file-count convention. Re-review approved the fixes, including the additional migration/seed preservation hardening, with server 266, client 98, integration 8 and E2E 19 passing with zero skips.
+- **Partner's comment (2026-09-16):** Thanked me for the actionable review and documented the fixes in commits `8265b42` and `f8c0132`: [reply](https://github.com/YummieGG/toktickit/pull/50#issuecomment-5701175828).
+- **Merge:** Merged into `lab3-staging` as `209c282`.
 
-**PR #49 — feat(admin)** (MERGED 2026-09-15)
-- **My review (Snnn3, APPROVED, 2026-09-15 13:07):** "Verdict: Approved with minor suggestions. Great work implementing role authorization, account safety rules (BR-10, BR-11), transactional ticket unassignment, and password/session revocation — solidly handled and well-tested."
-- **Partner's comment:** No reply; merged the PR (merged 2026-09-15 13:50).
+**PR #53 — test(lab-03): complete staged integration verification evidence** (MERGED 2026-09-18)
+- **My reviews (Snnn3, CHANGES_REQUESTED then APPROVED, 2026-09-17/18):** Requested Windows-safe Playwright `webServer` environment configuration, accurate separation of live versus fixture-backed E2E claims, required screenshot/known-limitations reporting sections, and cleanup of review artifacts. Re-review approved after the fixes and final verification of server 266, client 99, integration 8, builds and lint.
+- **Partner's comments (2026-09-17):** Thanked me and recorded the fixes for cross-platform startup, evidence scope, reporting headings, and Docker commands: [reply 1](https://github.com/YummieGG/toktickit/pull/53#issuecomment-5716060536) and [reply 2](https://github.com/YummieGG/toktickit/pull/53#issuecomment-5720157946).
+- **Merge:** Merged into `lab3-staging` as `bf5a97f`.
+
+**PR #54 — docs(lab-03): documentation, repository hygiene, and submission packaging** (OPEN 2026-09-19)
+- **Review status:** No review has been recorded yet; the PR remains open against `lab3-staging`.
+- **Scope:** Peer PR #54 proposes the bilateral reviewer/AI-use updates, README and `.gitignore` cleanup, and Lab 3 submission packaging. It is listed here as pending rather than marked approved.

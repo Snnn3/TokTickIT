@@ -246,23 +246,23 @@ Every AC maps to ≥1 test in `tests.md`.
 
 Product (checked before completion is reported):
 
-* [ ] All included scope implemented; no excluded feature present (specifically: no Service Actions tab, no user deletion, no admin pagination).
-* [ ] Every AC-01..AC-28 satisfied with passing automated evidence.
-* [ ] No test skipped or disabled; suite green from the documented commands on `main`.
-* [ ] Data model matches §7 (schema + applied migration + idempotent seed, ownership preserved, seed minimums met).
-* [ ] API conforms to `api-spec.md` (paths, shapes, cookies, authorization, safe errors).
-* [ ] UI conforms to `ui-spec.md` (tokens, badges, states, responsive, accessibility).
-* [ ] Migration and regression evidence recorded (counts before/after, Lab 2 suite still green).
-* [ ] No secret, real password or `JWT_SECRET` value committed; `server/.env.example` documents the new keys.
-* [ ] README setup, run and test instructions current, including seeded credentials, with the retired `e2e/lab-02` command removed and a note recording that Lab 2 browser evidence is superseded by `e2e/lab-03` — otherwise the final `main` reads as though graded Lab 2 evidence went missing.
+* [x] All included scope implemented; no excluded feature present (specifically: no Service Actions tab, no user deletion, no admin pagination). Verified by the implementation, component/API suites and the release visual evidence.
+* [x] Every AC-01..AC-28 satisfied with passing automated evidence. Server 185/185, client 135/135 and the documented M-01 record cover the acceptance-criteria traceability.
+* [x] No test skipped or disabled; the documented server, client, lint, build and Playwright commands are green on this feature branch.
+* [x] Data model matches §7 (schema + applied migration + idempotent seed, ownership preserved, seed minimums met). `prisma migrate deploy` reports no pending migrations and the seed reports the required role distributions and eight fixtures.
+* [x] API conforms to `api-spec.md` (paths, shapes, cookies, authorization, safe errors), covered by the 185 passing server tests and `authorization.json`.
+* [x] UI conforms to `ui-spec.md` (tokens, badges, states, responsive, accessibility), covered by the 135 passing client tests, 10 passing E2E tests and the release-state screenshots.
+* [x] Migration and regression evidence recorded (counts before/after, Lab 2 suite still green). The historical M-01 record remains authoritative; the current post-migration database cannot reproduce the original 92-ticket/72-attachment pre-state.
+* [x] No secret, real password or `JWT_SECRET` value committed; `server/.env.example` documents the new keys.
+* [x] README setup, run and test instructions current, including seeded credentials, with the retired `e2e/lab-02` command removed and a note recording that Lab 2 browser evidence is superseded by `e2e/lab-03` — otherwise the final `main` reads as though graded Lab 2 evidence went missing.
 
 Delivery:
 
 * [ ] Issues tracked on the Kanban board Backlog → Specified → Started → PR Review → Fixing → Done.
 * [ ] Feature branches only; peer-reviewed PRs into `lab3-staging`; release PR to `main` approved.
-* [ ] Contract docs version-controlled and merged **before** implementation PRs (handout Part 2 evidence).
+* [x] Contract docs version-controlled and merged **before** implementation PRs (handout Part 2 evidence; peer PR #45 precedes the implementation PRs).
 * [x] Peer approval recorded on PR #44 and this document's status changed from Draft to Approved. Until that happens the contract is not approved, whatever this file's header says — the reviewer's verdict on the PR is the authority, not the label. *Satisfied in v1.9: @YummieGG approved at head `d09355b` on 2026-09-10 16:01 and the PR merged at 16:04; the record is the PR #44 row in `reviewer.md`.*
-* [ ] `reviewer.md` complete with reviews given and received, links and approvals.
+* [x] `reviewer.md` complete with reviews given and received, links and approvals through peer PR #54's pending/open state.
 * [ ] Submission PDF using the literal headings "Answer Part 1" through "Answer Part 9" with working links.
 
 ## 11. Assumptions and Decisions

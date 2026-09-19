@@ -3,6 +3,7 @@ import {
   ACCOUNTS,
   assertNoHorizontalOverflow,
   captureScreenshot,
+  cleanupE2EFixtures,
   getQueue,
   requestJson,
   resetSeed,
@@ -16,6 +17,7 @@ const SEED_CROSS_OWNER_TICKET = "TKT-2026-SEED-02";
 
 test.describe("E-02 staff ticket flow and authorization evidence", () => {
   test.beforeEach(() => resetSeed());
+  test.afterEach(() => cleanupE2EFixtures());
 
   test("queue through claim, prioritise, resolve, comment, note, reopen, and API refusals", async ({
     browser,

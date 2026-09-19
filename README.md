@@ -269,7 +269,7 @@ migration preserved every ticket, ticket number, attachment byte and requester r
 ### Test (Lab 3)
 
 ```bash
-cd server && npm test                    # 89 tests, 10 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
+cd server && npm test                    # 185 tests, 15 files (Prisma stubbed, except inherited Lab 1 API-02.categories which needs the seeded DB)
 cd server && npx vitest run tests/lab-03 # Lab 3 only
 cd server && npx vitest run tests/lab-02 # Lab 2 regression
 cd client && npm test                    # 135 tests, 18 files
@@ -321,7 +321,7 @@ Upload rules: jpeg/png/webp/pdf only, each max 5 MB, max 5 files per ticket; cre
 - Administrator User Management (search, role filter, create, edit, reset and deactivation cascade)
 
 Screenshots: `artifacts/lab-02/screenshots/{create-ticket,my-tickets,ticket-detail}/{desktop,tablet,mobile}.png` (viewports 1366x768, 768x1024, 375x667); selector states in `artifacts/lab-02/screenshots/requester-selection/`; submission proofs (Parts 6/7/8) in `artifacts/lab-02/evidence/`.
-Lab 3 visual evidence: `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/{desktop,tablet,mobile}.png` plus the change-password captures and `artifacts/lab-03/authorization.json`.
+Lab 3 visual evidence: `artifacts/lab-03/screenshots/{authentication,staff-queue,staff-ticket-detail,user-management}/{desktop,tablet,mobile}.png` plus the change-password captures, the requested state captures in `artifacts/lab-03/screenshots/release-evidence/`, `artifacts/lab-03/authorization.json`, `artifacts/lab-03/visual-state-evidence.json`, and `artifacts/lab-03/clean-user-management.json`.
 
 ### Test
 

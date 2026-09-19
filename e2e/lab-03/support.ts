@@ -81,6 +81,7 @@ export type QueueResponse = {
 
 /** Restore the documented local fixtures before every browser journey. */
 export function resetSeed(): void {
+  cleanupE2EFixtures();
   if (process.platform === "win32") {
     execFileSync(
       process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe",
@@ -91,6 +92,23 @@ export function resetSeed(): void {
   }
 
   execFileSync("npm", ["run", "db:seed", "--prefix", "server"], {
+    cwd: REPO_ROOT,
+    stdio: "inherit",
+  });
+}
+
+/** Keep repeated browser runs from polluting the seeded User Management view. */
+export function cleanupE2EFixtures(): void {
+  if (process.platform === "win32") {
+    execFileSync(
+      process.env.ComSpec ?? "C:\\Windows\\System32\\cmd.exe",
+      ["/d", "/s", "/c", "npm run db:clean-e2e --prefix server"],
+      { cwd: REPO_ROOT, stdio: "inherit" }
+    );
+    return;
+  }
+
+  execFileSync("npm", ["run", "db:clean-e2e", "--prefix", "server"], {
     cwd: REPO_ROOT,
     stdio: "inherit",
   });
@@ -181,7 +199,8 @@ export async function captureScreenshot(
     | "authentication"
     | "staff-queue"
     | "staff-ticket-detail"
-    | "user-management",
+    | "user-management"
+    | "release-evidence",
   filename: string
 ): Promise<void> {
   const destination = join(

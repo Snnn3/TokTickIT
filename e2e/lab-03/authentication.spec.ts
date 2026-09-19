@@ -3,6 +3,7 @@ import {
   ACCOUNTS,
   assertNoHorizontalOverflow,
   captureScreenshot,
+  cleanupE2EFixtures,
   resetSeed,
   signInAndChangePassword,
   VIEWPORTS,
@@ -10,6 +11,7 @@ import {
 
 test.describe("E-01 authentication journey", () => {
   test.beforeEach(() => resetSeed());
+  test.afterEach(() => cleanupE2EFixtures());
 
   test("first sign-in, forced password change, logout, and cookie replay", async ({
     browser,

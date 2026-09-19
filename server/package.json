@@ -6,6 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "db:clean-e2e": "tsx prisma/cleanup-e2e.ts",
     "db:seed": "prisma db seed",
     "dev": "tsx watch src/index.ts",
     "prisma:generate": "prisma generate",

@@ -255,6 +255,75 @@ body {
   text-decoration: underline !important;
 }
 
+/* Keep the desktop queue's ten columns inside the responsive wrapper. The
+   original pixel widths summed beyond the compact desktop container, which
+   hid the right edge of Updated even though the page itself had no overflow.
+   Percentage tracks preserve the table at wide widths while leaving Summary
+   the largest flexible share. */
+@media (min-width: 992px) {
+  [data-testid="queue-table"] .zg-queue-table,
+  [data-testid="queue-loading"] .zg-queue-table {
+    min-width: 0;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table th,
+  [data-testid="queue-table"] .zg-queue-table td,
+  [data-testid="queue-loading"] .zg-queue-table th,
+  [data-testid="queue-loading"] .zg-queue-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(1),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(1) {
+    width: 13% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(2),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(2) {
+    width: 8% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(3),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(3) {
+    width: 20% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(4),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(4) {
+    width: 9% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(5),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(5),
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(6),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(6) {
+    width: 7% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(7),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(7) {
+    width: 11% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(8),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(8) {
+    width: 10% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(9),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(9) {
+    width: 10% !important;
+  }
+
+  [data-testid="queue-table"] .zg-queue-table :is(th, td):nth-child(10),
+  [data-testid="queue-loading"] .zg-queue-table :is(th, td):nth-child(10) {
+    width: 5% !important;
+  }
+}
+
 /* Zen Color Utility Classes */
 .text-zen-primary {
   color: var(--zg-primary) !important;

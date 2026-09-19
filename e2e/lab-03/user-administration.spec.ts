@@ -3,6 +3,7 @@ import {
   ACCOUNTS,
   assertNoHorizontalOverflow,
   captureScreenshot,
+  cleanupE2EFixtures,
   requestJson,
   resetSeed,
   signInAndChangePassword,
@@ -11,6 +12,7 @@ import {
 
 test.describe("E-03 user administration journey", () => {
   test.beforeEach(() => resetSeed());
+  test.afterEach(() => cleanupE2EFixtures());
 
   test("search, create, edit, reset, role guard, and deactivation cascade", async ({
     browser,
@@ -32,15 +34,18 @@ test.describe("E-03 user administration journey", () => {
     const createdName = "E2E Created User";
     const createdPassword = "E2E.Created!2026";
     await adminPage.getByTestId("create-user-btn").click();
-    await expect(adminPage.getByTestId("create-user-dialog")).toBeVisible();
-    await adminPage.locator("#user-name").fill(createdName);
-    await adminPage.locator("#user-email").fill(createdEmail);
-    await adminPage.locator("#user-role").selectOption("REQUESTER");
-    await adminPage.locator("#user-password").fill(createdPassword);
-    await adminPage
-      .getByTestId("create-user-dialog")
-      .getByRole("button", { name: "Create user" })
-      .click();
+    const createDialog = adminPage.getByTestId("create-user-dialog");
+    await expect(createDialog).toBeVisible();
+    await createDialog.locator("#user-name").fill(createdName);
+    await createDialog.locator("#user-email").fill(createdEmail);
+    await createDialog.locator("#user-role").selectOption("REQUESTER");
+    await createDialog.locator("#user-password").fill(createdPassword);
+    await expect(createDialog.locator("#user-name")).toHaveValue(createdName);
+    await expect(createDialog.locator("#user-email")).toHaveValue(createdEmail);
+    await expect(createDialog.locator("#user-password")).toHaveValue(
+      createdPassword
+    );
+    await createDialog.getByRole("button", { name: "Create user" }).click();
     await expect(adminPage.getByTestId("users-success")).toContainText(
       "User created"
     );

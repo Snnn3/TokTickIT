@@ -441,7 +441,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
         {!forbidden && !error && loading ? (
           <div data-testid="queue-loading" className="py-2">
             <div className="table-responsive d-none d-md-block">
-              <table className="table align-middle mb-0">
+              <table className="table align-middle mb-0 zg-queue-table">
                 <thead
                   className="table-light small text-muted text-uppercase"
                   style={{ fontSize: "0.75rem" }}
@@ -625,7 +625,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 className="table-responsive d-none d-lg-block"
                 data-testid="queue-table"
               >
-                <table className="table table-hover align-middle mb-0">
+                <table className="table table-hover align-middle mb-0 zg-queue-table">
                   <thead
                     className="table-light small text-muted text-uppercase"
                     style={{ fontSize: "0.75rem" }}
@@ -735,7 +735,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                           )}
                         </td>
                         <td>
-                          <span className="small text-muted">
+                          <span className="small text-muted text-truncate d-block">
                             {formatDateTime(ticket.updatedAt)}
                           </span>
                         </td>

@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-19T10:46:57.735Z",
+  "capturedAt": "2026-09-19T13:47:48.189Z",
   "cases": [
     {
       "case": "requester-refused-internal-notes",
@@ -30,7 +30,7 @@
     {
       "case": "staff-self-filed-owner-operation-refused",
       "method": "PATCH",
-      "path": "/api/staff/tickets/260/owner",
+      "path": "/api/staff/tickets/534/owner",
       "status": 403,
       "expectedStatus": 403,
       "body": {
@@ -43,7 +43,7 @@
     {
       "case": "staff-self-filed-internal-note-refused",
       "method": "POST",
-      "path": "/api/staff/tickets/260/notes",
+      "path": "/api/staff/tickets/534/notes",
       "status": 403,
       "expectedStatus": 403,
       "body": {

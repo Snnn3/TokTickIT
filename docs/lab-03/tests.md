@@ -232,15 +232,20 @@ Run date: **2026-09-19**. The branch is based on `origin/lab3-staging` at
 |---|---|---|
 | Server | `npm test --prefix server` | **185/185 passed**, 15 files |
 | Client | `npm test --prefix client -- --maxWorkers=1` | **135/135 passed**, 18 files |
-| Browser regression | `npx playwright test e2e/lab-03 --project=chromium` | **6/6 passed**, 3 specs; E-01, E-02 and E-03 journeys plus visual captures |
-| Formatting (touched scope) | `npm run check -- e2e/lab-03 client/src/components/StaffTicketQueue.tsx client/src/index.css` | **Pass**, 6 files |
+| Browser regression | `npx playwright test e2e/lab-03 --project=chromium` | **10/10 passed**, 4 specs; E-01, E-02, E-03 and release visual-state evidence |
+| Formatting | `npm run check` | **Pass**, 103 files |
 
 The browser run writes 3 viewport captures for authentication, staff queue,
-staff ticket detail and user management under
-`artifacts/lab-03/screenshots/`. Authentication also includes the three
-forced-change-password captures. The direct API authorization evidence is
-`artifacts/lab-03/authorization.json`: requester notes 403, cross-owner
-ticket access 403, and staff self-filed owner/note operations 403.
+staff ticket detail and user management under `artifacts/lab-03/screenshots/`.
+Authentication also includes the three forced-change-password captures. The
+release evidence spec adds invalid/inactive/busy/logout authentication,
+queue loading/empty/error/feedback and Updated-column clipping, staff
+post-action/validation, administrator dialog/safety-guard, and clean-user
+captures under `artifacts/lab-03/screenshots/release-evidence/`. The direct API
+authorization evidence is `artifacts/lab-03/authorization.json`: requester
+notes 403, cross-owner ticket access 403, and staff self-filed owner/note
+operations 403. The clipping and clean-data assertions are recorded in
+`visual-state-evidence.json` and `clean-user-management.json`.
 
 ### Lab 2 disposition and migration evidence
 
@@ -264,6 +269,15 @@ M-01 is recorded in
 | Ticket requesters changed | 0 | 0 | PASS |
 | Attachment bytes changed (md5 and sizeBytes) | 0 | 0 | PASS |
 
+The historical M-01 snapshot is the authoritative migration run. A rerun on
+2026-09-19 executed `npx prisma migrate deploy`, `npm run db:seed`, and
+`npx tsx prisma/migration-evidence/capture.ts after` against the current local
+database, but that database had already been reset to the 8 seeded Lab 3
+tickets and no attachments. The comparison therefore reported the expected
+92-to-8 / 72-to-0 mismatch against the historical pre-migration snapshot; it
+was not recorded as a passing migration run or used to overwrite the original
+evidence.
+
 The remaining release integration acceptance is deliberately pending: per the
 request for this implementation, no pull request was opened and no
 `lab3-staging`-to-`main` merge was performed. The local branch and commit
@@ -273,4 +287,7 @@ evidence that can be completed without that release PR.
 ## 7. Known Limitations
 
 No manual-only captures were required; the release evidence is fully represented by the
-automated server, client, browser, screenshot and authorization results above.
+automated server, client, browser, screenshot and authorization results above. A fresh
+M-01 rerun requires the original pre-migration Lab 2 database (the current local database
+contains only the seeded post-migration fixtures); the recorded 92-ticket/72-attachment
+run remains the preservation evidence.
