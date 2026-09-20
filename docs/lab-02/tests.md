@@ -61,17 +61,15 @@ attachment lifecycle, and multi-requester isolation. Final statuses are filled i
 Manual-only supplement (documented, not automated): backend-down visual state capture for Part 6
 (stop server, screenshot preserved-form banner).
 
-> **Superseded in Lab 3 — R-01 and E-01..E-03 only.** `e2e/lab-02/requester-ticket-flow.spec.ts`
-> was retired under Lab 3 `BR-28` in PR #46 (issue #37), together with the three
-> `e2e/evidence/` capture specs named in §7. All four were driven end to end by the
-> development requester selector and the `X-Requester-Id` header, both of which the Lab 3
-> auth foundation removes, so each would now throw on every run — and `BR-28` retires such a
-> spec rather than skipping it. The `pass` results in the four rows above were true when
-> captured on 2026-09-06 against the pre-auth application, which is still reachable in git
-> history; they stand as the Lab 2 evidence and the screenshots they produced remain
-> committed under `artifacts/lab-02/`. The browser coverage itself is rewritten against
-> authenticated flows in `e2e/lab-03/` by issue #42. Nothing in §2 above is re-run on the
-> Lab 3 lineage.
+> **Superseded in Lab 3 — R-01 and E-01..E-03 only.** The original selector-driven
+> `e2e/lab-02/requester-ticket-flow.spec.ts` and the three `e2e/evidence/` capture specs
+> were retired under Lab 3 `BR-28` in PR #46 (issue #37). The selector-only capture specs
+> remain retired. The requester flow was later restored as a session-adapted regression on
+> the release branch, so the current file no longer uses the removed selector or
+> `X-Requester-Id` header. The `pass` results in the four rows above were true when
+> captured on 2026-09-06 against the pre-auth application; they remain the historical Lab 2
+> evidence and the screenshots produced remain committed under `artifacts/lab-02/`. The
+> current session-adapted browser result is recorded in `docs/lab-03/tests.md`.
 
 ## 3. Acceptance-Criterion Traceability
 
@@ -135,12 +133,10 @@ npx playwright install chromium   # first time only
 npx playwright test e2e/lab-02
 ```
 
-> **The Playwright command above no longer runs on the Lab 3 lineage.** `e2e/lab-02/` was
-> deleted under Lab 3 `BR-28` in PR #46; `e2e/lab-03/` replaces it from issue #42. The two
-> `npm test` commands are unaffected — the Lab 2 server and client suites survive, adapted
-> only where the identity mechanism beneath them changed, and are re-run as Lab 3
-> regression (`docs/lab-03/tests.md`, API-27). Use this section as recorded history of the
-> Lab 2 run; to reproduce browser evidence, check out the Lab 2 release tag.
+> On the current Lab 3 lineage, the command runs the restored session-adapted requester
+> regression. The selector-only `e2e/evidence/` capture specs remain retired; use the Lab 2
+> release result above for the original pre-auth selector evidence and
+> `docs/lab-03/tests.md` for the current authenticated rerun.
 
 ## 6. Final Results
 
@@ -152,6 +148,7 @@ Run date: 2026-09-06 (fresh re-run; first run 2026-09-04 ~21:15–21:30 +07). Co
 | Server unit + API (9 files) | `npm test --prefix server` | 34/34 passed (~8s, re-run 2026-09-06 on freshly seeded DB) |
 | Client component/style (11 files) | `npm test --prefix client` | 42/42 passed (re-run 2026-09-06; pre-existing jsdom `scrollTo` warnings only) |
 | Playwright E2E + responsive (chromium) | `npx playwright test e2e/lab-02` | 3/3 passed (16.3s re-run 2026-09-06: E-01 2.5s, E-02 2.5s, R-01 & E-03 4.4s); 9 screenshots regenerated under `artifacts/lab-02/screenshots/` — **spec retired in Lab 3 (PR #46); result recorded, not reproducible on this lineage** |
+| Session-adapted requester regression | `npx playwright test e2e/lab-02 --project=chromium` | 3/3 passed on the current Lab 3 lineage; responsive captures under `artifacts/lab-03/screenshots/requester-regression/` |
 
 Seeded dev DB precondition (§5): docker `toktickit-db` was rebuilt with
 `prisma migrate reset --force` (repo's 3 migrations) + `npm run db:seed`
@@ -182,7 +179,7 @@ Honesty notes:
   `artifacts/lab-02/screenshots/requester-selection/`) and
   `e2e/evidence/report-gaps.spec.ts` (13 Part 6/7/8 proofs under
   `artifacts/lab-02/evidence/part*`) — all green 2026-09-06, none part of
-  the graded `e2e/lab-02` suite. **All three were retired under Lab 3 `BR-28` in PR #46**:
+  the graded pre-auth `e2e/lab-02` suite. **All three capture specs were retired under Lab 3 `BR-28` in PR #46**:
   they drive the requester selector and the `X-Requester-Id` header, which the auth
   foundation removes. The captured figures under `artifacts/lab-02/` are unaffected and stay
   committed as the Lab 2 evidence.

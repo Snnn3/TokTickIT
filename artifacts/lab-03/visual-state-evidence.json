@@ -1,0 +1,13 @@
+{
+  "queueDesktopUpdatedColumn": {
+    "containerRight": 1153,
+    "documentScrollWidth": 1280,
+    "headerRight": 1101.640625,
+    "headerText": "Updated",
+    "headerWidth": 102.59375,
+    "tableClientWidth": 1026,
+    "tableScrollWidth": 1026,
+    "viewportWidth": 1280
+  },
+  "capturedBy": "e2e/lab-03/zz-release-evidence.spec.ts"
+}
