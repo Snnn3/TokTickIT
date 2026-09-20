@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MyTickets } from "../../components/MyTickets";
-import { RequesterProvider } from "../../context/RequesterContext";
+import { AuthHarnessProvider, testUser } from "../../test/authHarness";
 
 const mockRequester = {
   id: 1,
@@ -47,18 +47,16 @@ const mockTickets = [
 ];
 
 function AuthenticatedWrapper({ children }: { children: ReactNode }) {
-  return <RequesterProvider>{children}</RequesterProvider>;
+  return (
+    <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+      {children}
+    </AuthHarnessProvider>
+  );
 }
 
 describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    sessionStorage.clear();
-    sessionStorage.setItem(
-      "toktickit_selected_requester",
-      JSON.stringify(mockRequester)
-    );
-
     // Default fetch mock
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
@@ -93,12 +91,20 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText("TKT-2026-00001").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("TKT-2026-00002").length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText("TKT-2026-00001").length
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText("TKT-2026-00002").length
+      ).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getAllByText("Wi-Fi connection issue in lab").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Printer jammed on 2nd floor").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Wi-Fi connection issue in lab").length
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Printer jammed on 2nd floor").length
+    ).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("HIGH").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("LOW").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("NEW").length).toBeGreaterThanOrEqual(2);
@@ -119,17 +125,20 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Search number or summary/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search number or summary/i);
+    const searchInput = screen.getByPlaceholderText(
+      /Search number or summary/i
+    );
     fireEvent.change(searchInput, { target: { value: "Printer" } });
 
     await waitFor(
       () => {
         expect(fetchSpy).toHaveBeenCalledWith(
-          expect.stringContaining("search=Printer"),
-          expect.anything()
+          expect.stringContaining("search=Printer")
         );
       },
       { timeout: 1000 }
@@ -146,48 +155,59 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox", { name: /Filter by category/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("combobox", { name: /Filter by category/i })
+      ).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByRole("combobox", { name: /Filter by category/i }), {
-      target: { value: "2" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: /Filter by priority/i }), {
-      target: { value: "HIGH" },
-    });
+    fireEvent.change(
+      screen.getByRole("combobox", { name: /Filter by category/i }),
+      {
+        target: { value: "2" },
+      }
+    );
+    fireEvent.change(
+      screen.getByRole("combobox", { name: /Filter by priority/i }),
+      {
+        target: { value: "HIGH" },
+      }
+    );
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("categoryId=2"),
-        expect.anything()
+        expect.stringContaining("categoryId=2")
       );
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("priority=HIGH"),
-        expect.anything()
+        expect.stringContaining("priority=HIGH")
       );
     });
   });
 
   it("C-10: supports pagination and page size selection (BR-21)", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = String(input);
-      if (url.includes("/api/reference/categories")) {
-        return { ok: true, json: async () => ({ categories: mockCategories }) } as Response;
-      }
-      if (url.includes("/api/tickets")) {
-        return {
-          ok: true,
-          json: async () => ({
-            tickets: mockTickets,
-            page: 1,
-            pageSize: 10,
-            total: 25,
-            totalPages: 3,
-          }),
-        } as Response;
-      }
-      return { ok: true, json: async () => ({}) } as Response;
-    });
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/reference/categories")) {
+          return {
+            ok: true,
+            json: async () => ({ categories: mockCategories }),
+          } as Response;
+        }
+        if (url.includes("/api/tickets")) {
+          return {
+            ok: true,
+            json: async () => ({
+              tickets: mockTickets,
+              page: 1,
+              pageSize: 10,
+              total: 25,
+              totalPages: 3,
+            }),
+          } as Response;
+        }
+        return { ok: true, json: async () => ({}) } as Response;
+      });
 
     render(
       <AuthenticatedWrapper>
@@ -196,7 +216,9 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent("Page 1 of 3 (25 tickets)");
+      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+        "Page 1 of 3 (25 tickets)"
+      );
     });
 
     // Click Next page
@@ -204,10 +226,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     fireEvent.click(nextBtn);
 
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("page=2"),
-        expect.anything()
-      );
+      expect(fetchSpy).toHaveBeenCalledWith(expect.stringContaining("page=2"));
     });
 
     // Change page size to 5
@@ -216,8 +235,7 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining("pageSize=5"),
-        expect.anything()
+        expect.stringContaining("pageSize=5")
       );
     });
   });
@@ -227,7 +245,10 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes("/api/reference/categories")) {
-        return { ok: true, json: async () => ({ categories: mockCategories }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({ categories: mockCategories }),
+        } as Response;
       }
       return {
         ok: true,
@@ -254,7 +275,9 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     });
 
     // Changing sort order with 0 tickets should still keep empty-tickets-state (BR-24)
-    const sortSelect = screen.getByLabelText(/Sort by/i, { selector: "#sort-select" });
+    const sortSelect = screen.getByLabelText(/Sort by/i, {
+      selector: "#sort-select",
+    });
     fireEvent.change(sortSelect, { target: { value: "createdAt" } });
     await waitFor(() => {
       expect(screen.getByTestId("empty-tickets-state")).toBeInTheDocument();
@@ -268,7 +291,9 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     await waitFor(
       () => {
         expect(screen.getByTestId("no-results-state")).toBeInTheDocument();
-        expect(screen.getByText("No tickets match your filters")).toBeInTheDocument();
+        expect(
+          screen.getByText("No tickets match your filters")
+        ).toBeInTheDocument();
       },
       { timeout: 1000 }
     );
@@ -282,10 +307,14 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Search number or summary/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText(/Search number or summary/i);
+    const searchInput = screen.getByPlaceholderText(
+      /Search number or summary/i
+    );
     fireEvent.change(searchInput, { target: { value: "Test search" } });
 
     const clearBtn = screen.getByRole("button", { name: "Clear filters" });
@@ -307,7 +336,10 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes("/api/reference/categories")) {
-        return { ok: true, json: async () => ({ categories: mockCategories }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({ categories: mockCategories }),
+        } as Response;
       }
       return pendingPromise as Promise<Response>;
     });

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRequester } from "../context/RequesterContext";
-import type { TicketSummaryItem, TicketPriority, TicketStatus } from "../types/ticket";
+import type {
+  TicketSummaryItem,
+  TicketPriority,
+  TicketStatus,
+} from "../types/ticket";
 import { useCategories } from "../hooks/useReferenceData";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { formatDateTime } from "../utils/format";
@@ -35,8 +38,6 @@ const initialQueryState: TicketQueryState = {
 };
 
 export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
-  const { selectedRequester } = useRequester();
-
   // State
   const [tickets, setTickets] = useState<TicketSummaryItem[]>([]);
   const { categories } = useCategories();
@@ -44,7 +45,8 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Consolidated Query State
-  const [queryState, setQueryState] = useState<TicketQueryState>(initialQueryState);
+  const [queryState, setQueryState] =
+    useState<TicketQueryState>(initialQueryState);
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Debounce search input by 300ms [ui-spec.md Section 8]
@@ -68,9 +70,9 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   );
 
   // Fetch tickets
+  // The list is scoped by the session cookie, so there is nothing to wait for
+  // before fetching and no identity for this component to carry.
   const fetchTickets = useCallback(async () => {
-    if (!selectedRequester) return;
-
     setLoading(true);
     setError(null);
 
@@ -85,11 +87,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     params.set("pageSize", String(queryState.pageSize));
 
     try {
-      const res = await fetch(`/api/tickets?${params.toString()}`, {
-        headers: {
-          "X-Requester-Id": String(selectedRequester.id),
-        },
-      });
+      const res = await fetch(`/api/tickets?${params.toString()}`);
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -113,7 +111,6 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       setLoading(false);
     }
   }, [
-    selectedRequester,
     debouncedSearch,
     queryState.categoryId,
     queryState.priority,
@@ -149,9 +146,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       <div className="zg-card p-4 mb-4">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <div>
-            <h1 className="h4 fw-bold mb-1 text-zen-primary">
-              My Tickets
-            </h1>
+            <h1 className="h4 fw-bold mb-1 text-zen-primary">My Tickets</h1>
             <p className="text-muted small mb-0">
               Track and manage all your submitted IT support tickets.
             </p>
@@ -185,7 +180,11 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 placeholder="Search number or summary"
                 value={queryState.search}
                 onChange={(e) => {
-                  setQueryState((prev) => ({ ...prev, search: e.target.value, page: 1 }));
+                  setQueryState((prev) => ({
+                    ...prev,
+                    search: e.target.value,
+                    page: 1,
+                  }));
                 }}
               />
             </div>
@@ -200,7 +199,11 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 className="form-select form-select-sm"
                 value={queryState.categoryId}
                 onChange={(e) => {
-                  setQueryState((prev) => ({ ...prev, categoryId: e.target.value, page: 1 }));
+                  setQueryState((prev) => ({
+                    ...prev,
+                    categoryId: e.target.value,
+                    page: 1,
+                  }));
                 }}
               >
                 <option value="">All Categories</option>
@@ -285,7 +288,10 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 onChange={(e) => {
                   setQueryState((prev) => ({
                     ...prev,
-                    sort: e.target.value as "updatedAt" | "createdAt" | "number",
+                    sort: e.target.value as
+                      | "updatedAt"
+                      | "createdAt"
+                      | "number",
                     page: 1,
                   }));
                 }}
@@ -319,7 +325,10 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
         {/* Error State */}
         {error && (
-          <div className="alert alert-danger py-2 mb-3 d-flex justify-content-between align-items-center" role="alert">
+          <div
+            className="alert alert-danger py-2 mb-3 d-flex justify-content-between align-items-center"
+            role="alert"
+          >
             <span>{error}</span>
             <button
               type="button"
@@ -337,27 +346,79 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
             {/* Desktop Table Skeletons (>= 768px) */}
             <div className="table-responsive d-none d-md-block">
               <table className="table align-middle mb-0">
-                <thead className="table-light small text-muted text-uppercase" style={{ fontSize: "0.75rem" }}>
+                <thead
+                  className="table-light small text-muted text-uppercase"
+                  style={{ fontSize: "0.75rem" }}
+                >
                   <tr>
-                    <th scope="col" style={{ width: "160px" }}>Ticket Number</th>
+                    <th scope="col" style={{ width: "160px" }}>
+                      Ticket Number
+                    </th>
                     <th scope="col">Summary</th>
-                    <th scope="col" className="d-none d-lg-table-cell" style={{ width: "160px" }}>Category</th>
-                    <th scope="col" style={{ width: "110px" }}>Priority</th>
-                    <th scope="col" style={{ width: "90px" }}>Status</th>
-                    <th scope="col" style={{ width: "170px" }}>Last Updated</th>
-                    <th scope="col" style={{ width: "90px" }} className="text-end">Action</th>
+                    <th
+                      scope="col"
+                      className="d-none d-lg-table-cell"
+                      style={{ width: "160px" }}
+                    >
+                      Category
+                    </th>
+                    <th scope="col" style={{ width: "110px" }}>
+                      Priority
+                    </th>
+                    <th scope="col" style={{ width: "90px" }}>
+                      Status
+                    </th>
+                    <th scope="col" style={{ width: "170px" }}>
+                      Last Updated
+                    </th>
+                    <th
+                      scope="col"
+                      style={{ width: "90px" }}
+                      className="text-end"
+                    >
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {[1, 2, 3, 4, 5].map((idx) => (
                     <tr key={idx}>
-                      <td><div className="zg-skeleton-line" style={{ width: "120px" }} /></td>
-                      <td><div className="zg-skeleton-line" style={{ width: "70%" }} /></td>
-                      <td className="d-none d-lg-table-cell"><div className="zg-skeleton-line" style={{ width: "90px" }} /></td>
-                      <td><div className="zg-skeleton-badge" /></td>
-                      <td><div className="zg-skeleton-badge" /></td>
-                      <td><div className="zg-skeleton-line" style={{ width: "130px" }} /></td>
-                      <td className="text-end"><div className="zg-skeleton-line ms-auto" style={{ width: "40px" }} /></td>
+                      <td>
+                        <div
+                          className="zg-skeleton-line"
+                          style={{ width: "120px" }}
+                        />
+                      </td>
+                      <td>
+                        <div
+                          className="zg-skeleton-line"
+                          style={{ width: "70%" }}
+                        />
+                      </td>
+                      <td className="d-none d-lg-table-cell">
+                        <div
+                          className="zg-skeleton-line"
+                          style={{ width: "90px" }}
+                        />
+                      </td>
+                      <td>
+                        <div className="zg-skeleton-badge" />
+                      </td>
+                      <td>
+                        <div className="zg-skeleton-badge" />
+                      </td>
+                      <td>
+                        <div
+                          className="zg-skeleton-line"
+                          style={{ width: "130px" }}
+                        />
+                      </td>
+                      <td className="text-end">
+                        <div
+                          className="zg-skeleton-line ms-auto"
+                          style={{ width: "40px" }}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -368,18 +429,33 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
             <div className="d-md-none">
               <div className="d-flex flex-column gap-3">
                 {[1, 2, 3].map((idx) => (
-                  <div key={idx} className="p-3 border rounded bg-white shadow-sm">
+                  <div
+                    key={idx}
+                    className="p-3 border rounded bg-white shadow-sm"
+                  >
                     <div className="d-flex justify-content-between align-items-start mb-2">
-                      <div className="zg-skeleton-line" style={{ width: "130px" }} />
+                      <div
+                        className="zg-skeleton-line"
+                        style={{ width: "130px" }}
+                      />
                       <div className="d-flex gap-1">
                         <div className="zg-skeleton-badge" />
                         <div className="zg-skeleton-badge" />
                       </div>
                     </div>
-                    <div className="zg-skeleton-line mb-3" style={{ width: "85%" }} />
+                    <div
+                      className="zg-skeleton-line mb-3"
+                      style={{ width: "85%" }}
+                    />
                     <div className="d-flex justify-content-between align-items-center pt-2 border-top">
-                      <div className="zg-skeleton-line" style={{ width: "110px" }} />
-                      <div className="zg-skeleton-line" style={{ width: "40px" }} />
+                      <div
+                        className="zg-skeleton-line"
+                        style={{ width: "110px" }}
+                      />
+                      <div
+                        className="zg-skeleton-line"
+                        style={{ width: "40px" }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -389,8 +465,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
         ) : tickets.length === 0 ? (
           /* Empty / No Results State */
           hasActiveFilters ? (
-            <div className="text-center py-5 border rounded bg-light" data-testid="no-results-state">
-              <div className="h5 fw-semibold mb-2 text-muted">No tickets match your filters</div>
+            <div
+              className="text-center py-5 border rounded bg-light"
+              data-testid="no-results-state"
+            >
+              <div className="h5 fw-semibold mb-2 text-muted">
+                No tickets match your filters
+              </div>
               <p className="text-muted small mb-3">
                 Try adjusting your search keywords or filter criteria.
               </p>
@@ -403,13 +484,14 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               </button>
             </div>
           ) : (
-            <div className="text-center py-5 border rounded bg-light" data-testid="empty-tickets-state">
+            <div
+              className="text-center py-5 border rounded bg-light"
+              data-testid="empty-tickets-state"
+            >
               <div className="h5 fw-semibold mb-2 text-zen-primary">
                 No tickets yet
               </div>
-              <p className="text-muted small mb-3">
-                Create your first ticket
-              </p>
+              <p className="text-muted small mb-3">Create your first ticket</p>
               <button
                 type="button"
                 className="btn btn-zen-primary btn-sm"
@@ -425,17 +507,43 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
           /* Tickets List View */
           <div>
             {/* Desktop Table View (>= 768px) */}
-            <div className="table-responsive d-none d-md-block" data-testid="tickets-desktop-table">
+            <div
+              className="table-responsive d-none d-md-block"
+              data-testid="tickets-desktop-table"
+            >
               <table className="table table-hover align-middle mb-0">
-                <thead className="table-light small text-muted text-uppercase" style={{ fontSize: "0.75rem" }}>
+                <thead
+                  className="table-light small text-muted text-uppercase"
+                  style={{ fontSize: "0.75rem" }}
+                >
                   <tr>
-                    <th scope="col" style={{ width: "160px" }}>Ticket Number</th>
+                    <th scope="col" style={{ width: "160px" }}>
+                      Ticket Number
+                    </th>
                     <th scope="col">Summary</th>
-                    <th scope="col" className="d-none d-lg-table-cell" style={{ width: "160px" }}>Category</th>
-                    <th scope="col" style={{ width: "110px" }}>Priority</th>
-                    <th scope="col" style={{ width: "90px" }}>Status</th>
-                    <th scope="col" style={{ width: "170px" }}>Last Updated</th>
-                    <th scope="col" style={{ width: "90px" }} className="text-end">Action</th>
+                    <th
+                      scope="col"
+                      className="d-none d-lg-table-cell"
+                      style={{ width: "160px" }}
+                    >
+                      Category
+                    </th>
+                    <th scope="col" style={{ width: "110px" }}>
+                      Priority
+                    </th>
+                    <th scope="col" style={{ width: "90px" }}>
+                      Status
+                    </th>
+                    <th scope="col" style={{ width: "170px" }}>
+                      Last Updated
+                    </th>
+                    <th
+                      scope="col"
+                      style={{ width: "90px" }}
+                      className="text-end"
+                    >
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -451,12 +559,18 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                         </button>
                       </td>
                       <td>
-                        <div className="text-truncate" style={{ maxWidth: "340px" }} title={ticket.summary}>
+                        <div
+                          className="text-truncate"
+                          style={{ maxWidth: "340px" }}
+                          title={ticket.summary}
+                        >
                           {ticket.summary}
                         </div>
                       </td>
                       <td className="d-none d-lg-table-cell">
-                        <span className="small text-muted">{ticket.categoryName}</span>
+                        <span className="small text-muted">
+                          {ticket.categoryName}
+                        </span>
                       </td>
                       <td>
                         <ZenPriorityBadge priority={ticket.requestedPriority} />
@@ -569,20 +683,32 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   type="button"
                   className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page <= 1}
-                  onClick={() => setQueryState((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                  onClick={() =>
+                    setQueryState((prev) => ({
+                      ...prev,
+                      page: Math.max(1, prev.page - 1),
+                    }))
+                  }
                   aria-label="Previous page"
                 >
                   Previous
                 </button>
-                <span className="small text-muted px-2" data-testid="pagination-page-info">
-                  Page <strong>{queryState.page}</strong> of <strong>{totalPages || 1}</strong> ({total} tickets)
+                <span
+                  className="small text-muted px-2"
+                  data-testid="pagination-page-info"
+                >
+                  Page <strong>{queryState.page}</strong> of{" "}
+                  <strong>{totalPages || 1}</strong> ({total} tickets)
                 </span>
                 <button
                   type="button"
                   className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page >= totalPages || totalPages === 0}
                   onClick={() =>
-                    setQueryState((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))
+                    setQueryState((prev) => ({
+                      ...prev,
+                      page: Math.min(totalPages, prev.page + 1),
+                    }))
                   }
                   aria-label="Next page"
                 >

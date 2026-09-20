@@ -25,10 +25,16 @@ describe("Check System", () => {
       vi.fn().mockImplementation((url: string) =>
         fetchPromise.then(() =>
           url === "/api/health"
-            ? { ok: true, json: async () => ({ status: "ok", service: "TokTickIT API" }) }
-            : { ok: true, json: async () => SEEDED_CATEGORIES },
-        ),
-      ),
+            ? {
+                ok: true,
+                json: async () => ({
+                  status: "ok",
+                  service: "TokTickIT API",
+                }),
+              }
+            : { ok: true, json: async () => SEEDED_CATEGORIES }
+        )
+      )
     );
 
     const user = userEvent.setup();
@@ -40,14 +46,16 @@ describe("Check System", () => {
     resolveFetch!(undefined);
     expect(
       await screen.findByText(
-        (_content, element) => element?.textContent === "System Status: Online",
-      ),
+        (_content, element) => element?.textContent === "System Status: Online"
+      )
     ).toBeInTheDocument();
 
     for (const category of SEEDED_CATEGORIES) {
       expect(screen.getByText(category.name)).toBeInTheDocument();
     }
-    expect(screen.getByText("Supported Request Categories")).toBeInTheDocument();
+    expect(
+      screen.getByText("Supported Request Categories")
+    ).toBeInTheDocument();
     expect(screen.queryByText(/loading/)).not.toBeInTheDocument();
   });
 });

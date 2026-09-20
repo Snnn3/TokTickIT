@@ -32,7 +32,9 @@ export function CheckSystem() {
     <div className="min-vh-100 d-flex flex-column">
       <nav className="navbar navbar-dark bg-primary">
         <div className="container">
-          <span className="navbar-brand fw-bold">TokTickIT IT Service Desk</span>
+          <span className="navbar-brand fw-bold">
+            TokTickIT IT Service Desk
+          </span>
         </div>
       </nav>
       <main className="container py-4 flex-grow-1">
@@ -48,7 +50,8 @@ export function CheckSystem() {
         {systemState === "online" && (
           <div className="mt-3">
             <p>
-              System Status: <span className="badge text-bg-success">Online</span>
+              System Status:{" "}
+              <span className="badge text-bg-success">Online</span>
             </p>
             <p className="mb-1">Supported Request Categories</p>
             <ol className="mb-0">
@@ -62,7 +65,8 @@ export function CheckSystem() {
         {systemState === "offline" && (
           <div className="mt-3">
             <p>
-              System Status: <span className="badge text-bg-danger">Offline</span>
+              System Status:{" "}
+              <span className="badge text-bg-danger">Offline</span>
             </p>
             {error && <p className="alert alert-danger">{error}</p>}
           </div>

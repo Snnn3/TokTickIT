@@ -32,37 +32,33 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
   });
 
   it("C-13: performs client file pre-checks for invalid types and oversize >5MB (AC-07, AC-08)", async () => {
-    render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={[]}
-        requesterId={1}
-      />,
-    );
+    render(<AttachmentSection ticketId={10} attachments={[]} />);
 
-    const input = screen.getByTestId("add-attachment-input") as HTMLInputElement;
+    const input = screen.getByTestId(
+      "add-attachment-input"
+    ) as HTMLInputElement;
 
     // 1. Invalid file extension (.exe)
-    const invalidFile = new File(["binary content"], "bad_file.exe", { type: "application/x-msdownload" });
+    const invalidFile = new File(["binary content"], "bad_file.exe", {
+      type: "application/x-msdownload",
+    });
     fireEvent.change(input, { target: { files: [invalidFile] } });
 
     expect(screen.getByText(/unsupported/i)).toBeInTheDocument();
 
     // 2. Oversize file (>5MB)
-    const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], "oversize.png", { type: "image/png" });
+    const bigFile = new File(
+      [new ArrayBuffer(6 * 1024 * 1024)],
+      "oversize.png",
+      { type: "image/png" }
+    );
     fireEvent.change(input, { target: { files: [bigFile] } });
 
     expect(screen.getByText(/exceeds/i)).toBeInTheDocument();
   });
 
   it("C-12: renders removed attachments with strikethrough, badge, reason caption, and disabled actions (AC-11)", async () => {
-    render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={mockAttachments}
-        requesterId={1}
-      />,
-    );
+    render(<AttachmentSection ticketId={10} attachments={mockAttachments} />);
 
     // Active attachment: enabled actions
     const activeDownload = screen.getByTestId("download-button-101");
@@ -90,9 +86,8 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       <AttachmentSection
         ticketId={10}
         attachments={[mockAttachments[0]]}
-        requesterId={1}
         onAttachmentRemoved={onRemoved}
-      />,
+      />
     );
 
     // Click remove on active attachment
@@ -100,7 +95,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
 
     // Modal dialog opens
     expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
-    expect(screen.getByText(/Are you sure you want to remove/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to remove/i)
+    ).toBeInTheDocument();
 
     const confirmBtn = screen.getByTestId("confirm-remove-button");
     const reasonInput = screen.getByTestId("removal-reason-input");
@@ -109,7 +106,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     expect(confirmBtn).toBeDisabled();
 
     // Enter valid reason
-    fireEvent.change(reasonInput, { target: { value: "No longer needed by IT" } });
+    fireEvent.change(reasonInput, {
+      target: { value: "No longer needed by IT" },
+    });
     expect(confirmBtn).not.toBeDisabled();
 
     // Mock DELETE endpoint
@@ -129,7 +128,9 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
         removedReason: "No longer needed by IT",
         removedAt: "2026-08-30T12:00:00.000Z",
       });
-      expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -139,15 +140,11 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
       resolveDeletePromise = resolve;
     });
 
-    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() => deletePromise as any);
-
-    render(
-      <AttachmentSection
-        ticketId={10}
-        attachments={mockAttachments}
-        requesterId={1}
-      />,
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () => deletePromise as any
     );
+
+    render(<AttachmentSection ticketId={10} attachments={mockAttachments} />);
 
     fireEvent.click(screen.getByTestId("remove-button-101"));
     expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
@@ -170,11 +167,116 @@ describe("AttachmentSection Component (C-11..C-13, AC-07..AC-12, BR-13, BR-16, B
     // Settle flight
     resolveDeletePromise({
       ok: true,
-      json: async () => ({ removed: true, removedAt: new Date().toISOString() }),
+      json: async () => ({
+        removed: true,
+        removedAt: new Date().toISOString(),
+      }),
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId("remove-attachment-dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("contains focus inside the removal modal when focus moves outside (ui-spec §10)", async () => {
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <AttachmentSection ticketId={10} attachments={mockAttachments} />
+      </div>
+    );
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    const dialog = screen.getByTestId("remove-attachment-dialog");
+    const reasonInput = screen.getByTestId("removal-reason-input");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(reasonInput);
+    });
+
+    // A click-away or programmatic focus outside is pulled back inside.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+  });
+
+  it("keeps focus contained in the removal modal while busy, and Escape still does not close (ui-spec §10, BR-18)", async () => {
+    // The DELETE stays in flight so the modal sits in its busy state.
+    let resolveDeletePromise: (val: any) => void = () => {};
+    const deletePromise = new Promise((resolve) => {
+      resolveDeletePromise = resolve;
+    });
+
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+      () => deletePromise as any
+    );
+
+    render(
+      <div>
+        <button type="button" data-testid="outside-control">
+          Outside
+        </button>
+        <AttachmentSection ticketId={10} attachments={mockAttachments} />
+      </div>
+    );
+
+    fireEvent.click(screen.getByTestId("remove-button-101"));
+    const dialog = screen.getByTestId("remove-attachment-dialog");
+    const reasonInput = screen.getByTestId("removal-reason-input");
+    await waitFor(() => {
+      expect(document.activeElement).toBe(reasonInput);
+    });
+
+    fireEvent.change(reasonInput, { target: { value: "Sensitive data" } });
+
+    // Confirm: the removal is now in flight (busy), proven by aria-busy,
+    // while the modal stays open.
+    const confirmBtn = screen.getByTestId("confirm-remove-button");
+    fireEvent.click(confirmBtn);
+    await waitFor(() => {
+      expect(confirmBtn).toHaveAttribute("aria-busy", "true");
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Let the busy re-focus timer (50ms, targets the still-enabled reason
+    // input) fire before moving focus outside: its deadline is earlier than
+    // the sleep below, so afterwards no timer is pending and the assertion
+    // proves the containment guard itself rather than the timer.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    // Focus escaping mid-request is still pulled back inside the open modal.
+    const outside = screen.getByTestId("outside-control");
+    outside.focus();
+    fireEvent.focusIn(outside);
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Escape mid-request still does not close (BR-18 in-flight lockout).
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByTestId("remove-attachment-dialog")).toBeInTheDocument();
+
+    // Settle the flight: the modal closes on success.
+    resolveDeletePromise({
+      ok: true,
+      json: async () => ({
+        removed: true,
+        removedAt: new Date().toISOString(),
+      }),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("remove-attachment-dialog")
+      ).not.toBeInTheDocument();
     });
   });
 });

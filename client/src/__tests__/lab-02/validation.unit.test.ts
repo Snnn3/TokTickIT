@@ -21,7 +21,9 @@ describe("Validation Utilities (U-02, BR-07, BR-08, BR-13)", () => {
     });
 
     it("rejects summary exceeding 150 characters after trim", () => {
-      expect(validateSummary("A".repeat(151))).toBe("Summary must not exceed 150 characters");
+      expect(validateSummary("A".repeat(151))).toBe(
+        "Summary must not exceed 150 characters"
+      );
     });
   });
 
@@ -37,7 +39,9 @@ describe("Validation Utilities (U-02, BR-07, BR-08, BR-13)", () => {
     });
 
     it("rejects description exceeding 5000 characters", () => {
-      expect(validateDescription("B".repeat(5001))).toBe("Description must not exceed 5000 characters");
+      expect(validateDescription("B".repeat(5001))).toBe(
+        "Description must not exceed 5000 characters"
+      );
     });
   });
 
@@ -50,7 +54,9 @@ describe("Validation Utilities (U-02, BR-07, BR-08, BR-13)", () => {
       expect(validateSystem("2")).toBeNull();
 
       expect(validatePriority("")).toBe("Requested priority is required");
-      expect(validatePriority("INVALID")).toBe("Requested priority is required");
+      expect(validatePriority("INVALID")).toBe(
+        "Requested priority is required"
+      );
       expect(validatePriority("LOW")).toBeNull();
       expect(validatePriority("MEDIUM")).toBeNull();
       expect(validatePriority("HIGH")).toBeNull();
@@ -66,9 +72,13 @@ describe("Validation Utilities (U-02, BR-07, BR-08, BR-13)", () => {
     });
 
     it("rejects files exceeding 5 MB", () => {
-      const largeFile = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.png", {
-        type: "image/png",
-      });
+      const largeFile = new File(
+        [new Uint8Array(5 * 1024 * 1024 + 1)],
+        "big.png",
+        {
+          type: "image/png",
+        }
+      );
       expect(validateFile(largeFile)).toContain("exceeds maximum allowed size");
     });
 

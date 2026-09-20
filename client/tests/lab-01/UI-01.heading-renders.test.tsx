@@ -6,7 +6,7 @@ describe("CheckSystem", () => {
   it("renders the TokTickIT heading", () => {
     render(<CheckSystem />);
     expect(
-      screen.getByRole("heading", { name: "TokTickIT IT Service Desk" }),
+      screen.getByRole("heading", { name: "TokTickIT IT Service Desk" })
     ).toBeInTheDocument();
   });
 });

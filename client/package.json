@@ -1,11 +1,11 @@
 {
   "name": "client",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc -b && vite build",
+    "dev": "vite",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
@@ -14,7 +14,8 @@
   "dependencies": {
     "bootstrap": "^5.3.8",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.0",
