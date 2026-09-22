@@ -1,27 +1,45 @@
-# Lab 4 Reviewer Guide and Record
+# Lab 4 - Peer Review Record
 
-Status: **Draft contract for peer review**<br>
-Version: **1.0**<br>
-Date: **2026-09-22**<br>
-Branch: `feature/lab4-1-contract`<br>
-Issue: [#54](https://github.com/Snnn3/TokTickIT/issues/54)
+Version: 1.0 | Date: 2026-09-22 | Companion to `specification.md`.
+
+| Role | Name | Student ID | GitHub |
+|------|------|------------|--------|
+| Author | Chanon Lhumsa-ard | 67070501059 | [@Snnn3](https://github.com/Snnn3) |
+| Peer reviewer | Worawut Sereethai | 67070501040 | [@YummieGG](https://github.com/YummieGG) |
+
+## Pull Requests I authored (reviewed by my partner)
+
+| PR | Branch | Reviewer verdict |
+|----|--------|------------------|
+| https://github.com/Snnn3/TokTickIT/pull/63 | feature/lab4-1-contract | Open; peer review pending; targets `lab4-staging` |
+
+### Reviewer comments I received and how I responded
+
+**PR #63 - feature/lab4-1-contract** (OPEN)
+- **Contract preparation (OpenAI Codex, 2026-09-22):** Reviewed the Lab 4 PDF and Issue #54, then checked the six companion documents for cross-document consistency.
+- **My response:** Added and pushed the six-document Lab 4 contract at commit `63de103`, then added `CONTEXT.md` and `skills-lock.json` at commit `0158b6b`. The PR targets `lab4-staging`.
+- **Peer review:** Pending. The contract must be peer-approved and merged before implementation PRs are completed.
+
+## Lab 4 review guide
 
 Review all six companion files against [the handout](../../material/SE+Lab+4.pdf)
 and [Issue #54](https://github.com/Snnn3/TokTickIT/issues/54).
-This is a contract change. Peer approval and merge remain pending; the contract
-PR is opened only after the user requested it.
+This is a contract change. PR #63 is open; peer approval and merge remain
+pending. No implementation PR should be completed before this contract is
+approved and merged.
 
-## 1. Source and authority
+### Source and authority
 
 The PDF requires Requester and Staff dashboards, Administrator action writes,
-follow-up/attachment-note fields, database/seed/recovery decisions, test coverage
-and Product DoD. Issue #54 adds the locked action statuses, authenticated performer,
-active-Staff assignment, completed-result resolution gate, recent7/latest5,
-UTC/Bangkok, versions409 and zero-action legacy migration.
-The untracked CONTEXT.md glossary is useful terminology but does not override
+follow-up/attachment-note fields, database/seed/recovery decisions, test
+coverage and Product DoD. Issue #54 adds the locked action statuses,
+authenticated performer, active-Staff assignment, completed-result resolution
+gate, recent7/latest5, UTC/Bangkok, versions409 and zero-action legacy
+migration.
+The tracked `CONTEXT.md` glossary is useful terminology but does not override
 the handout's explicit Administrator permissions.
 
-## 2. Validation findings and repairs
+### Validation findings and repairs
 
 | Finding from PDF validation | Contract repair | Verification reference |
 |---|---|---|
@@ -40,7 +58,7 @@ the handout's explicit Administrator permissions.
 
 These are drafting repairs, not evidence that future implementation tests pass.
 
-## 3. Peer checklist
+### Peer checklist
 
 - [ ] All PDF and issue requirements map to FR/BR/AC and planned evidence.
 - [ ] Every role/ownership/self-service combination is consistent across files.
@@ -59,20 +77,20 @@ These are drafting repairs, not evidence that future implementation tests pass.
 - [ ] New design choices (audit trail, optional assignee, replay retention,
   historical completed-action reuse after reopen) are acceptable.
 
-## 4. Review history
+### Review history
 
 | Round | Reviewer | Scope | Result | Evidence |
 |---|---|---|---|---|
-| 1 | OpenAI Codex (AI assistance, not peer approval) | PDF and Issue54 validation, 2026-09-22 | Changes required | Findings recorded in Section2 |
+| 1 | OpenAI Codex (AI assistance, not peer approval) | PDF and Issue #54 validation, 2026-09-22 | Changes required | Findings recorded in the validation table above |
 | 2 | OpenAI Codex (AI assistance, not peer approval) | Contract repair, 2026-09-22 | Fresh AI consistency review found no material contradictions; peer review pending | Six companion documents; 23 ACs and 89 exact forward/reverse pairs checked; local links, versions and npm script names verified |
-| Peer1 | Pending | Contract | Pending | Reviewer identity, commit, PR/review URL and timestamp required |
+| Peer1 | Worawut Sereethai (@YummieGG) | Contract | Pending | [PR #63](https://github.com/Snnn3/TokTickIT/pull/63); reviewer comment, approval and timestamp required |
 
 For each real review record the comment/finding, author response, fixing commit,
 review URL and approval. Never substitute an AI check for peer approval.
 Contract approval and merge must occur before implementation PRs are completed.
-Keep Issue54 open until its review/merge acceptance criterion is satisfied.
+Keep Issue #54 open until its review/merge acceptance criterion is satisfied.
 
-## 5. Implementation/release evidence template
+## Implementation/release evidence template
 
 | Item | Result / evidence |
 |---|---|
@@ -88,5 +106,13 @@ Keep Issue54 open until its review/merge acceptance criterion is satisfied.
 | Peer comments, responses and approval | Pending |
 | lab4-staging integration and final main verification | Pending |
 
-Product-completion checkboxes are owned by specification.md Section10 and
+Product-completion checkboxes are owned by `specification.md` Section10 and
 must cite this evidence before being checked.
+
+## Pull Requests I reviewed for my partner
+
+No Lab 4 partner PRs have been recorded yet.
+
+### My comments and partner's responses
+
+No Lab 4 partner review comments or responses have been recorded yet.

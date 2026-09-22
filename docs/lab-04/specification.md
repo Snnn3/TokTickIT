@@ -6,7 +6,7 @@ Date: **2026-09-22**<br>
 Branch: `feature/lab4-1-contract`<br>
 Issue: [#54](https://github.com/Snnn3/TokTickIT/issues/54)
 
-Sources: [Lab 4 handout](../../material/SE+Lab+4.pdf), Issue #54, and the existing
+Sources: Lab 4 handout, Issue #54, and the existing
 Lab 3 contract. Companions: [API](api-spec.md), [UI](ui-spec.md),
 [tests](tests.md), [reviewer](reviewer.md), [AI use](ai-use.md).
 This revision repairs the PDF-validation findings while retaining draft version
