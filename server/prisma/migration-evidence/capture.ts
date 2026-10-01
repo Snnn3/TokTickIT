@@ -8,12 +8,14 @@
  *
  *   npx tsx prisma/migration-evidence/capture.ts before   # before migrating
  *   npx prisma migrate deploy
+ *   npx tsx prisma/migration-evidence/capture.ts after    # before seeding
  *   npm run db:seed
- *   npx tsx prisma/migration-evidence/capture.ts after    # compares and reports
+ *   npm run db:seed                              # repeat-seed evidence
  *
  * "before" writes snapshot.before.json next to this file; "after" reads it back,
- * captures the same shape, and exits non-zero if any ticket number, attachment
- * checksum or requester identity changed.
+ * captures the same shape, and exits non-zero if any legacy row count, ticket
+ * number/requester identity, attachment checksum, Ticket version, or new-table
+ * migration invariant changed.
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -22,7 +24,12 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 const SNAPSHOT = join(__dirname, "snapshot.before.json");
 
-type TicketRow = { id: number; number: string; requesterEmail: string };
+type TicketRow = {
+  id: number;
+  number: string;
+  requesterEmail: string;
+  version: number | null;
+};
 type AttachmentRow = {
   id: number;
   ticketId: number;
@@ -38,6 +45,11 @@ type Snapshot = {
     activeAccounts: number;
     tickets: number;
     attachments: number;
+    publicComments: number;
+    internalNotes: number;
+    actionTaken: number;
+    actionEvents: number;
+    actionCreationRequests: number;
   };
   tickets: TicketRow[];
   attachments: AttachmentRow[];
@@ -58,8 +70,46 @@ async function accountTable(): Promise<"RequesterUser" | "User"> {
   throw new Error("Neither User nor RequesterUser exists in this database");
 }
 
+async function tableExists(tableName: string): Promise<boolean> {
+  const [row] = await prisma.$queryRawUnsafe<{ exists: boolean }[]>(
+    "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1) AS exists",
+    tableName
+  );
+  return row.exists;
+}
+
+async function columnExists(
+  tableName: string,
+  columnName: string
+): Promise<boolean> {
+  const [row] = await prisma.$queryRawUnsafe<{ exists: boolean }[]>(
+    "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2) AS exists",
+    tableName,
+    columnName
+  );
+  return row.exists;
+}
+
+async function countRows(tableName: string): Promise<number> {
+  if (!(await tableExists(tableName))) {
+    return 0;
+  }
+  const [row] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
+    `SELECT count(*)::bigint AS n FROM "${tableName}"`
+  );
+  return Number(row.n);
+}
+
+function versionSummary(snapshot: Snapshot): string {
+  const versions = snapshot.tickets
+    .map((ticket) => ticket.version)
+    .filter((version): version is number => typeof version === "number");
+  return versions.length ? [...new Set(versions)].join(", ") : "n/a";
+}
+
 async function capture(phase: "before" | "after"): Promise<Snapshot> {
   const table = await accountTable();
+  const hasTicketVersion = await columnExists("Ticket", "version");
 
   const [accounts] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
     `SELECT count(*)::bigint AS n FROM "${table}"`
@@ -73,11 +123,24 @@ async function capture(phase: "before" | "after"): Promise<Snapshot> {
   const [attachments] = await prisma.$queryRawUnsafe<{ n: bigint }[]>(
     'SELECT count(*)::bigint AS n FROM "Attachment"'
   );
+  const [
+    publicComments,
+    internalNotes,
+    actionTaken,
+    actionEvents,
+    actionCreationRequests,
+  ] = await Promise.all([
+    countRows("PublicComment"),
+    countRows("InternalNote"),
+    countRows("ActionTaken"),
+    countRows("ActionEvent"),
+    countRows("ActionCreationRequest"),
+  ]);
 
   // Requester identity is carried by email rather than id, so the comparison
   // still holds even if the migration had to renumber accounts.
   const ticketRows = await prisma.$queryRawUnsafe<TicketRow[]>(
-    `SELECT t.id, t.number, lower(u.email) AS "requesterEmail" FROM "Ticket" t JOIN "${table}" u ON u.id = t."requesterId" ORDER BY t.id`
+    `SELECT t.id, t.number, lower(u.email) AS "requesterEmail", ${hasTicketVersion ? 't."version"' : "NULL::integer"} AS version FROM "Ticket" t JOIN "${table}" u ON u.id = t."requesterId" ORDER BY t.id`
   );
   const attachmentRows = await prisma.$queryRawUnsafe<AttachmentRow[]>(
     'SELECT id, "ticketId", "sizeBytes", md5(data) AS checksum FROM "Attachment" ORDER BY id'
@@ -91,6 +154,11 @@ async function capture(phase: "before" | "after"): Promise<Snapshot> {
       activeAccounts: Number(activeAccounts.n),
       tickets: Number(tickets.n),
       attachments: Number(attachments.n),
+      publicComments,
+      internalNotes,
+      actionTaken,
+      actionEvents,
+      actionCreationRequests,
     },
     tickets: ticketRows,
     attachments: attachmentRows,
@@ -148,6 +216,10 @@ function compare(before: Snapshot, after: Snapshot): boolean {
     (a) => !afterAttachmentIds.has(a.id)
   );
 
+  const invalidTicketVersions = after.tickets.filter(
+    (ticket) => ticket.version !== 1
+  );
+
   const rows = [
     row(
       "Account rows (RequesterUser then User)",
@@ -166,6 +238,43 @@ function compare(before: Snapshot, after: Snapshot): boolean {
       before.counts.attachments,
       after.counts.attachments,
       before.counts.attachments === after.counts.attachments
+    ),
+    row(
+      "PublicComment rows",
+      before.counts.publicComments,
+      after.counts.publicComments,
+      before.counts.publicComments === after.counts.publicComments
+    ),
+    row(
+      "InternalNote rows",
+      before.counts.internalNotes,
+      after.counts.internalNotes,
+      before.counts.internalNotes === after.counts.internalNotes
+    ),
+    row(
+      "ActionTaken rows (migration only)",
+      before.counts.actionTaken,
+      after.counts.actionTaken,
+      before.counts.actionTaken === 0 && after.counts.actionTaken === 0
+    ),
+    row(
+      "ActionEvent rows (migration only)",
+      before.counts.actionEvents,
+      after.counts.actionEvents,
+      before.counts.actionEvents === 0 && after.counts.actionEvents === 0
+    ),
+    row(
+      "ActionCreationRequest rows (migration only)",
+      before.counts.actionCreationRequests,
+      after.counts.actionCreationRequests,
+      before.counts.actionCreationRequests === 0 &&
+        after.counts.actionCreationRequests === 0
+    ),
+    row(
+      "Legacy Ticket versions",
+      versionSummary(before),
+      versionSummary(after),
+      invalidTicketVersions.length === 0
     ),
     row(
       "Tickets missing after migration",
@@ -206,6 +315,26 @@ function compare(before: Snapshot, after: Snapshot): boolean {
   if (before.counts.attachments !== after.counts.attachments) {
     failures.push("attachment count changed");
   }
+  if (before.counts.publicComments !== after.counts.publicComments) {
+    failures.push("public comment count changed");
+  }
+  if (before.counts.internalNotes !== after.counts.internalNotes) {
+    failures.push("internal note count changed");
+  }
+  if (after.counts.actionTaken !== 0) {
+    failures.push("migration created ActionTaken rows");
+  }
+  if (after.counts.actionEvents !== 0) {
+    failures.push("migration created ActionEvent rows");
+  }
+  if (after.counts.actionCreationRequests !== 0) {
+    failures.push("migration created ActionCreationRequest rows");
+  }
+  if (invalidTicketVersions.length) {
+    failures.push(
+      `${invalidTicketVersions.length} Tickets do not have version 1 after migration`
+    );
+  }
   if (after.counts.accounts < before.counts.accounts) {
     failures.push("accounts were lost");
   }
@@ -237,7 +366,7 @@ function compare(before: Snapshot, after: Snapshot): boolean {
     return false;
   }
   console.log(
-    `All checks passed: ${after.counts.tickets} tickets and ${after.counts.attachments} attachments preserved byte-for-byte with unchanged numbers and requesters.`
+    `All checks passed: ${after.counts.tickets} tickets, ${after.counts.attachments} attachments, ${after.counts.publicComments} public comments and ${after.counts.internalNotes} internal notes preserved with unchanged numbers, requesters and attachment bytes.`
   );
   return true;
 }

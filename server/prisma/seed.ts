@@ -1,10 +1,17 @@
 import {
+  ActionEventType,
+  ActionStatus,
+  Prisma,
   PrismaClient,
   Role,
   TicketPriority,
   TicketStatus,
 } from "@prisma/client";
 import { hashPassword } from "../src/utils/password";
+import {
+  SEED_ACTIONS,
+  SEED_FIXTURE_CLOCK,
+} from "./action-seed-fixtures";
 
 const prisma = new PrismaClient();
 
@@ -32,9 +39,11 @@ const INITIAL_PASSWORD = process.env.SEED_INITIAL_PASSWORD ?? "ChangeMe!2026";
 type SeedUser = { name: string; email: string; role: Role; isActive: boolean };
 
 /**
- * Seed minimums from specification.md section 5.3: four active and one
+ * Seed minimums from specification.md section 5.3: five active and one
  * inactive Requester, three active and one inactive IT Staff, and two active
- * Administrators. The second Administrator is not decoration — with only one,
+ * Administrators. The fifth active Requester is intentionally empty so the
+ * dashboard seed covers both empty and populated requester views. The second
+ * Administrator is not decoration — with only one,
  * every last-administrator scenario is also a self-deactivation, which leaves
  * 409 LAST_ADMIN unreachable and BR-15 half untested.
  */
@@ -60,6 +69,12 @@ const USERS: SeedUser[] = [
   {
     name: "Duangjai Niran",
     email: "duangjai.niran@example.com",
+    role: Role.REQUESTER,
+    isActive: true,
+  },
+  {
+    name: "Sirilak Prasert",
+    email: "sirilak.prasert@example.com",
     role: Role.REQUESTER,
     isActive: true,
   },
@@ -131,6 +146,10 @@ type SeedTicket = {
   summary: string;
   description: string;
   resolutionSummary?: string;
+  resolvedAt?: string | null;
+  ticketDate: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 const SEED_TICKETS: SeedTicket[] = [
@@ -143,6 +162,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "Cannot connect to campus Wi-Fi in Building 3",
     description:
       "Laptop drops the Campus Wi-Fi connection every few minutes in Building 3, room 301. Other networks work fine.",
+    resolvedAt: null,
+    ticketDate: "2026-10-01T09:00:00.000Z",
+    createdAt: "2026-10-01T09:00:00.000Z",
+    updatedAt: "2026-10-01T09:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-02",
@@ -153,6 +176,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "Email client shows certificate warning",
     description:
       "The desktop Email client shows a certificate warning on launch since Monday. Mail still syncs after accepting.",
+    resolvedAt: null,
+    ticketDate: "2026-09-20T12:00:00.000Z",
+    createdAt: "2026-09-20T12:00:00.000Z",
+    updatedAt: "2026-09-20T12:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-03",
@@ -163,6 +190,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "Grade Submission App rejects CSV upload",
     description:
       "Uploading the final-grade CSV to the Grade Submission App fails with a validation error on every row, even the sample file.",
+    resolvedAt: null,
+    ticketDate: "2026-09-29T08:00:00.000Z",
+    createdAt: "2026-09-29T08:00:00.000Z",
+    updatedAt: "2026-09-30T08:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-04",
@@ -173,6 +204,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "VPN disconnects after ten minutes",
     description:
       "The VPN connects, then drops after about ten minutes. Reconnecting works, then drops again the same way.",
+    resolvedAt: null,
+    ticketDate: "2026-09-24T12:00:00.000Z",
+    createdAt: "2026-09-24T12:00:00.000Z",
+    updatedAt: "2026-09-24T12:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-05",
@@ -185,6 +220,10 @@ const SEED_TICKETS: SeedTicket[] = [
       "The floor-2 Printer reports a paper jam, but the trays and rear cover are clear. Restarting did not help.",
     resolutionSummary:
       "Cleared a torn fragment from the rear roller and printed a test page successfully.",
+    resolvedAt: "2026-09-29T09:00:00.000Z",
+    ticketDate: "2026-09-25T07:00:00.000Z",
+    createdAt: "2026-09-25T07:00:00.000Z",
+    updatedAt: "2026-09-29T09:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-06",
@@ -197,6 +236,10 @@ const SEED_TICKETS: SeedTicket[] = [
       "Need read access to the shared Software drive for the new course-preparation folder.",
     resolutionSummary:
       "Access granted to the shared folder and confirmed by the requester.",
+    resolvedAt: "2026-09-10T09:00:00.000Z",
+    ticketDate: "2026-09-10T08:00:00.000Z",
+    createdAt: "2026-09-10T08:00:00.000Z",
+    updatedAt: "2026-09-11T09:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-07",
@@ -207,6 +250,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "LEB2 App crashes when opening week-5 materials",
     description:
       "The LEB2 App closes immediately when opening the week-5 materials. Other weeks open normally.",
+    resolvedAt: null,
+    ticketDate: "2026-09-23T08:00:00.000Z",
+    createdAt: "2026-09-23T08:00:00.000Z",
+    updatedAt: "2026-09-30T10:00:00.000Z",
   },
   {
     number: "TKT-2026-SEED-08",
@@ -217,6 +264,10 @@ const SEED_TICKETS: SeedTicket[] = [
     summary: "Duplicate: Corporate Laptop battery replacement",
     description:
       "Duplicate of an earlier request for a Corporate Laptop battery replacement. Kept for the record.",
+    resolvedAt: null,
+    ticketDate: "2026-09-01T08:00:00.000Z",
+    createdAt: "2026-09-01T08:00:00.000Z",
+    updatedAt: "2026-09-01T08:00:00.000Z",
   },
 ];
 
@@ -258,6 +309,53 @@ const SEED_INTERNAL_NOTES: {
     body: "Waiting on the requester to confirm whether the spare test profile behaves the same way.",
   },
 ];
+
+type ActionSnapshotSource = {
+  title: string;
+  details: string;
+  result: string | null;
+  performedById: number;
+  assigneeId: number | null;
+  status: ActionStatus;
+  followUpRequired: boolean;
+  followUpNote: string | null;
+  attachmentNotes: string | null;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt: Date | null;
+};
+
+function actionSnapshot(action: ActionSnapshotSource): Prisma.InputJsonObject {
+  return {
+    title: action.title,
+    details: action.details,
+    result: action.result,
+    performedById: action.performedById,
+    assigneeId: action.assigneeId,
+    status: action.status,
+    followUpRequired: action.followUpRequired,
+    followUpNote: action.followUpNote,
+    attachmentNotes: action.attachmentNotes,
+    version: action.version,
+    createdAt: action.createdAt.toISOString(),
+    updatedAt: action.updatedAt.toISOString(),
+    completedAt: action.completedAt?.toISOString() ?? null,
+  };
+}
+
+function createdActionEventData(
+  action: ActionSnapshotSource & { id: number }
+) {
+  return {
+    actionId: action.id,
+    actorId: action.performedById,
+    type: ActionEventType.CREATED,
+    previousVersion: null,
+    newVersion: action.version,
+    after: actionSnapshot(action),
+  };
+}
 
 async function main() {
   for (const name of CATEGORIES) {
@@ -355,6 +453,10 @@ async function main() {
       itPriority: ticket.requestedPriority,
       status: ticket.status,
       resolutionSummary: ticket.resolutionSummary ?? null,
+      resolvedAt: ticket.resolvedAt ? new Date(ticket.resolvedAt) : null,
+      ticketDate: new Date(ticket.ticketDate),
+      createdAt: new Date(ticket.createdAt),
+      updatedAt: new Date(ticket.updatedAt),
     };
     await prisma.ticket.upsert({
       where: { number: ticket.number },
@@ -363,8 +465,7 @@ async function main() {
     });
   }
 
-  // Comments and notes: deterministic bodies, created only when missing, so a
-  // re-run adds nothing. Authors come from the seeded accounts above.
+  // Resolve seeded ticket IDs once for Actions Taken, comments and notes.
   const authorIdByEmail = userIdByEmail;
   const ticketIdByNumber = new Map(
     (
@@ -375,6 +476,109 @@ async function main() {
     ).map((t) => [t.number, t.id])
   );
 
+  // Actions Taken: seedKey is the immutable fixture identity. Existing
+  // fixture rows are brought back to the documented state, but unrelated
+  // user-created actions are never touched. A changed fixture increments the
+  // existing version and appends an audit event instead of rewinding history.
+  await prisma.$transaction(async (tx) => {
+    for (const action of SEED_ACTIONS) {
+      const ticketId = ticketIdByNumber.get(action.ticketNumber);
+      const performedById = userIdByEmail.get(action.performedByEmail);
+      const assigneeId = action.assigneeEmail
+        ? (userIdByEmail.get(action.assigneeEmail) ?? null)
+        : null;
+      if (!ticketId || !performedById || (action.assigneeEmail && !assigneeId)) {
+        throw new Error(
+          `Seed action ${action.title} references a missing ticket or user`
+        );
+      }
+
+      const data = {
+        seedKey: action.seedKey,
+        ticketId,
+        title: action.title,
+        details: action.details,
+        result: action.result ?? null,
+        performedById,
+        assigneeId,
+        status: action.status,
+        followUpRequired: action.followUpRequired ?? false,
+        followUpNote: action.followUpNote ?? null,
+        attachmentNotes: action.attachmentNotes ?? null,
+        createdAt: new Date(action.createdAt),
+        updatedAt: new Date(action.updatedAt),
+        completedAt: action.completedAt
+          ? new Date(action.completedAt)
+          : null,
+      };
+      const existing = await tx.actionTaken.findUnique({
+        where: { seedKey: action.seedKey },
+      });
+      if (!existing) {
+        const stored = await tx.actionTaken.create({
+          data: { ...data, version: 1 },
+        });
+        await tx.actionEvent.create({
+          data: createdActionEventData(stored),
+        });
+        continue;
+      }
+
+      const createdEvent = await tx.actionEvent.findFirst({
+        where: { actionId: existing.id, type: ActionEventType.CREATED },
+        select: { id: true },
+      });
+      if (!createdEvent) {
+        await tx.actionEvent.create({
+          data: createdActionEventData(existing),
+        });
+      }
+
+      const changed =
+        existing.ticketId !== data.ticketId ||
+        existing.title !== data.title ||
+        existing.details !== data.details ||
+        existing.result !== data.result ||
+        existing.performedById !== data.performedById ||
+        existing.assigneeId !== data.assigneeId ||
+        existing.status !== data.status ||
+        existing.followUpRequired !== data.followUpRequired ||
+        existing.followUpNote !== data.followUpNote ||
+        existing.attachmentNotes !== data.attachmentNotes ||
+        existing.createdAt.getTime() !== data.createdAt.getTime() ||
+        existing.updatedAt.getTime() !== data.updatedAt.getTime() ||
+        (existing.completedAt?.getTime() ?? null) !==
+          (data.completedAt?.getTime() ?? null);
+      if (!changed) {
+        continue;
+      }
+
+      const stored = await tx.actionTaken.update({
+        where: { id: existing.id },
+        data: { ...data, version: existing.version + 1 },
+      });
+      const eventType =
+        existing.assigneeId !== data.assigneeId && data.assigneeId === null
+          ? ActionEventType.ASSIGNEE_RELEASED
+          : existing.status !== data.status
+            ? ActionEventType.STATUS_CHANGED
+            : ActionEventType.EDITED;
+      await tx.actionEvent.create({
+        data: {
+          actionId: stored.id,
+          actorId: performedById,
+          type: eventType,
+          previousVersion: existing.version,
+          newVersion: stored.version,
+          before: actionSnapshot(existing),
+          after: actionSnapshot(stored),
+        },
+      });
+    }
+  });
+
+  // Comments and notes: deterministic bodies, created only when missing, so a
+  // re-run adds nothing. Authors come from the seeded accounts above.
   for (const comment of SEED_PUBLIC_COMMENTS) {
     const ticketId = ticketIdByNumber.get(comment.ticketNumber);
     const authorId = authorIdByEmail.get(comment.authorEmail);
@@ -409,9 +613,25 @@ async function main() {
     }
   }
 
-  const [seedTicketCount, seedCommentCount, seedNoteCount] = await Promise.all([
+  const [
+    seedTicketCount,
+    seedActionCount,
+    seedEventCount,
+    seedCommentCount,
+    seedNoteCount,
+  ] = await Promise.all([
     prisma.ticket.count({
       where: { number: { in: SEED_TICKETS.map((t) => t.number) } },
+    }),
+    prisma.actionTaken.count({
+      where: {
+        ticket: { number: { in: SEED_TICKETS.map((t) => t.number) } },
+      },
+    }),
+    prisma.actionEvent.count({
+      where: {
+        action: { ticket: { number: { in: SEED_TICKETS.map((t) => t.number) } } },
+      },
     }),
     prisma.publicComment.count({
       where: {
@@ -439,7 +659,10 @@ async function main() {
       `requesters ${describe(Role.REQUESTER)}, ` +
       `IT staff ${describe(Role.IT_STAFF)}, ` +
       `administrators ${describe(Role.ADMINISTRATOR)}, ` +
+      `fixture clock ${SEED_FIXTURE_CLOCK}, ` +
       `seed tickets ${seedTicketCount}, ` +
+      `seed actions ${seedActionCount}, ` +
+      `seed action events ${seedEventCount}, ` +
       `seed public comments ${seedCommentCount}, ` +
       `seed internal notes ${seedNoteCount}.`
   );

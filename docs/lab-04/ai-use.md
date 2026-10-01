@@ -167,3 +167,16 @@ save astra prompt to ai-use
 
 **Outcome:** Recorded this request in the Lab 4 AI-use log. The six selected
 prompts in the grading table remain unchanged.
+
+### Prompt 14 - Match the Lab 2 reviewer-log format
+
+**Prompt (verbatim):**
+
+```text
+Do format docs\lab-04\reviewer.md like docs\lab-02\reviewer.md
+```
+
+**Outcome:** Reformatted `docs/lab-04/reviewer.md` to use the Lab 2-style peer
+review record structure, updated PR #63 with its verified approval and merge,
+and added the current PR #64 implementation status. The six selected prompts
+in the grading table remain unchanged.
