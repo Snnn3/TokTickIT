@@ -11,24 +11,28 @@ and it does not fabricate historical Actions Taken.
 Run this against a disposable copy of the Lab 3 database, never against a
 shared production database:
 
-1. Capture the existing User, Ticket, Attachment, PublicComment and
-   InternalNote row counts. Record every Ticket id/number/requester relation
-   and every Attachment id, size and byte checksum.
+1. Run `npx tsx prisma/migration-evidence/capture.ts before` against the
+   disposable copy. It records the existing User, Ticket, Attachment,
+   PublicComment and InternalNote row counts, every Ticket
+   id/number/requester relation, and every Attachment id, size and byte
+   checksum.
 2. Take a database backup with the PostgreSQL toolchain used by the environment.
 3. Apply the migration with `npx prisma migrate deploy` from `server/`.
-4. Confirm every legacy table and row is still present, every Ticket has
-   `version = 1`, and `ActionTaken`, `ActionEvent`, and
-   `ActionCreationRequest` are empty. The migration creates no backfill rows.
+4. Run `npx tsx prisma/migration-evidence/capture.ts after` before seeding.
+   The checked-in capture script verifies every legacy row count, Ticket number
+   and requester relation, Attachment checksum, `version = 1`, and empty
+   `ActionTaken`, `ActionEvent`, and `ActionCreationRequest` tables. The
+   migration creates no backfill rows.
 5. Run `npm run db:seed` twice. The second run must keep the same seeded Ticket,
    Action Taken and event counts and must not duplicate fixture events.
 6. Compare the post-migration inventory with the preflight inventory. Ticket
    numbers, requester relations, attachment bytes, comments and notes must be
    unchanged.
 
-The existing `capture.ts` script records the Lab 3 Ticket and Attachment
-preservation evidence. The new schema-focused checks should additionally query
-the three Lab 4 tables and record the counts, foreign-key checks and seed
-repeat result.
+The checked-in `capture.ts` script records the Lab 3 Ticket, Attachment,
+PublicComment, InternalNote and Lab 4 migration-only invariants. The
+foreign-key definitions, delete guard, backup/restore and seed-repeat checks
+are separate SQL/toolchain checks recorded below.
 
 ## Expected fresh-seed fixture shape
 
@@ -50,7 +54,7 @@ database version, counts and outcomes.
 
 ## Verified disposable run — 2026-10-01
 
-The checks ran against PostgreSQL 18.1 on `localhost:55432`, using two
+The checks ran against PostgreSQL 18.1 on `localhost:55433`, using three
 disposable databases in an isolated local cluster. No shared or production
 database was used.
 
@@ -74,7 +78,9 @@ and the capture script was run with `after`.
 | Existing Ticket version | n/a | 1 | PASS |
 | ActionTaken, ActionEvent, ActionCreationRequest | n/a | 0, 0, 0 | PASS |
 
-The capture script reported all eight preservation checks as `PASS`.
+The checked-in capture script reported all 14 preservation and migration
+invariant checks as `PASS`. The foreign-key and backup/restore results below
+are separate explicit SQL/toolchain checks, not claims made by `capture.ts`.
 
 ### Fresh migration, seed repeat and recovery
 
@@ -104,6 +110,12 @@ seeded twice more. The changed row returned to its fixture value at version 2,
 with exactly 2 events and maximum event version 2; the second repeat remained
 at version 2 with 2 events. This verifies that fixture correction is monotonic
 and append-only rather than a reset to version 1.
+
+### Regression gate
+
+The existing Lab 1-3 regression suites were run against the freshly migrated
+and seeded disposable database. The server suite passed 190/190 tests across
+16 files, and the client suite passed 135/135 tests across 18 files.
 
 The temporary PostgreSQL cluster and disposable databases were removed after
 the run. The ignored `snapshot.before.json` is machine-local evidence output;

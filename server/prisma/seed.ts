@@ -310,7 +310,7 @@ const SEED_INTERNAL_NOTES: {
   },
 ];
 
-function actionSnapshot(action: {
+type ActionSnapshotSource = {
   title: string;
   details: string;
   result: string | null;
@@ -324,7 +324,9 @@ function actionSnapshot(action: {
   createdAt: Date;
   updatedAt: Date;
   completedAt: Date | null;
-}): Prisma.InputJsonObject {
+};
+
+function actionSnapshot(action: ActionSnapshotSource): Prisma.InputJsonObject {
   return {
     title: action.title,
     details: action.details,
@@ -339,6 +341,19 @@ function actionSnapshot(action: {
     createdAt: action.createdAt.toISOString(),
     updatedAt: action.updatedAt.toISOString(),
     completedAt: action.completedAt?.toISOString() ?? null,
+  };
+}
+
+function createdActionEventData(
+  action: ActionSnapshotSource & { id: number }
+) {
+  return {
+    actionId: action.id,
+    actorId: action.performedById,
+    type: ActionEventType.CREATED,
+    previousVersion: null,
+    newVersion: action.version,
+    after: actionSnapshot(action),
   };
 }
 
@@ -504,14 +519,7 @@ async function main() {
           data: { ...data, version: 1 },
         });
         await tx.actionEvent.create({
-          data: {
-            actionId: stored.id,
-            actorId: performedById,
-            type: ActionEventType.CREATED,
-            previousVersion: null,
-            newVersion: stored.version,
-            after: actionSnapshot(stored),
-          },
+          data: createdActionEventData(stored),
         });
         continue;
       }
@@ -522,14 +530,7 @@ async function main() {
       });
       if (!createdEvent) {
         await tx.actionEvent.create({
-          data: {
-            actionId: existing.id,
-            actorId: existing.performedById,
-            type: ActionEventType.CREATED,
-            previousVersion: null,
-            newVersion: existing.version,
-            after: actionSnapshot(existing),
-          },
+          data: createdActionEventData(existing),
         });
       }
 
