@@ -111,11 +111,24 @@ with exactly 2 events and maximum event version 2; the second repeat remained
 at version 2 with 2 events. This verifies that fixture correction is monotonic
 and append-only rather than a reset to version 1.
 
+The same fresh-schema probe attempted to insert an `IN_PROGRESS` Action Taken
+with a non-null `completedAt`. PostgreSQL rejected it with
+`ActionTaken_completedAt_state_check`, leaving the seeded Action Taken count at
+8. This proves that `PLANNED` and `IN_PROGRESS` rows cannot carry a completion
+timestamp; the existing `ActionTaken_completed_check` continues to require both
+`completedAt` and a non-blank `result` for `COMPLETED` rows.
+
 ### Regression gate
 
 The existing Lab 1-3 regression suites were run against the freshly migrated
 and seeded disposable database. The server suite passed 190/190 tests across
 16 files, and the client suite passed 135/135 tests across 18 files.
+
+The authenticated Lab 2/3 browser regression was also run with
+`npx playwright test e2e/lab-02 e2e/lab-03`: 13/13 tests passed across five
+spec files. The run included the requester attachment regression, authenticated
+Lab 3 journeys, release-state captures and the clean User Management check;
+the E2E cleanup reported no leftover E2E users or tickets.
 
 The temporary PostgreSQL cluster and disposable databases were removed after
 the run. The ignored `snapshot.before.json` is machine-local evidence output;

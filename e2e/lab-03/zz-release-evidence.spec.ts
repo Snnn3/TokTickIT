@@ -265,7 +265,7 @@ test.describe("release visual state evidence", () => {
     );
     await expect(page.getByTestId("user-management-view")).toBeVisible();
     const userRows = page.getByTestId(/user-row-/);
-    await expect(userRows).toHaveCount(11);
+    await expect(userRows).toHaveCount(12);
     const userTableText = await page.getByTestId("users-table").innerText();
     expect(userTableText).not.toContain("e2e.");
     await captureScreenshot(

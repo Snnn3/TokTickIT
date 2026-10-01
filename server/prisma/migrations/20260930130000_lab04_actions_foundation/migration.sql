@@ -56,6 +56,8 @@ CREATE TABLE "ActionTaken" (
       CHECK ("version" >= 1),
     CONSTRAINT "ActionTaken_completed_check"
       CHECK ("status" <> 'COMPLETED' OR ("completedAt" IS NOT NULL AND "result" IS NOT NULL AND char_length(btrim("result")) BETWEEN 1 AND 2000)),
+    CONSTRAINT "ActionTaken_completedAt_state_check"
+      CHECK ("status" = 'COMPLETED' OR "completedAt" IS NULL),
     CONSTRAINT "ActionTaken_cancelled_check"
       CHECK ("status" <> 'CANCELLED' OR "completedAt" IS NULL)
 );
