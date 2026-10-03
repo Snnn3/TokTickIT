@@ -935,8 +935,9 @@ actionStaffRouter.get(
   "/action-assignees",
   ...requireAuth,
   requireRole(...STAFF_ROLES),
-  async (_req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
+      noQuery(req);
       const assignees = await prisma.user.findMany({
         where: { role: Role.IT_STAFF, isActive: true },
         orderBy: [{ name: "asc" }, { id: "asc" }],

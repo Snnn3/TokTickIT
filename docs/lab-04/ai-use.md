@@ -258,3 +258,18 @@ assignment validation, status/follow-up/result guards, optimistic Ticket and
 Action versions, serializable idempotent creation, audit events and focused
 API tests. The issue remains in the Kanban `Started` column while it is not
 merged.
+
+### Prompt 21 - Fix the Issue #56 review findings
+
+**Prompt (verbatim):**
+
+```text
+coder fix following this reviee c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-feature-lab4-3-actions-api-issue56.md
+```
+
+**Outcome:** Rejected unsupported query parameters on the action-assignee
+endpoint and added API coverage for Administrator creation, Requester create
+and edit denial, and stale Action updates that leave the Action, Ticket and
+history unchanged. The focused Action API suite passed 14/14 tests; the full
+server suite passed 204/204 tests; the server build and changed-file Biome
+checks passed.

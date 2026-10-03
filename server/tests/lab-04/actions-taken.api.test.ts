@@ -155,6 +155,21 @@ describe("Action Taken reads", () => {
     );
   });
 
+  it("rejects query parameters on the assignee picker", async () => {
+    const cookie = authAs();
+    const findMany = vi
+      .spyOn(prisma.user, "findMany")
+      .mockResolvedValue([] as never);
+
+    const response = await request(app)
+      .get("/api/staff/action-assignees?includeInactive=true")
+      .set("Cookie", cookie);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_QUERY");
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it("returns ordered immutable history for a readable action", async () => {
     const cookie = authAs(2, Role.REQUESTER);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
@@ -269,6 +284,92 @@ describe("Action Taken creation", () => {
       })
     );
     expect(validResponse.body.ticketVersion).toBe(5);
+  });
+
+  it("allows an Administrator to create an action as the authenticated performer", async () => {
+    const adminId = 11;
+    const cookie = authAs(adminId, Role.ADMINISTRATOR);
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow() as never
+    );
+    const adminRef = {
+      id: adminId,
+      name: "User 11",
+      role: Role.ADMINISTRATOR,
+      isActive: true,
+    };
+    const tx = {
+      actionCreationRequest: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+      },
+      ticket: {
+        findUnique: vi.fn().mockResolvedValue({ status: "OPEN", version: 4 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      user: { findFirst: vi.fn() },
+      actionTaken: {
+        create: vi.fn().mockResolvedValue(
+          actionRow({
+            performedById: adminId,
+            performedBy: adminRef,
+            assigneeId: null,
+            assignee: null,
+          })
+        ),
+      },
+      actionEvent: { create: vi.fn().mockResolvedValue({}) },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+      callback(tx)
+    );
+
+    const response = await request(app)
+      .post("/api/staff/tickets/20/actions")
+      .set("Cookie", cookie)
+      .set("Idempotency-Key", "66666666-6666-4666-8666-666666666666")
+      .send({
+        title: "Review backup status",
+        details: "Confirm the backup job completed successfully.",
+        expectedTicketVersion: 4,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.action.performedBy).toEqual(adminRef);
+    expect(tx.actionTaken.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ performedById: adminId }),
+      })
+    );
+    expect(tx.user.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("refuses Requester create and edit attempts before loading staff resources", async () => {
+    const cookie = authAs(12, Role.REQUESTER);
+    const ticketLookup = vi.spyOn(prisma.ticket, "findUnique");
+    const create = await request(app)
+      .post("/api/staff/tickets/20/actions")
+      .set("Cookie", cookie)
+      .set("Idempotency-Key", "77777777-7777-4777-8777-777777777777")
+      .send({
+        title: "Unauthorized",
+        details: "Should not be accepted.",
+        expectedTicketVersion: 1,
+      });
+    const edit = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", cookie)
+      .send({
+        expectedVersion: 1,
+        expectedTicketVersion: 1,
+        title: "Unauthorized",
+      });
+
+    expect(create.status).toBe(403);
+    expect(create.body.error.code).toBe("FORBIDDEN");
+    expect(edit.status).toBe(403);
+    expect(edit.body.error.code).toBe("FORBIDDEN");
+    expect(ticketLookup).not.toHaveBeenCalled();
   });
 
   it("rejects self-service writes and stale parent versions", async () => {
@@ -472,6 +573,66 @@ describe("Action Taken editing", () => {
         }),
       })
     );
+  });
+
+  it("rejects a stale Action version without changing the action, ticket, or history", async () => {
+    const cookie = authAs();
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow() as never
+    );
+    const storedAction = actionRow({ version: 2 });
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(
+      storedAction as never
+    );
+    const actionBefore = { ...storedAction };
+    const updateAction = vi.fn(async () => {
+      Object.assign(storedAction, { title: "Overwritten stale action" });
+      return { count: 1 };
+    });
+    const updateTicket = vi.fn().mockResolvedValue({ count: 1 });
+    const appendEvent = vi.fn().mockResolvedValue({});
+    const tx = {
+      ticket: {
+        findUnique: vi.fn().mockResolvedValue({
+          requesterId: 2,
+          status: "OPEN",
+          version: 4,
+        }),
+        updateMany: updateTicket,
+      },
+      actionTaken: {
+        findFirst: vi.fn().mockResolvedValue(storedAction),
+        updateMany: updateAction,
+      },
+      actionEvent: { create: appendEvent },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+      callback(tx)
+    );
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", cookie)
+      .send({
+        expectedVersion: 1,
+        expectedTicketVersion: 4,
+        title: "Overwrite with stale client data",
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toMatchObject({
+      code: "STALE_WRITE",
+      details: {
+        resource: "ACTION_TAKEN",
+        id: 501,
+        expectedVersion: 1,
+        currentVersion: 2,
+      },
+    });
+    expect(updateAction).not.toHaveBeenCalled();
+    expect(updateTicket).not.toHaveBeenCalled();
+    expect(appendEvent).not.toHaveBeenCalled();
+    expect(storedAction).toEqual(actionBefore);
   });
 
   it("requires a result to complete and refuses terminal edits", async () => {
