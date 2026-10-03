@@ -575,6 +575,72 @@ describe("Action Taken editing", () => {
     );
   });
 
+  it("allows an Administrator to update an action and records the Admin as audit actor", async () => {
+    const adminId = 11;
+    const cookie = authAs(adminId, Role.ADMINISTRATOR);
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow() as never
+    );
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(
+      actionRow() as never
+    );
+    const updated = actionRow({
+      title: "Review backup status",
+      version: 2,
+      updatedAt: new Date("2026-10-01T10:05:00.000Z"),
+    });
+    const recordEvent = vi.fn().mockResolvedValue({});
+    const tx = {
+      ticket: {
+        findUnique: vi.fn().mockResolvedValue({
+          requesterId: 2,
+          status: "OPEN",
+          version: 4,
+        }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      actionTaken: {
+        findFirst: vi.fn().mockResolvedValue(actionRow()),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn().mockResolvedValue(updated),
+      },
+      actionEvent: { create: recordEvent },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+      callback(tx)
+    );
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", cookie)
+      .send({
+        expectedVersion: 1,
+        expectedTicketVersion: 4,
+        title: "Review backup status",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      action: {
+        id: 501,
+        title: "Review backup status",
+        performedBy: ACTOR,
+        version: 2,
+      },
+      ticketVersion: 5,
+    });
+    expect(recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          actorId: adminId,
+          type: "EDITED",
+          previousVersion: 1,
+          newVersion: 2,
+        }),
+      })
+    );
+  });
+
   it("rejects a stale Action version without changing the action, ticket, or history", async () => {
     const cookie = authAs();
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
