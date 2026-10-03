@@ -96,6 +96,16 @@ function withRowLockMock<T extends object>(tx: T) {
   };
 }
 
+function transactionImplementation(tx: object) {
+  return async (callback: any) => callback(withRowLockMock(tx));
+}
+
+function mockTransaction(tx: object) {
+  return vi
+    .spyOn(prisma, "$transaction")
+    .mockImplementation(transactionImplementation(tx));
+}
+
 const ACTION_GET_ENDPOINTS = [
   {
     name: "action list",
@@ -150,6 +160,114 @@ describe("Action write authorization precedence", () => {
       expect(response.body.error.code).toBe("AUTH_REQUIRED");
     }
   );
+});
+
+describe("Action request precedence before body parsing", () => {
+  it.each(ACTION_GET_ENDPOINTS)(
+    "authenticates before parsing malformed JSON on the $name GET endpoint",
+    async ({ path }) => {
+      const ticketLookup = vi.spyOn(prisma.ticket, "findUnique");
+
+      const response = await request(app)
+        .get(path)
+        .set("Content-Type", "application/json")
+        .send("{ malformed");
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe("AUTH_REQUIRED");
+      expect(ticketLookup).not.toHaveBeenCalled();
+    }
+  );
+
+  it("validates the POST Ticket path before parsing malformed JSON", async () => {
+    const ticketLookup = vi.spyOn(prisma.ticket, "findUnique");
+
+    const response = await request(app)
+      .post("/api/staff/tickets/not-an-id/actions")
+      .set("Cookie", authAs())
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_ID");
+    expect(ticketLookup).not.toHaveBeenCalled();
+  });
+
+  it("checks the route role before parsing malformed PATCH JSON", async () => {
+    const ticketLookup = vi.spyOn(prisma.ticket, "findUnique");
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", authAs(2, Role.REQUESTER))
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
+    expect(ticketLookup).not.toHaveBeenCalled();
+  });
+
+  it("validates the PATCH Action path before looking up its Ticket", async () => {
+    const ticketLookup = vi
+      .spyOn(prisma.ticket, "findUnique")
+      .mockResolvedValue(null as never);
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/not-an-id")
+      .set("Cookie", authAs())
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_ID");
+    expect(ticketLookup).not.toHaveBeenCalled();
+  });
+
+  it("reports a missing POST Ticket before parsing malformed JSON", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(null as never);
+
+    const response = await request(app)
+      .post("/api/staff/tickets/404/actions")
+      .set("Cookie", authAs())
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("reports self-service refusal before rejecting an unsupported PATCH body", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow({ requesterId: ACTOR.id }) as never
+    );
+    const actionLookup = vi.spyOn(prisma.actionTaken, "findFirst");
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", authAs())
+      .set("Content-Type", "text/plain")
+      .send("not JSON");
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
+    expect(actionLookup).not.toHaveBeenCalled();
+  });
+
+  it("reports a missing PATCH Action before parsing malformed JSON", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow({ requesterId: 2 }) as never
+    );
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(null as never);
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/404")
+      .set("Cookie", authAs())
+      .set("Content-Type", "application/json")
+      .send("{ malformed");
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
 });
 
 describe("Action Taken reads", () => {
@@ -401,9 +519,7 @@ describe("Action Taken creation", () => {
       actionTaken: { create: vi.fn().mockResolvedValue(action) },
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .post("/api/staff/tickets/20/actions")
@@ -488,9 +604,7 @@ describe("Action Taken creation", () => {
       },
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .post("/api/staff/tickets/20/actions")
@@ -564,9 +678,7 @@ describe("Action Taken creation", () => {
         findUnique: vi.fn().mockResolvedValue({ status: "OPEN", version: 5 }),
       },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
     const stale = await request(app)
       .post("/api/staff/tickets/20/actions")
       .set("Cookie", sessionCookie({ id: ACTOR.id, role: ACTOR.role }))
@@ -594,9 +706,7 @@ describe("Action Taken creation", () => {
       user: { findFirst: vi.fn().mockResolvedValue(null) },
       actionTaken: { create: vi.fn() },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .post("/api/staff/tickets/20/actions")
@@ -641,9 +751,7 @@ describe("Action Taken creation", () => {
       actionTaken: { create: vi.fn().mockResolvedValue(action) },
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
     const body = {
       title: "Check VPN concentrator",
       details: "Inspect logs.",
@@ -704,9 +812,7 @@ describe("Action Taken creation", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     const transaction = vi.spyOn(prisma, "$transaction");
-    transaction.mockImplementationOnce(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    transaction.mockImplementationOnce(transactionImplementation(tx));
     transaction.mockImplementation(async () => {
       throw { code: "P2002" };
     });
@@ -776,9 +882,7 @@ describe("Action Taken editing", () => {
       },
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
@@ -843,9 +947,7 @@ describe("Action Taken editing", () => {
       },
       actionEvent: { create: recordEvent },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
@@ -909,9 +1011,7 @@ describe("Action Taken editing", () => {
       },
       actionEvent: { create: appendEvent },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
@@ -966,9 +1066,7 @@ describe("Action Taken editing", () => {
       },
       actionEvent: { create: appendEvent },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const response = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
@@ -1007,9 +1105,7 @@ describe("Action Taken editing", () => {
           .mockResolvedValue(actionRow({ status: ActionStatus.IN_PROGRESS })),
       },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(tx))
-    );
+    mockTransaction(tx);
 
     const missingResult = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
@@ -1042,9 +1138,7 @@ describe("Action Taken editing", () => {
           .mockResolvedValue(actionRow({ status: ActionStatus.COMPLETED })),
       },
     };
-    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(withRowLockMock(terminalTx))
-    );
+    mockTransaction(terminalTx);
     const terminal = await request(app)
       .patch("/api/staff/tickets/20/actions/501")
       .set("Cookie", sessionCookie({ id: ACTOR.id, role: ACTOR.role }))

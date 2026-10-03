@@ -1,8 +1,9 @@
 import { ActionStatus, Prisma, Role, TicketStatus } from "@prisma/client";
-import express, { Router, type Response } from "express";
+import express, { Router, type NextFunction, type Response } from "express";
 import { createHash } from "node:crypto";
 import { actionSnapshot } from "../utils/action-snapshot";
 import { lockActionAssignmentRows } from "../utils/action-assignment-lock";
+import { runSerializableTransaction } from "../utils/serializable-transaction";
 import {
   AuthenticatedRequest,
   requireAuth,
@@ -45,14 +46,17 @@ const ACTION_INCLUDE = {
 const EVENT_INCLUDE = {
   actor: { select: USER_REF_SELECT },
 } as const;
-const MAX_SERIALIZATION_RETRIES = 3;
-
 type ActionWithUsers = Prisma.ActionTakenGetPayload<{
   include: typeof ACTION_INCLUDE;
 }>;
 type EventWithActor = Prisma.ActionEventGetPayload<{
   include: typeof EVENT_INCLUDE;
 }>;
+
+type ActionWriteTarget = { ticketId: number; actionId?: number };
+interface ActionWriteRequest extends AuthenticatedRequest {
+  actionWriteTarget?: ActionWriteTarget;
+}
 
 type ValidationField = { field: string; issue: string };
 
@@ -467,6 +471,38 @@ async function loadStaffTicket(
   return ticket;
 }
 
+function validateActionWriteTarget(requireAction: boolean) {
+  return async (
+    req: ActionWriteRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const ticketId = validId(req, "id");
+      const actionId = requireAction ? validId(req, "actionId") : undefined;
+      await loadStaffTicket(ticketId, req.authUser!);
+
+      if (actionId !== undefined) {
+        const action = await prisma.actionTaken.findFirst({
+          where: { id: actionId, ticketId },
+          select: { id: true },
+        });
+        if (!action) {
+          throw new ActionApiError(404, "NOT_FOUND", "Action not found");
+        }
+      }
+
+      req.actionWriteTarget = {
+        ticketId,
+        ...(actionId !== undefined ? { actionId } : {}),
+      };
+      next();
+    } catch (error) {
+      sendError(res, error);
+    }
+  };
+}
+
 function staleError(
   resource: "TICKET" | "ACTION_TAKEN",
   id: number,
@@ -492,26 +528,6 @@ function isPrismaError(error: unknown, code: string): boolean {
     "code" in error &&
     (error as { code?: unknown }).code === code
   );
-}
-
-async function runSerializableTransaction<T>(
-  callback: (tx: Prisma.TransactionClient) => Promise<T>
-): Promise<T> {
-  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt += 1) {
-    try {
-      return await prisma.$transaction(callback, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (
-        !isPrismaError(error, "P2034") ||
-        attempt === MAX_SERIALIZATION_RETRIES - 1
-      ) {
-        throw error;
-      }
-    }
-  }
-  throw new Error("Serializable transaction retry loop exhausted");
 }
 
 async function checkAssignee(
@@ -950,12 +966,12 @@ actionStaffRouter.post(
   "/tickets/:id/actions",
   ...requireAuth,
   requireRole(...STAFF_ROLES),
+  validateActionWriteTarget(false),
   requireJsonBody,
   express.json(),
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: ActionWriteRequest, res: Response) => {
     try {
-      const ticketId = validId(req, "id");
-      await loadStaffTicket(ticketId, req.authUser!);
+      const { ticketId } = req.actionWriteTarget!;
       const key = req.header("Idempotency-Key")?.trim();
       if (
         !key ||
@@ -992,24 +1008,17 @@ actionStaffRouter.patch(
   "/tickets/:id/actions/:actionId",
   ...requireAuth,
   requireRole(...STAFF_ROLES),
+  validateActionWriteTarget(true),
   requireJsonBody,
   express.json(),
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: ActionWriteRequest, res: Response) => {
     try {
-      const ticketId = validId(req, "id");
-      const actionId = validId(req, "actionId");
-      await loadStaffTicket(ticketId, req.authUser!);
-      const exists = await prisma.actionTaken.findFirst({
-        where: { id: actionId, ticketId },
-        select: { id: true },
-      });
-      if (!exists)
-        throw new ActionApiError(404, "NOT_FOUND", "Action not found");
+      const { ticketId, actionId } = req.actionWriteTarget!;
       const payload = parseEditPayload(req.body);
       const result = await editAction(
         req.authUser!,
         ticketId,
-        actionId,
+        actionId!,
         payload
       );
       res.status(200).json(result);

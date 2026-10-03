@@ -14,13 +14,21 @@ import { ticketsRouter } from "./routes/tickets";
 
 export const app = express();
 
-function isActionWrite(req: Request): boolean {
-  return (
+function shouldDeferActionBodyParsing(req: Request): boolean {
+  const isWrite =
     (req.method === "POST" &&
       /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/.test(req.path)) ||
     (req.method === "PATCH" &&
-      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/.test(req.path))
-  );
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/.test(req.path));
+  const isRead =
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/tickets\/[^/]+\/actions(?:\/[^/]+(?:\/history)?)?\/?$/.test(
+        req.path
+      )) ||
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/staff\/action-assignees\/?$/.test(req.path));
+
+  return isWrite || isRead;
 }
 
 const parseJsonBody = express.json();
@@ -30,11 +38,11 @@ const parseJsonBody = express.json();
 // BR-22 relies on instead of a CSRF token [D14].
 app.use(cors({ credentials: false }));
 app.use((req, res, next) =>
-  isActionWrite(req) ? next() : parseJsonBody(req, res, next)
+  shouldDeferActionBodyParsing(req) ? next() : parseJsonBody(req, res, next)
 );
 app.use(cookieParser());
 app.use((req, res, next) =>
-  isActionWrite(req) ? next() : requireJsonBody(req, res, next)
+  shouldDeferActionBodyParsing(req) ? next() : requireJsonBody(req, res, next)
 );
 
 app.get("/", (_req, res) => {

@@ -9,6 +9,7 @@ import { hashPassword, validatePassword } from "../utils/password";
 import { parsePositiveIntParam } from "../utils/attachment";
 import { actionSnapshot } from "../utils/action-snapshot";
 import { lockActionAssignmentRows } from "../utils/action-assignment-lock";
+import { runSerializableTransaction } from "../utils/serializable-transaction";
 import { prisma } from "../prisma";
 
 /** Administrator user management [FR-26, BR-09, BR-15, BR-24]. */
@@ -274,35 +275,6 @@ const USER_MUTATION_SELECT = {
   isActive: true,
   mustChangePassword: true,
 } as const;
-
-const MAX_SERIALIZATION_RETRIES = 3;
-
-/**
- * Last-administrator changes must be serialized. PostgreSQL's serializable
- * isolation rejects the losing concurrent write with P2034; retrying that
- * transaction makes the second attempt observe the committed administrator
- * count and return LAST_ADMIN instead of allowing zero active administrators.
- */
-async function runSerializableTransaction<T>(
-  callback: (tx: Prisma.TransactionClient) => Promise<T>
-): Promise<T> {
-  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt += 1) {
-    try {
-      return await prisma.$transaction(callback, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (
-        !isPrismaError(error, "P2034") ||
-        attempt === MAX_SERIALIZATION_RETRIES - 1
-      ) {
-        throw error;
-      }
-    }
-  }
-
-  throw new Error("Serializable transaction retry loop exhausted");
-}
 
 // GET /api/admin/users [FR-26, AC-13]
 adminRouter.get(

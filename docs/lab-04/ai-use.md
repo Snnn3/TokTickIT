@@ -360,3 +360,17 @@ an illegal Action transition for zero writes. Full tests passed (223 server,
 passed. The Standards self-review found no findings. The repository-wide
 formatter check still reports existing CRLF formatting differences in other
 files.
+
+### Prompt 28 - Fix the remaining PR #65 spec finding and duplication
+
+**Prompt (verbatim):**
+
+```text
+coder fix the spec issue c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr65-feature-lab4-3-actions-api-issue56-4e829f8.md in this review and delete the duplicatd code smell
+```
+
+**Outcome:** Deferred Action GET parsing until after auth/access checks and
+Action write parsing until after path, Ticket, self-service and Action checks.
+Consolidated Serializable retry behavior and repeated Action test transaction
+setup. The full server/client suites passed (233/135), as did the server build,
+focused formatter check and whitespace check.
