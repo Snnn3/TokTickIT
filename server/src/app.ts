@@ -14,13 +14,28 @@ import { ticketsRouter } from "./routes/tickets";
 
 export const app = express();
 
+function isActionWrite(req: Request): boolean {
+  return (
+    (req.method === "POST" &&
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/.test(req.path)) ||
+    (req.method === "PATCH" &&
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/.test(req.path))
+  );
+}
+
+const parseJsonBody = express.json();
+
 // CORS without credentials, deliberately: no foreign origin can cause the
 // session cookie to be sent, which is the second of the three properties
 // BR-22 relies on instead of a CSRF token [D14].
 app.use(cors({ credentials: false }));
-app.use(express.json());
+app.use((req, res, next) =>
+  isActionWrite(req) ? next() : parseJsonBody(req, res, next)
+);
 app.use(cookieParser());
-app.use(requireJsonBody);
+app.use((req, res, next) =>
+  isActionWrite(req) ? next() : requireJsonBody(req, res, next)
+);
 
 app.get("/", (_req, res) => {
   res.status(200).json({ service: "TokTickIT API" });

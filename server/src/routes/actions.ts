@@ -1,9 +1,12 @@
 import { ActionStatus, Prisma, Role, TicketStatus } from "@prisma/client";
-import { Router, Response } from "express";
+import express, { Router, type Response } from "express";
 import { createHash } from "node:crypto";
+import { actionSnapshot } from "../utils/action-snapshot";
+import { lockActionAssignmentRows } from "../utils/action-assignment-lock";
 import {
   AuthenticatedRequest,
   requireAuth,
+  requireJsonBody,
   requireRole,
 } from "../middleware/auth";
 import { prisma } from "../prisma";
@@ -387,38 +390,6 @@ function serializeEvent(event: EventWithActor) {
   };
 }
 
-function snapshot(action: {
-  title: string;
-  details: string;
-  result: string | null;
-  performedById: number;
-  assigneeId: number | null;
-  status: ActionStatus;
-  followUpRequired: boolean;
-  followUpNote: string | null;
-  attachmentNotes: string | null;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt: Date | null;
-}) {
-  return {
-    title: action.title,
-    details: action.details,
-    result: action.result,
-    performedById: action.performedById,
-    assigneeId: action.assigneeId,
-    status: action.status,
-    followUpRequired: action.followUpRequired,
-    followUpNote: action.followUpNote,
-    attachmentNotes: action.attachmentNotes,
-    version: action.version,
-    createdAt: action.createdAt,
-    updatedAt: action.updatedAt,
-    completedAt: action.completedAt,
-  };
-}
-
 function jsonSafe<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -623,6 +594,12 @@ async function createAction(
       const replay = resolveCreationReplay(existing, payloadFingerprint);
       if (replay) return replay;
 
+      await lockActionAssignmentRows(
+        tx,
+        payload.assigneeId == null ? [] : [payload.assigneeId],
+        [ticketId]
+      );
+
       const ticket = await tx.ticket.findUnique({
         where: { id: ticketId },
         select: { status: true, version: true },
@@ -667,7 +644,7 @@ async function createAction(
         },
         include: ACTION_INCLUDE,
       });
-      const after = snapshot(action);
+      const after = actionSnapshot(action);
       await tx.actionEvent.create({
         data: {
           actionId: action.id,
@@ -714,6 +691,16 @@ async function editAction(
   payload: EditPayload
 ) {
   return runSerializableTransaction(async (tx) => {
+    const current = await tx.actionTaken.findFirst({
+      where: { id: actionId, ticketId },
+      include: ACTION_INCLUDE,
+    });
+    await lockActionAssignmentRows(
+      tx,
+      [current?.assigneeId, payload.assigneeId],
+      [ticketId]
+    );
+
     const ticket = await tx.ticket.findUnique({
       where: { id: ticketId },
       select: { requesterId: true, status: true, version: true },
@@ -742,10 +729,6 @@ async function editAction(
       );
     }
 
-    const current = await tx.actionTaken.findFirst({
-      where: { id: actionId, ticketId },
-      include: ACTION_INCLUDE,
-    });
     if (!current) {
       throw new ActionApiError(404, "NOT_FOUND", "Action not found");
     }
@@ -861,8 +844,8 @@ async function editAction(
         type,
         previousVersion: current.version,
         newVersion: updated.version,
-        before: jsonSafe(snapshot(current)),
-        after: jsonSafe(snapshot(updated)),
+        before: jsonSafe(actionSnapshot(current)),
+        after: jsonSafe(actionSnapshot(updated)),
       },
     });
     return {
@@ -881,12 +864,12 @@ async function handleRequesterActionRead(
   kind: "list" | "detail" | "history"
 ): Promise<void> {
   try {
-    noReadInput(req);
     const ticketId = validId(req, "id");
     const actionId = kind === "list" ? undefined : validId(req, "actionId");
     const ticket = await loadReadableTicket(ticketId, req.authUser!);
 
     if (kind === "list") {
+      noReadInput(req);
       const actions = await prisma.actionTaken.findMany({
         where: { ticketId },
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -904,6 +887,7 @@ async function handleRequesterActionRead(
       include: ACTION_INCLUDE,
     });
     if (!action) throw new ActionApiError(404, "NOT_FOUND", "Action not found");
+    noReadInput(req);
 
     if (kind === "detail") {
       res.status(200).json({
@@ -966,6 +950,8 @@ actionStaffRouter.post(
   "/tickets/:id/actions",
   ...requireAuth,
   requireRole(...STAFF_ROLES),
+  requireJsonBody,
+  express.json(),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const ticketId = validId(req, "id");
@@ -1006,6 +992,8 @@ actionStaffRouter.patch(
   "/tickets/:id/actions/:actionId",
   ...requireAuth,
   requireRole(...STAFF_ROLES),
+  requireJsonBody,
+  express.json(),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const ticketId = validId(req, "id");

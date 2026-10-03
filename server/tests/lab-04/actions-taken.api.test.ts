@@ -89,6 +89,13 @@ function ticketRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function withRowLockMock<T extends object>(tx: T) {
+  return {
+    ...tx,
+    $queryRaw: vi.fn().mockResolvedValue([]),
+  };
+}
+
 const ACTION_GET_ENDPOINTS = [
   {
     name: "action list",
@@ -116,11 +123,92 @@ const ACTION_GET_ENDPOINTS = [
   },
 ] as const;
 
+const MALFORMED_ACTION_WRITES = [
+  {
+    name: "Action creation",
+    request: () => request(app).post("/api/staff/tickets/20/actions"),
+  },
+  {
+    name: "Action update",
+    request: () => request(app).patch("/api/staff/tickets/20/actions/501"),
+  },
+] as const;
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("Action write authorization precedence", () => {
+  it.each(MALFORMED_ACTION_WRITES)(
+    "authenticates before parsing malformed JSON for $name",
+    async ({ request: makeRequest }) => {
+      const response = await makeRequest()
+        .set("Content-Type", "application/json")
+        .send("{ malformed");
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe("AUTH_REQUIRED");
+    }
+  );
+});
+
 describe("Action Taken reads", () => {
+  it("reports an invalid Ticket path before rejecting read input", async () => {
+    const ticketLookup = vi.spyOn(prisma.ticket, "findUnique");
+
+    const response = await request(app)
+      .get("/api/tickets/not-an-id/actions?include=all")
+      .set("Cookie", authAs(2, Role.REQUESTER))
+      .send({ unexpected: true });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_ID");
+    expect(ticketLookup).not.toHaveBeenCalled();
+  });
+
+  it("reports a missing Ticket before rejecting read input", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(null as never);
+
+    const response = await request(app)
+      .get("/api/tickets/20/actions?include=all")
+      .set("Cookie", authAs(2, Role.REQUESTER))
+      .send({ unexpected: true });
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("refuses a foreign Ticket before rejecting read input", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow({ requesterId: 99 }) as never
+    );
+    const actionLookup = vi.spyOn(prisma.actionTaken, "findFirst");
+
+    const response = await request(app)
+      .get("/api/tickets/20/actions/501/history?include=all")
+      .set("Cookie", authAs(2, Role.REQUESTER))
+      .send({ unexpected: true });
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("FORBIDDEN");
+    expect(actionLookup).not.toHaveBeenCalled();
+  });
+
+  it("reports a missing Action before rejecting read input", async () => {
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow({ requesterId: 2 }) as never
+    );
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(null as never);
+
+    const response = await request(app)
+      .get("/api/tickets/20/actions/501?include=all")
+      .set("Cookie", authAs(2, Role.REQUESTER))
+      .send({ unexpected: true });
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
   it("lists a requester's own actions with the parent version", async () => {
     const cookie = authAs(2, Role.REQUESTER);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
@@ -236,8 +324,17 @@ describe("Action Taken reads", () => {
         message: "Invalid request",
       });
       expect(JSON.stringify(response.body)).not.toContain("unexpected");
-      expect(ticketLookup).not.toHaveBeenCalled();
-      expect(assigneeLookup).not.toHaveBeenCalled();
+      if (route.name === "action assignee picker") {
+        expect(assigneeLookup).not.toHaveBeenCalled();
+      } else {
+        expect(ticketLookup).toHaveBeenCalledOnce();
+        expect(assigneeLookup).not.toHaveBeenCalled();
+      }
+      if (route.name === "action detail" || route.name === "action history") {
+        expect(prisma.actionTaken.findFirst).toHaveBeenCalledOnce();
+      } else {
+        expect(prisma.actionTaken.findFirst).not.toHaveBeenCalled();
+      }
     }
   );
 
@@ -305,7 +402,7 @@ describe("Action Taken creation", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -392,7 +489,7 @@ describe("Action Taken creation", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -468,7 +565,7 @@ describe("Action Taken creation", () => {
       },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
     const stale = await request(app)
       .post("/api/staff/tickets/20/actions")
@@ -498,7 +595,7 @@ describe("Action Taken creation", () => {
       actionTaken: { create: vi.fn() },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -545,7 +642,7 @@ describe("Action Taken creation", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
     const body = {
       title: "Check VPN concentrator",
@@ -607,7 +704,9 @@ describe("Action Taken creation", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     const transaction = vi.spyOn(prisma, "$transaction");
-    transaction.mockImplementationOnce(async (callback: any) => callback(tx));
+    transaction.mockImplementationOnce(async (callback: any) =>
+      callback(withRowLockMock(tx))
+    );
     transaction.mockImplementation(async () => {
       throw { code: "P2002" };
     });
@@ -678,7 +777,7 @@ describe("Action Taken editing", () => {
       actionEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -745,7 +844,7 @@ describe("Action Taken editing", () => {
       actionEvent: { create: recordEvent },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -811,7 +910,7 @@ describe("Action Taken editing", () => {
       actionEvent: { create: appendEvent },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const response = await request(app)
@@ -839,6 +938,55 @@ describe("Action Taken editing", () => {
     expect(storedAction).toEqual(actionBefore);
   });
 
+  it("rejects an illegal PLANNED-to-COMPLETED edge without changing records", async () => {
+    const cookie = authAs();
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow() as never
+    );
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(
+      actionRow({ status: ActionStatus.PLANNED }) as never
+    );
+    const updateTicket = vi.fn().mockResolvedValue({ count: 1 });
+    const updateAction = vi.fn().mockResolvedValue({ count: 1 });
+    const appendEvent = vi.fn().mockResolvedValue({});
+    const tx = {
+      ticket: {
+        findUnique: vi.fn().mockResolvedValue({
+          requesterId: 2,
+          status: "OPEN",
+          version: 4,
+        }),
+        updateMany: updateTicket,
+      },
+      actionTaken: {
+        findFirst: vi
+          .fn()
+          .mockResolvedValue(actionRow({ status: ActionStatus.PLANNED })),
+        updateMany: updateAction,
+      },
+      actionEvent: { create: appendEvent },
+    };
+    vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
+      callback(withRowLockMock(tx))
+    );
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/actions/501")
+      .set("Cookie", cookie)
+      .send({
+        expectedVersion: 1,
+        expectedTicketVersion: 4,
+        status: ActionStatus.COMPLETED,
+        result: "The requested work was not started.",
+      });
+
+    expect(response.status).toBe(422);
+    expect(response.body.error.code).toBe("INVALID_ACTION_TRANSITION");
+    expect(updateTicket).not.toHaveBeenCalled();
+    expect(updateAction).not.toHaveBeenCalled();
+    expect(appendEvent).not.toHaveBeenCalled();
+  });
+
   it("requires a result to complete and refuses terminal edits", async () => {
     const cookie = authAs();
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
@@ -860,7 +1008,7 @@ describe("Action Taken editing", () => {
       },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(tx)
+      callback(withRowLockMock(tx))
     );
 
     const missingResult = await request(app)
@@ -895,7 +1043,7 @@ describe("Action Taken editing", () => {
       },
     };
     vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
-      callback(terminalTx)
+      callback(withRowLockMock(terminalTx))
     );
     const terminal = await request(app)
       .patch("/api/staff/tickets/20/actions/501")

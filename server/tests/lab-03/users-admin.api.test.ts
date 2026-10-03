@@ -1,4 +1,4 @@
-import { Role, TicketStatus } from "@prisma/client";
+import { ActionStatus, Role, TicketStatus } from "@prisma/client";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../src/app";
@@ -43,6 +43,7 @@ function userRow(
 }
 
 function transactionOnPrisma() {
+  vi.spyOn(prisma, "$queryRaw").mockResolvedValue([] as never);
   vi.spyOn(prisma, "$transaction").mockImplementation(async (callback: any) =>
     callback(prisma as any)
   );
@@ -353,8 +354,10 @@ describe("API-19 administrator guards and reset (AC-15, AC-16)", () => {
             },
           },
           ticket: {
+            findMany: async () => [],
             updateMany: async () => ({ count: 0 }),
           },
+          $queryRaw: async () => [],
         };
 
         const result = await callback(tx);
@@ -483,6 +486,11 @@ describe("API-21 deactivation and demotion cascade (AC-21, BR-24)", () => {
       const updateMany = vi
         .spyOn(prisma.ticket, "updateMany")
         .mockResolvedValue({ count: 3 });
+      vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([
+        { id: 101 },
+        { id: 102 },
+        { id: 103 },
+      ] as never);
 
       const res = await request(app)
         .patch("/api/admin/users/2")
@@ -507,12 +515,234 @@ describe("API-21 deactivation and demotion cascade (AC-21, BR-24)", () => {
           data: expect.objectContaining({ tokenVersion: { increment: 1 } }),
         })
       );
-      expect(updateMany).toHaveBeenCalledWith({
-        where: {
-          ownerId: 2,
-          status: { notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED] },
+      expect(updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { in: [101, 102, 103] },
+            ownerId: 2,
+          }),
+          data: { ownerId: null },
+        })
+      );
+      expect(updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: { in: [101, 102, 103] } },
+          data: {
+            version: { increment: 1 },
+            updatedAt: expect.any(Date),
+          },
+        })
+      );
+    }
+  );
+
+  it.each<[string, { isActive?: boolean; role?: Role }]>([
+    ["deactivation", { isActive: false }],
+    ["role change away from IT Staff", { role: Role.REQUESTER }],
+  ])(
+    "releases active Action assignments and versions each affected Ticket once on %s",
+    async (_change, change) => {
+      transactionOnPrisma();
+      const targetId = 2;
+      const timestamp = new Date("2026-10-01T10:00:00.000Z");
+      const user = userRow(targetId, {
+        role: Role.IT_STAFF,
+        isActive: true,
+        tokenVersion: 6,
+      });
+      vi.spyOn(prisma.user, "findUnique").mockImplementation((async (
+        args: any
+      ) => (args.where?.id === ADMIN_ID ? adminRow() : user)) as never);
+      vi.spyOn(prisma.user, "count").mockResolvedValue(2);
+      vi.spyOn(prisma.user, "update").mockResolvedValue({
+        id: targetId,
+        name: user.name,
+        email: user.email,
+        role: change.role ?? Role.IT_STAFF,
+        isActive: change.isActive ?? true,
+        mustChangePassword: false,
+      } as never);
+
+      const tickets = [
+        { id: 20, ownerId: targetId, status: TicketStatus.OPEN, version: 4 },
+        { id: 21, ownerId: null, status: TicketStatus.CLOSED, version: 9 },
+      ];
+      const actions = [
+        {
+          id: 501,
+          ticketId: 20,
+          title: "Inspect VPN",
+          details: "Review gateway logs.",
+          result: null,
+          performedById: 8,
+          assigneeId: targetId,
+          status: ActionStatus.PLANNED,
+          followUpRequired: false,
+          followUpNote: null,
+          attachmentNotes: null,
+          version: 1,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          completedAt: null,
         },
-        data: { ownerId: null },
+        {
+          id: 502,
+          ticketId: 20,
+          title: "Check DNS",
+          details: "Verify the resolver configuration.",
+          result: null,
+          performedById: 8,
+          assigneeId: targetId,
+          status: ActionStatus.IN_PROGRESS,
+          followUpRequired: false,
+          followUpNote: null,
+          attachmentNotes: null,
+          version: 3,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          completedAt: null,
+        },
+        {
+          id: 503,
+          ticketId: 21,
+          title: "Review closed-ticket action",
+          details: "Historical parent status must not block release.",
+          result: null,
+          performedById: 8,
+          assigneeId: targetId,
+          status: ActionStatus.PLANNED,
+          followUpRequired: false,
+          followUpNote: null,
+          attachmentNotes: null,
+          version: 2,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          completedAt: null,
+        },
+        {
+          id: 504,
+          ticketId: 20,
+          title: "Completed work",
+          details: "Keep terminal assignment history.",
+          result: "Done.",
+          performedById: 8,
+          assigneeId: targetId,
+          status: ActionStatus.COMPLETED,
+          followUpRequired: false,
+          followUpNote: null,
+          attachmentNotes: null,
+          version: 5,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          completedAt: timestamp,
+        },
+        {
+          id: 505,
+          ticketId: 21,
+          title: "Cancelled work",
+          details: "Keep terminal assignment history.",
+          result: null,
+          performedById: 8,
+          assigneeId: targetId,
+          status: ActionStatus.CANCELLED,
+          followUpRequired: false,
+          followUpNote: null,
+          attachmentNotes: null,
+          version: 4,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          completedAt: null,
+        },
+      ];
+      vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([
+        { id: 20 },
+      ] as never);
+      vi.spyOn(prisma.ticket, "updateMany").mockImplementation((async (
+        args: any
+      ) => {
+        let count = 0;
+        for (const ticket of tickets) {
+          const idMatches = args.where.id?.in
+            ? args.where.id.in.includes(ticket.id)
+            : true;
+          const ownerMatches =
+            args.where.ownerId === undefined ||
+            ticket.ownerId === args.where.ownerId;
+          const statusMatches = !args.where.status?.notIn?.includes(
+            ticket.status
+          );
+          if (idMatches && ownerMatches && statusMatches) {
+            if ("ownerId" in args.data) ticket.ownerId = args.data.ownerId;
+            if (args.data.version?.increment) {
+              ticket.version += args.data.version.increment;
+            }
+            count += 1;
+          }
+        }
+        return { count };
+      }) as never);
+      vi.spyOn(prisma.actionTaken, "findMany").mockImplementation((async (
+        args: any
+      ) =>
+        actions.filter(
+          (action) =>
+            action.assigneeId === args.where.assigneeId &&
+            !args.where.status.notIn.includes(action.status)
+        )) as never);
+      vi.spyOn(prisma.actionTaken, "updateMany").mockImplementation((async (
+        args: any
+      ) => {
+        const action = actions.find((row) => row.id === args.where.id);
+        if (!action || action.assigneeId !== args.where.assigneeId) {
+          return { count: 0 };
+        }
+        action.assigneeId = args.data.assigneeId;
+        action.version += args.data.version.increment;
+        action.updatedAt = args.data.updatedAt;
+        return { count: 1 };
+      }) as never);
+      const events: any[] = [];
+      vi.spyOn(prisma.actionEvent, "create").mockImplementation((async (
+        args: any
+      ) => {
+        events.push(args.data);
+        return args.data;
+      }) as never);
+
+      const response = await request(app)
+        .patch("/api/admin/users/2")
+        .set(
+          "Cookie",
+          sessionCookie({ id: ADMIN_ID, role: Role.ADMINISTRATOR })
+        )
+        .send(change);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        unassignedTicketCount: 1,
+        unassignedActionCount: 3,
+      });
+      expect(tickets).toMatchObject([
+        { id: 20, ownerId: null, version: 5 },
+        { id: 21, status: TicketStatus.CLOSED, version: 10 },
+      ]);
+      expect(
+        actions.map(({ assigneeId, version }) => [assigneeId, version])
+      ).toEqual([
+        [null, 2],
+        [null, 4],
+        [null, 3],
+        [targetId, 5],
+        [targetId, 4],
+      ]);
+      expect(events).toHaveLength(3);
+      expect(events[0]).toMatchObject({
+        actorId: ADMIN_ID,
+        type: "ASSIGNEE_RELEASED",
+        previousVersion: 1,
+        newVersion: 2,
+        before: { assigneeId: targetId, version: 1 },
+        after: { assigneeId: null, version: 2 },
       });
     }
   );

@@ -342,3 +342,21 @@ suite passed 214/214 tests, and the server build, changed-file Biome checks,
 and diff checks passed. A separate branch self-review found and drove the
 non-JSON body fix. Opened [PR #65](https://github.com/Snnn3/TokTickIT/pull/65)
 to merge into `lab4-staging`.
+
+### Prompt 27 - Implement the PR #65 review findings
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr65-feature-lab4-3-actions-api-f1790d5.md coder read this review and implement following this. and review yourself one time.
+```
+
+**Outcome:** Deferred malformed Action-write parsing until after authentication
+and role checks; corrected Action read-error precedence; added atomic release of
+nonterminal Action assignments when IT Staff become inactive or change roles,
+with Action/Ticket versions, Admin audit events and response counts; and tested
+an illegal Action transition for zero writes. Full tests passed (223 server,
+135 client), the server build and changed-file formatter/whitespace checks
+passed. The Standards self-review found no findings. The repository-wide
+formatter check still reports existing CRLF formatting differences in other
+files.
