@@ -301,3 +301,27 @@ coverage for replaying the winning request after a `P2002` race. The full
 server suite passed 206/206, the server build passed, and changed-file Biome
 and whitespace checks passed. Rechecked the review's API coverage and
 idempotency recommendations.
+
+### Prompt 24 - Place the agent setup in `.agents`
+
+**Prompt (verbatim):**
+
+```text
+make the agents in .agents
+```
+
+**Outcome:** Relocated the setup target from the initially drafted `docs/agents/`
+location to the repository's local-only `.agents/` configuration.
+
+### Prompt 25 - Use the `.agents/` folder
+
+**Prompt (verbatim):**
+
+```text
+make the folder in .agents/
+```
+
+**Outcome:** Reused `.agents/AGENTS.md` and the existing tracker/domain guides,
+added the default triage-label mapping and Wayfinder conventions under
+`.agents/agents/`, and removed the temporary `docs/agents/` drafts. These
+configuration files remain ignored and local-only.
