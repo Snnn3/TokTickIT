@@ -566,6 +566,37 @@ async function incrementTicket(
   throw staleError("TICKET", ticketId, expectedVersion, current.version);
 }
 
+type ActionCreationResponse = {
+  action: ReturnType<typeof serializeAction>;
+  ticketVersion: number;
+};
+
+type ActionCreationResult = {
+  replay: boolean;
+  response: ActionCreationResponse;
+};
+
+function resolveCreationReplay(
+  existing: {
+    payloadFingerprint: string;
+    response: Prisma.JsonValue;
+  } | null,
+  expectedFingerprint: string
+): ActionCreationResult | null {
+  if (!existing) return null;
+  if (existing.payloadFingerprint !== expectedFingerprint) {
+    throw new ActionApiError(
+      409,
+      "IDEMPOTENCY_CONFLICT",
+      "The idempotency key was already used with a different payload"
+    );
+  }
+  return {
+    replay: true,
+    response: existing.response as unknown as ActionCreationResponse,
+  };
+}
+
 async function createAction(
   actor: NonNullable<AuthenticatedRequest["authUser"]>,
   ticketId: number,
@@ -580,22 +611,8 @@ async function createAction(
       const existing = await tx.actionCreationRequest.findUnique({
         where: { actorId_key: { actorId: actor.id, key } },
       });
-      if (existing) {
-        if (existing.payloadFingerprint !== payloadFingerprint) {
-          throw new ActionApiError(
-            409,
-            "IDEMPOTENCY_CONFLICT",
-            "The idempotency key was already used with a different payload"
-          );
-        }
-        return {
-          replay: true,
-          response: existing.response as unknown as {
-            action: ReturnType<typeof serializeAction>;
-            ticketVersion: number;
-          },
-        };
-      }
+      const replay = resolveCreationReplay(existing, payloadFingerprint);
+      if (replay) return replay;
 
       const ticket = await tx.ticket.findUnique({
         where: { id: ticketId },
@@ -674,22 +691,8 @@ async function createAction(
       const existing = await prisma.actionCreationRequest.findUnique({
         where: { actorId_key: { actorId: actor.id, key } },
       });
-      if (existing) {
-        if (existing.payloadFingerprint !== payloadFingerprint) {
-          throw new ActionApiError(
-            409,
-            "IDEMPOTENCY_CONFLICT",
-            "The idempotency key was already used with a different payload"
-          );
-        }
-        return {
-          replay: true,
-          response: existing.response as unknown as {
-            action: ReturnType<typeof serializeAction>;
-            ticketVersion: number;
-          },
-        };
-      }
+      const replay = resolveCreationReplay(existing, payloadFingerprint);
+      if (replay) return replay;
     }
     throw error;
   }

@@ -507,6 +507,73 @@ describe("Action Taken creation", () => {
     expect(tx.actionTaken.create).toHaveBeenCalledTimes(1);
     expect(tx.actionEvent.create).toHaveBeenCalledTimes(1);
   });
+
+  it("replays the winner when a concurrent idempotency insert hits the unique key", async () => {
+    const cookie = authAs();
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(
+      ticketRow() as never
+    );
+    const action = actionRow();
+    let storedRequest: Record<string, unknown> | null = null;
+    const tx = {
+      actionCreationRequest: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi
+          .fn()
+          .mockImplementation(
+            async (args: { data: Record<string, unknown> }) => {
+              storedRequest = args.data;
+              return args.data;
+            }
+          ),
+      },
+      ticket: {
+        findUnique: vi.fn().mockResolvedValue({ status: "OPEN", version: 4 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      user: { findFirst: vi.fn().mockResolvedValue({ id: ASSIGNEE.id }) },
+      actionTaken: { create: vi.fn().mockResolvedValue(action) },
+      actionEvent: { create: vi.fn().mockResolvedValue({}) },
+    };
+    const transaction = vi.spyOn(prisma, "$transaction");
+    transaction.mockImplementationOnce(async (callback: any) => callback(tx));
+    transaction.mockImplementation(async () => {
+      throw { code: "P2002" };
+    });
+    vi.spyOn(prisma.actionCreationRequest, "findUnique").mockImplementation(
+      (async () => storedRequest) as any
+    );
+    const body = {
+      title: "Check VPN concentrator",
+      details: "Inspect logs.",
+      expectedTicketVersion: 4,
+    };
+    const key = "88888888-8888-4888-8888-888888888888";
+
+    const created = await request(app)
+      .post("/api/staff/tickets/20/actions")
+      .set("Cookie", cookie)
+      .set("Idempotency-Key", key)
+      .send(body);
+    const replay = await request(app)
+      .post("/api/staff/tickets/20/actions")
+      .set("Cookie", cookie)
+      .set("Idempotency-Key", key)
+      .send(body);
+    const conflict = await request(app)
+      .post("/api/staff/tickets/20/actions")
+      .set("Cookie", cookie)
+      .set("Idempotency-Key", key)
+      .send({ ...body, title: "Different title" });
+
+    expect(created.status).toBe(201);
+    expect(replay.status).toBe(201);
+    expect(replay.body).toEqual(created.body);
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.error.code).toBe("IDEMPOTENCY_CONFLICT");
+    expect(tx.actionTaken.create).toHaveBeenCalledTimes(1);
+    expect(tx.actionEvent.create).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("Action Taken editing", () => {
