@@ -6,6 +6,7 @@ import type { NextFunction, Request, Response } from "express";
 import { requireAuth, requireJsonBody } from "./middleware/auth";
 import { prisma } from "./prisma";
 import { attachmentsRouter } from "./routes/attachments";
+import { actionRequesterRouter, actionStaffRouter } from "./routes/actions";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { staffRouter } from "./routes/staff";
@@ -110,7 +111,9 @@ app.use("/api/admin", adminRouter);
 // Mounted after the requester routes; the /api/staff/* prefix keeps the two
 // from ever colliding, and the router's role guard makes Administrator a
 // superset of IT Staff here (D2).
+app.use("/api/staff", actionStaffRouter);
 app.use("/api/staff", staffRouter);
+app.use("/api/tickets", actionRequesterRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/attachments", attachmentsRouter);
 

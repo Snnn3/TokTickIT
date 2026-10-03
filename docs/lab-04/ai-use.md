@@ -180,3 +180,81 @@ Do format docs\lab-04\reviewer.md like docs\lab-02\reviewer.md
 review record structure, updated PR #63 with its verified approval and merge,
 and added the current PR #64 implementation status. The six selected prompts
 in the grading table remain unchanged.
+
+### Prompt 15 - Fix the PR #64 review
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr64-feature-lab4-2-actions-foundation-348d407.md coder fix following this review make it good and run test
+```
+
+**Outcome:** Reviewed the PR #64 findings, identified the incomplete Lab 2/3
+regression evidence and the missing database invariant for `completedAt`, and
+prepared the implementation fix and verification plan.
+
+### Prompt 16 - Complete and self-review the fix
+
+**Prompt (verbatim):**
+
+```text
+Coder fix it c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr64-feature-lab4-2-actions-foundation-348d407.md if you finish review yourself once
+```
+
+**Outcome:** Added `ActionTaken_completedAt_state_check`, corrected the clean
+User Management expectation to the seeded 12 users, recorded Lab 2/3 E2E
+coverage, and regenerated the browser evidence. Verification passed with
+server 190/190, client 135/135, Playwright 13/13, both builds, client lint,
+Prisma validation, migration status and a fresh-database constraint probe.
+The repository formatter still reports the pre-existing CRLF baseline
+diagnostics; no new whitespace errors were found in the committed diff.
+
+### Prompt 17 - Record the complete prompt history
+
+**Prompt (verbatim):**
+
+```text
+after this save the all prompt into docs\lab-04\ai-use.md
+```
+
+**Outcome:** Appended the PR #64 implementation and self-review prompts to
+this archival log while preserving the six selected key prompts used for the
+Lab 4 disclosure table.
+
+### Prompt 18 - Review PR #64 against Issue #55 only
+
+**Prompt (verbatim):**
+
+```text
+reviewer review PR#64 feature/lab4-2-actions-foundation following issue#55 only the issue scope
+```
+
+**Outcome:** Reviewed the current PR head against Issue #55 only, without
+applying requirements from the broader Lab 4 specification.
+
+### Prompt 19 - Record prompts from this review exchange
+
+**Prompt (verbatim):**
+
+```text
+save all prompt after this into docs\lab-04\ai-use.md
+```
+
+**Outcome:** Added the prompts from this review exchange to the Lab 4 AI-use
+log. Continue recording subsequent user prompts in later entries.
+
+### Prompt 20 - Implement the Actions API issue
+
+**Prompt (verbatim):**
+
+```text
+coder implement the issue#56 move the kanban and dont open the PR
+```
+
+**Outcome:** Implemented the Issue #56 Actions Taken REST API on
+`feature/lab4-3-actions-api` without opening a pull request. The implementation
+adds ownership-scoped reads, Staff/Administrator writes, active-staff
+assignment validation, status/follow-up/result guards, optimistic Ticket and
+Action versions, serializable idempotent creation, audit events and focused
+API tests. The issue remains in the Kanban `Started` column while it is not
+merged.
