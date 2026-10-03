@@ -170,6 +170,62 @@ describe("Action Taken reads", () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 
+  it.each([
+    {
+      name: "action list",
+      path: "/api/tickets/20/actions",
+      userId: 2,
+      role: Role.REQUESTER,
+    },
+    {
+      name: "action detail",
+      path: "/api/tickets/20/actions/501",
+      userId: 2,
+      role: Role.REQUESTER,
+    },
+    {
+      name: "action history",
+      path: "/api/tickets/20/actions/501/history",
+      userId: 2,
+      role: Role.REQUESTER,
+    },
+    {
+      name: "action assignee picker",
+      path: "/api/staff/action-assignees",
+      userId: ACTOR.id,
+      role: Role.IT_STAFF,
+    },
+  ])("rejects request bodies on the $name GET endpoint", async (route) => {
+    const cookie = authAs(route.userId, route.role);
+    const ticketLookup = vi
+      .spyOn(prisma.ticket, "findUnique")
+      .mockResolvedValue(ticketRow({ requesterId: 2 }) as never);
+    const assigneeLookup = vi
+      .spyOn(prisma.user, "findMany")
+      .mockResolvedValue([ASSIGNEE] as never);
+    vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([
+      actionRow(),
+    ] as never);
+    vi.spyOn(prisma.actionTaken, "findFirst").mockResolvedValue(
+      actionRow() as never
+    );
+    vi.spyOn(prisma.actionEvent, "findMany").mockResolvedValue([] as never);
+
+    const response = await request(app)
+      .get(route.path)
+      .set("Cookie", cookie)
+      .set("Content-Type", "application/json")
+      .send({ unexpected: true });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "Invalid request",
+    });
+    expect(ticketLookup).not.toHaveBeenCalled();
+    expect(assigneeLookup).not.toHaveBeenCalled();
+  });
+
   it("returns ordered immutable history for a readable action", async () => {
     const cookie = authAs(2, Role.REQUESTER);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(

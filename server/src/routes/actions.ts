@@ -449,15 +449,29 @@ function noQuery(req: AuthenticatedRequest): void {
   }
 }
 
-async function loadReadableTicket(
-  id: number,
-  actor: NonNullable<AuthenticatedRequest["authUser"]>
-) {
+function noReadInput(req: AuthenticatedRequest): void {
+  if (req.body !== undefined) {
+    throw validationError([
+      { field: "body", issue: "This endpoint does not accept a request body" },
+    ]);
+  }
+  noQuery(req);
+}
+
+async function loadActionTicket(id: number) {
   const ticket = await prisma.ticket.findUnique({
     where: { id },
     select: { id: true, requesterId: true, status: true, version: true },
   });
   if (!ticket) throw new ActionApiError(404, "NOT_FOUND", "Ticket not found");
+  return ticket;
+}
+
+async function loadReadableTicket(
+  id: number,
+  actor: NonNullable<AuthenticatedRequest["authUser"]>
+) {
+  const ticket = await loadActionTicket(id);
   if (actor.role === Role.REQUESTER && ticket.requesterId !== actor.id) {
     throw new ActionApiError(403, "FORBIDDEN", "Access denied");
   }
@@ -468,11 +482,7 @@ async function loadStaffTicket(
   id: number,
   actor: NonNullable<AuthenticatedRequest["authUser"]>
 ) {
-  const ticket = await prisma.ticket.findUnique({
-    where: { id },
-    select: { id: true, requesterId: true, status: true, version: true },
-  });
-  if (!ticket) throw new ActionApiError(404, "NOT_FOUND", "Ticket not found");
+  const ticket = await loadActionTicket(id);
   if (ticket.requesterId === actor.id) {
     throw new ActionApiError(
       403,
@@ -872,7 +882,7 @@ async function handleRequesterActionRead(
   kind: "list" | "detail" | "history"
 ): Promise<void> {
   try {
-    noQuery(req);
+    noReadInput(req);
     const ticketId = validId(req, "id");
     const actionId = kind === "list" ? undefined : validId(req, "actionId");
     const ticket = await loadReadableTicket(ticketId, req.authUser!);
@@ -940,7 +950,7 @@ actionStaffRouter.get(
   requireRole(...STAFF_ROLES),
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      noQuery(req);
+      noReadInput(req);
       const assignees = await prisma.user.findMany({
         where: { role: Role.IT_STAFF, isActive: true },
         orderBy: [{ name: "asc" }, { id: "asc" }],
