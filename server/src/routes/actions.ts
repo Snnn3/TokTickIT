@@ -450,7 +450,10 @@ function noQuery(req: AuthenticatedRequest): void {
 }
 
 function noReadInput(req: AuthenticatedRequest): void {
-  if (req.body !== undefined) {
+  const contentLength = Number(req.get("content-length") ?? 0);
+  const hasFramedBody =
+    contentLength > 0 || req.get("transfer-encoding") !== undefined;
+  if (req.body !== undefined || hasFramedBody) {
     throw validationError([
       { field: "body", issue: "This endpoint does not accept a request body" },
     ]);
@@ -582,7 +585,6 @@ type ActionCreationResponse = {
 };
 
 type ActionCreationResult = {
-  replay: boolean;
   response: ActionCreationResponse;
 };
 
@@ -601,10 +603,7 @@ function resolveCreationReplay(
       "The idempotency key was already used with a different payload"
     );
   }
-  return {
-    replay: true,
-    response: existing.response as unknown as ActionCreationResponse,
-  };
+  return { response: existing.response as unknown as ActionCreationResponse };
 }
 
 async function createAction(
@@ -694,7 +693,7 @@ async function createAction(
           response,
         },
       });
-      return { replay: false, response };
+      return { response };
     });
   } catch (error) {
     if (isPrismaError(error, "P2002")) {
