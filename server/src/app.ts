@@ -17,16 +17,16 @@ export const app = express();
 function shouldDeferActionBodyParsing(req: Request): boolean {
   const isWrite =
     (req.method === "POST" &&
-      /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/.test(req.path)) ||
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/i.test(req.path)) ||
     (req.method === "PATCH" &&
-      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/.test(req.path));
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/i.test(req.path));
   const isRead =
     ((req.method === "GET" || req.method === "HEAD") &&
-      /^\/api\/tickets\/[^/]+\/actions(?:\/[^/]+(?:\/history)?)?\/?$/.test(
+      /^\/api\/tickets\/[^/]+\/actions(?:\/[^/]+(?:\/history)?)?\/?$/i.test(
         req.path
       )) ||
     ((req.method === "GET" || req.method === "HEAD") &&
-      /^\/api\/staff\/action-assignees\/?$/.test(req.path));
+      /^\/api\/staff\/action-assignees\/?$/i.test(req.path));
 
   return isWrite || isRead;
 }

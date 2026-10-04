@@ -144,6 +144,42 @@ const MALFORMED_ACTION_WRITES = [
   },
 ] as const;
 
+const ACTION_BODY_TYPES = [
+  {
+    contentType: "application/json",
+    body: "{ malformed",
+  },
+  {
+    contentType: "text/plain",
+    body: "not JSON",
+  },
+] as const;
+
+const CASE_VARIANT_UNAUTHENTICATED_ACTION_REQUESTS = [
+  ...ACTION_GET_ENDPOINTS.flatMap((route) =>
+    ACTION_BODY_TYPES.map((bodyType) => ({
+      name: route.name,
+      method: "GET" as const,
+      path: route.path.toUpperCase(),
+      ...bodyType,
+    }))
+  ),
+  ...[
+    {
+      name: "Action creation",
+      method: "POST" as const,
+      path: "/API/STAFF/TICKETS/20/ACTIONS",
+    },
+    {
+      name: "Action update",
+      method: "PATCH" as const,
+      path: "/API/STAFF/TICKETS/20/ACTIONS/501",
+    },
+  ].flatMap((route) =>
+    ACTION_BODY_TYPES.map((bodyType) => ({ ...route, ...bodyType }))
+  ),
+];
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -155,6 +191,26 @@ describe("Action write authorization precedence", () => {
       const response = await makeRequest()
         .set("Content-Type", "application/json")
         .send("{ malformed");
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe("AUTH_REQUIRED");
+    }
+  );
+});
+
+describe("Case-insensitive Action route body precedence", () => {
+  it.each(CASE_VARIANT_UNAUTHENTICATED_ACTION_REQUESTS)(
+    "authenticates before validating $contentType on case-insensitive $name routes",
+    async ({ method, path, contentType, body }) => {
+      const actionRequest =
+        method === "GET"
+          ? request(app).get(path)
+          : method === "POST"
+            ? request(app).post(path)
+            : request(app).patch(path);
+      const response = await actionRequest
+        .set("Content-Type", contentType)
+        .send(body);
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe("AUTH_REQUIRED");
