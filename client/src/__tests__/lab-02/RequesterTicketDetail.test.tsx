@@ -13,6 +13,8 @@ const mockTicketDetail: TicketDetail = {
   systemId: 2,
   requestedPriority: "HIGH",
   status: "NEW",
+  version: 1,
+  resolvedAt: null,
   requester: {
     id: 1,
     name: "Anucha Wongchai",

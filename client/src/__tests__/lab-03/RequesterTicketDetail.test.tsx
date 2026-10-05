@@ -41,6 +41,8 @@ const BASE_TICKET: TicketDetail = {
   systemId: 2,
   requestedPriority: "HIGH",
   status: "OPEN",
+  version: 1,
+  resolvedAt: null,
   requester: { id: 1, name: "Anucha Wongchai" },
   ticketDate: "2026-08-30T09:00:00.000Z",
   createdAt: "2026-08-30T09:00:00.000Z",
@@ -87,6 +89,7 @@ function mockApi(ticket: TicketDetail) {
         status: 200,
         json: async () => ({
           appearsResolvedAt: "2026-09-12T08:00:00.000Z",
+          version: 2,
         }),
       } as Response;
     }
@@ -94,7 +97,11 @@ function mockApi(ticket: TicketDetail) {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ status: "REOPENED" }),
+        json: async () => ({
+          status: "REOPENED",
+          version: 2,
+          resolvedAt: null,
+        }),
       } as Response;
     }
     if (url.includes("/api/tickets/42")) {
@@ -153,6 +160,9 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
 
     const reopenCall = calls.find((c) => c.url.endsWith("/reopen"));
     expect(reopenCall?.init?.method).toBe("POST");
+    expect(JSON.parse(String(reopenCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
     // The ticket now reads REOPENED, so the action is gone with it.
     expect(screen.queryByTestId("reopen-btn")).not.toBeInTheDocument();
   });
@@ -180,6 +190,9 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
 
     const signalCall = calls.find((c) => c.url.endsWith("/appears-resolved"));
     expect(signalCall?.init?.method).toBe("POST");
+    expect(JSON.parse(String(signalCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
     expect(screen.getByTestId("appears-resolved-badge")).toHaveTextContent(
       "REQUESTER SAYS FIXED"
     );

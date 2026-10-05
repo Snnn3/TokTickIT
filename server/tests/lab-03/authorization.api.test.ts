@@ -23,6 +23,16 @@ import { sessionCookie, sessionUser } from "../helpers/session";
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(prisma, "$transaction").mockImplementation((async (
+    callback: (tx: object) => Promise<unknown>
+  ) =>
+    callback({
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      ticket: {
+        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
+        updateMany: (args: unknown) => prisma.ticket.updateMany(args as never),
+      },
+    })) as never);
 });
 
 describe("API-07 authenticated identity beats any client-supplied id (AC-04)", () => {
@@ -121,6 +131,8 @@ describe("API-07 authenticated identity beats any client-supplied id (AC-04)", (
       systemId: 2,
       requestedPriority: "MEDIUM",
       status: "NEW",
+      version: 3,
+      resolvedAt: null,
       requesterId: 1,
       ticketDate: new Date(),
       createdAt: new Date(),
@@ -221,6 +233,8 @@ describe("API-08 cross-user access rejected without an existence leak (AC-04, AC
       systemId: 2,
       requestedPriority: "MEDIUM",
       status: "NEW",
+      version: 3,
+      resolvedAt: null,
       requesterId: 1,
       ticketDate: new Date(),
       createdAt: new Date(),
@@ -237,6 +251,7 @@ describe("API-08 cross-user access rejected without an existence leak (AC-04, AC
       .set("Cookie", sessionCookie({ id: 1 }));
 
     expect(res.status).toBe(200);
+    expect(res.body.ticket).toMatchObject({ version: 3, resolvedAt: null });
     expect(res.body.ticket).not.toHaveProperty("internalNotes");
     expect(res.body.ticket).not.toHaveProperty("notes");
     expect(JSON.stringify(res.body)).not.toMatch(/internalnote/i);
@@ -248,6 +263,8 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
     id: 5,
     requesterId: 1,
     status: "RESOLVED",
+    version: 1,
+    resolvedAt: new Date("2026-09-10T10:00:00.000Z"),
     appearsResolvedAt: new Date("2026-09-10T10:00:00.000Z"),
     resolutionSummary: "Rebooted the server.",
   };
@@ -266,16 +283,23 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
     const res = await request(app)
       .post("/api/tickets/5/reopen")
       .set("Cookie", sessionCookie({ id: 1 }))
-      .send({});
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "REOPENED" });
+    expect(res.body).toMatchObject({
+      status: "REOPENED",
+      resolutionSummary: null,
+      appearsResolvedAt: null,
+      resolvedAt: null,
+      version: 2,
+    });
     expect(updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
           id: 5,
           requesterId: 1,
           status: "RESOLVED",
+          version: 1,
         }),
         data: expect.objectContaining({
           status: "REOPENED",
@@ -299,7 +323,7 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
     const res = await request(app)
       .post("/api/tickets/5/reopen")
       .set("Cookie", sessionCookie({ id: 1 }))
-      .send({});
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("FORBIDDEN");
@@ -321,7 +345,7 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
       const res = await request(app)
         .post("/api/tickets/5/reopen")
         .set("Cookie", sessionCookie({ id: 1 }))
-        .send({});
+        .send({ expectedVersion: 1 });
 
       expect(res.status).toBe(422);
       expect(res.body.error.code).toBe("INVALID_TRANSITION");
@@ -338,14 +362,14 @@ describe("API-22 requester reopen (AC-22, BR-13)", () => {
     const missing = await request(app)
       .post("/api/tickets/999/reopen")
       .set("Cookie", sessionCookie({ id: 1 }))
-      .send({});
+      .send({ expectedVersion: 1 });
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe("NOT_FOUND");
 
     const invalid = await request(app)
       .post("/api/tickets/abc/reopen")
       .set("Cookie", sessionCookie({ id: 1 }))
-      .send({});
+      .send({ expectedVersion: 1 });
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe("INVALID_ID");
   });
@@ -356,6 +380,8 @@ describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
     id: 5,
     requesterId: 1,
     status: "RESOLVED",
+    version: 1,
+    resolvedAt: new Date("2026-09-10T10:00:00.000Z"),
     appearsResolvedAt: new Date("2026-09-10T10:00:00.000Z"),
     resolutionSummary: "Rebooted the server.",
   };
@@ -367,12 +393,9 @@ describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
     return sessionCookie({ id: 1 });
   }
 
-  it("admits two parallel reopens but only one wins: the loser sees 422 INVALID_TRANSITION", async () => {
-    // Same TOCTOU window as the signal case: both pre-checks read RESOLVED,
-    // the conditional updateMany lets exactly one through, and the loser's
-    // re-read observes REOPENED so it reports 422 instead of a second 200.
-    // The first two reads are pinned stale to emulate parallel admission; the
-    // stub otherwise serialises the requests (cf. login-throttle test).
+  it("admits two parallel reopens at one version but only one wins", async () => {
+    // Both requests present version 1; the second cannot adopt the winner's
+    // newer version or overwrite the reopen.
     const cookie = authOwner();
     let reads = 0;
     let writes = 0;
@@ -381,7 +404,7 @@ describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
       if (reads <= 2) {
         return { ...resolvedTicket } as any;
       }
-      return { ...resolvedTicket, status: "REOPENED" } as any;
+      return { ...resolvedTicket, status: "REOPENED", version: 2 } as any;
     }) as any);
     const updateMany = vi
       .spyOn(prisma.ticket, "updateMany")
@@ -391,29 +414,40 @@ describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
       }) as any);
 
     const [first, second] = await Promise.all([
-      request(app).post("/api/tickets/5/reopen").set("Cookie", cookie).send({}),
-      request(app).post("/api/tickets/5/reopen").set("Cookie", cookie).send({}),
+      request(app)
+        .post("/api/tickets/5/reopen")
+        .set("Cookie", cookie)
+        .send({ expectedVersion: 1 }),
+      request(app)
+        .post("/api/tickets/5/reopen")
+        .set("Cookie", cookie)
+        .send({ expectedVersion: 1 }),
     ]);
 
     const statuses = [first.status, second.status].sort();
-    expect(statuses).toEqual([200, 422]);
-    const loser = first.status === 422 ? first : second;
-    expect(loser.body.error.code).toBe("INVALID_TRANSITION");
+    expect(statuses).toEqual([200, 409]);
+    const loser = first.status === 409 ? first : second;
+    expect(loser.body.error.code).toBe("STALE_WRITE");
     expect(updateMany).toHaveBeenCalledTimes(2);
     for (const call of updateMany.mock.calls) {
       expect(call[0].where).toEqual(
-        expect.objectContaining({ id: 5, requesterId: 1, status: "RESOLVED" })
+        expect.objectContaining({
+          id: 5,
+          requesterId: 1,
+          status: "RESOLVED",
+          version: 1,
+        })
       );
     }
   });
 
-  it("does not resurrect a terminal transition that lands mid-reopen: 422 and no second write", async () => {
-    // Pre-check sees RESOLVED, but staff close the ticket before the write, so
-    // the conditional write matches nothing and the re-read reports CLOSED.
+  it("rejects a stale reopen after the Ticket has become terminal", async () => {
     const cookie = authOwner();
-    vi.spyOn(prisma.ticket, "findUnique")
-      .mockResolvedValueOnce({ ...resolvedTicket } as any)
-      .mockResolvedValue({ ...resolvedTicket, status: "CLOSED" } as any);
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
+      ...resolvedTicket,
+      status: "CLOSED",
+      version: 2,
+    } as any);
     const updateMany = vi
       .spyOn(prisma.ticket, "updateMany")
       .mockResolvedValue({ count: 0 } as any);
@@ -421,11 +455,11 @@ describe("API-22 atomic reopen regression (AC-22, terminal guard)", () => {
     const res = await request(app)
       .post("/api/tickets/5/reopen")
       .set("Cookie", cookie)
-      .send({});
+      .send({ expectedVersion: 1 });
 
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe("INVALID_TRANSITION");
-    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("STALE_WRITE");
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });
 

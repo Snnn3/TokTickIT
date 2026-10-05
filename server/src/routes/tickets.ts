@@ -10,6 +10,12 @@ import {
 } from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
 import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
+import {
+  markTicketAppearsResolved,
+  parseExpectedVersion,
+  reopenRequesterTicket,
+  sendTicketWorkflowError,
+} from "../utils/ticket-workflow";
 
 export const ticketsRouter = Router();
 
@@ -494,6 +500,8 @@ ticketsRouter.get(
         categoryName: t.category?.name || "Unknown",
         requestedPriority: t.requestedPriority,
         status: t.status,
+        version: t.version,
+        resolvedAt: t.resolvedAt,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
       }));
@@ -810,6 +818,8 @@ ticketsRouter.get(
           number: ticket.number,
           ticketDate: ticket.ticketDate,
           status: ticket.status,
+          version: ticket.version,
+          resolvedAt: ticket.resolvedAt ?? null,
           requestedPriority: ticket.requestedPriority,
           summary: ticket.summary,
           description: ticket.description,
@@ -1107,126 +1117,15 @@ ticketsRouter.post(
     }
 
     try {
-      // Pre-checks preserve the sequential 404/403/422/409 discipline: missing
-      // -> 404, foreign owner -> 403, terminal -> 422, repeat signal -> 409.
-      // They are advisory only -- the conditional updateMany below is the
-      // atomic gate, so two requests admitted here together cannot both win.
-      const current = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          appearsResolvedAt: true,
-        },
-      });
-
-      if (!current) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Ticket not found" },
-        });
-      }
-
-      if (current.requesterId !== user.id) {
-        return res.status(403).json({
-          error: { code: "FORBIDDEN", message: "Access denied" },
-        });
-      }
-
-      if (current.status === "CLOSED" || current.status === "CANCELLED") {
-        return res.status(422).json({
-          error: {
-            code: "INVALID_TRANSITION",
-            message:
-              "A Closed or Cancelled ticket cannot be marked as appears resolved",
-          },
-        });
-      }
-
-      if (current.appearsResolvedAt !== null) {
-        return res.status(409).json({
-          error: {
-            code: "ALREADY_SIGNALLED",
-            message: "This ticket is already marked as appears resolved",
-          },
-        });
-      }
-
-      // Atomic conditional write [AC-07]: ownership plus the expected state
-      // (non-terminal, not yet signalled) travel in the WHERE, so a concurrent
-      // signal, reopen, or staff terminal transition can only let one writer
-      // through. The write touches the timestamp alone: the signal never
-      // changes status, whatever the ticket's current state [BR-05, D3].
-      const signalledAt = new Date();
-      const result = await prisma.ticket.updateMany({
-        where: {
-          id: ticketId,
-          requesterId: user.id,
-          status: {
-            notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED],
-          },
-          appearsResolvedAt: null,
-        },
-        data: { appearsResolvedAt: signalledAt },
-      });
-
-      if (result.count === 0) {
-        // Lost the race: re-read once to report why, without overwriting the
-        // winner's state. A terminal move reports 422, a concurrent signal
-        // reports 409, a foreign owner reports 403.
-        const fresh = await prisma.ticket.findUnique({
-          where: { id: ticketId },
-          select: {
-            id: true,
-            requesterId: true,
-            status: true,
-            appearsResolvedAt: true,
-          },
-        });
-
-        if (!fresh) {
-          return res.status(404).json({
-            error: { code: "NOT_FOUND", message: "Ticket not found" },
-          });
-        }
-
-        if (fresh.requesterId !== user.id) {
-          return res.status(403).json({
-            error: { code: "FORBIDDEN", message: "Access denied" },
-          });
-        }
-
-        if (fresh.status === "CLOSED" || fresh.status === "CANCELLED") {
-          return res.status(422).json({
-            error: {
-              code: "INVALID_TRANSITION",
-              message:
-                "A Closed or Cancelled ticket cannot be marked as appears resolved",
-            },
-          });
-        }
-
-        if (fresh.appearsResolvedAt !== null) {
-          return res.status(409).json({
-            error: {
-              code: "ALREADY_SIGNALLED",
-              message: "This ticket is already marked as appears resolved",
-            },
-          });
-        }
-
-        return res.status(422).json({
-          error: {
-            code: "INVALID_TRANSITION",
-            message: "Ticket state changed. Please reload and try again.",
-          },
-        });
-      }
-
-      return res.status(200).json({
-        appearsResolvedAt: signalledAt,
-      });
-    } catch {
+      const version = parseExpectedVersion(req.body);
+      const result = await markTicketAppearsResolved(
+        ticketId,
+        user.id,
+        version
+      );
+      return res.status(200).json(result);
+    } catch (error) {
+      if (sendTicketWorkflowError(res, error)) return;
       return res.status(500).json({
         error: {
           code: "UNEXPECTED",
@@ -1255,87 +1154,11 @@ ticketsRouter.post(
     }
 
     try {
-      // Pre-checks preserve the sequential 404/403/422 discipline, as above.
-      // They admit both halves of a race; the conditional updateMany below is
-      // the atomic gate that lets only one through.
-      const current = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, requesterId: true, status: true },
-      });
-
-      if (!current) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Ticket not found" },
-        });
-      }
-
-      if (current.requesterId !== user.id) {
-        return res.status(403).json({
-          error: { code: "FORBIDDEN", message: "Access denied" },
-        });
-      }
-
-      // Only Resolved reopens -- notably not Closed, which is terminal
-      // [BR-13, D4]. The requester check above already ran, so a 403 here
-      // would be wrong: this is a state refusal, not an identity one.
-      if (current.status !== "RESOLVED") {
-        return res.status(422).json({
-          error: {
-            code: "INVALID_TRANSITION",
-            message: "Only a Resolved ticket can be reopened",
-          },
-        });
-      }
-
-      // Atomic conditional write [AC-22]: ownership plus the expected RESOLVED
-      // state travel in the WHERE, so a concurrent reopen or a staff terminal
-      // transition cannot both win and a terminal state is never resurrected.
-      // Reopening clears the signal and the summary alike, so the next
-      // resolution cycle cannot reuse the explanation the requester has just
-      // rejected by reopening [BR-26].
-      const result = await prisma.ticket.updateMany({
-        where: { id: ticketId, requesterId: user.id, status: "RESOLVED" },
-        data: {
-          status: "REOPENED",
-          appearsResolvedAt: null,
-          resolutionSummary: null,
-        },
-      });
-
-      if (result.count === 0) {
-        // Lost the race: re-read once to report why. A terminal or otherwise
-        // non-Resolved state reports 422, a foreign owner reports 403, and
-        // nothing here overwrites the winner's state.
-        const fresh = await prisma.ticket.findUnique({
-          where: { id: ticketId },
-          select: { id: true, requesterId: true, status: true },
-        });
-
-        if (!fresh) {
-          return res.status(404).json({
-            error: { code: "NOT_FOUND", message: "Ticket not found" },
-          });
-        }
-
-        if (fresh.requesterId !== user.id) {
-          return res.status(403).json({
-            error: { code: "FORBIDDEN", message: "Access denied" },
-          });
-        }
-
-        return res.status(422).json({
-          error: {
-            code: "INVALID_TRANSITION",
-            message:
-              fresh.status === "RESOLVED"
-                ? "Ticket state changed. Please reload and try again."
-                : "Only a Resolved ticket can be reopened",
-          },
-        });
-      }
-
-      return res.status(200).json({ status: "REOPENED" });
-    } catch {
+      const version = parseExpectedVersion(req.body);
+      const result = await reopenRequesterTicket(ticketId, user.id, version);
+      return res.status(200).json(result);
+    } catch (error) {
+      if (sendTicketWorkflowError(res, error)) return;
       return res.status(500).json({
         error: {
           code: "UNEXPECTED",

@@ -20,12 +20,23 @@ import { sessionCookie, sessionUser } from "../helpers/session";
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(prisma, "$transaction").mockImplementation((async (
+    callback: (tx: object) => Promise<unknown>
+  ) =>
+    callback({
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      ticket: {
+        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
+        updateMany: (args: unknown) => prisma.ticket.updateMany(args as never),
+      },
+    })) as never);
 });
 
 const OWN_OPEN_TICKET = {
   id: 7,
   requesterId: 1,
   status: "OPEN",
+  version: 1,
   appearsResolvedAt: null,
   resolutionSummary: null,
 };
@@ -49,7 +60,8 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(200);
     expect(typeof res.body.appearsResolvedAt).toBe("string");
@@ -62,7 +74,10 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
           requesterId: 1,
           appearsResolvedAt: null,
         }),
-        data: { appearsResolvedAt: expect.any(Date) },
+        data: expect.objectContaining({
+          appearsResolvedAt: expect.any(Date),
+          version: { increment: 1 },
+        }),
       })
     );
     expect(updateMany.mock.calls[0][0].data).not.toHaveProperty("status");
@@ -80,7 +95,7 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
       .set("Cookie", cookie)
-      .send({});
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(200);
     expect(typeof res.body.appearsResolvedAt).toBe("string");
@@ -96,7 +111,8 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("ALREADY_SIGNALLED");
@@ -113,7 +129,8 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
 
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("FORBIDDEN");
@@ -132,7 +149,8 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
       const res = await request(app)
         .post("/api/tickets/7/appears-resolved")
-        .set("Cookie", cookie);
+        .set("Cookie", cookie)
+        .send({ expectedVersion: 1 });
 
       expect(res.status).toBe(422);
     }
@@ -145,26 +163,24 @@ describe("API-16 appears-resolved signal (AC-07, BR-05, D3)", () => {
 
     const missing = await request(app)
       .post("/api/tickets/999/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
     expect(missing.status).toBe(404);
     expect(missing.body.error.code).toBe("NOT_FOUND");
 
     const invalid = await request(app)
       .post("/api/tickets/abc/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
     expect(invalid.status).toBe(400);
     expect(invalid.body.error.code).toBe("INVALID_ID");
   });
 });
 
-describe("API-16 atomic signal regression (AC-07, ALREADY_SIGNALLED)", () => {
-  it("admits two parallel signals but only one wins: the loser sees 409 ALREADY_SIGNALLED", async () => {
-    // Both requests read the same stale pre-check state (OPEN, unsignalled),
-    // exactly the TOCTOU window the old findUnique-then-update let through.
-    // The stub cannot interleave real I/O, so the first two reads are pinned
-    // stale (parallel admission, cf. the login-throttle parallel test) while
-    // the loser's re-read observes the winner's signal. The conditional
-    // updateMany serialises them: first count 1, second count 0.
+describe("API-16 atomic signal regression (AC-07, versioned writes)", () => {
+  it("admits two parallel signals at one version but only one wins", async () => {
+    // Both requests present version 1. The second must not overwrite the
+    // signal or silently adopt version 2 after the first commit.
     const cookie = authAs(1);
     const signalledAt = new Date("2026-09-12T08:00:00.000Z");
     let reads = 0;
@@ -174,7 +190,11 @@ describe("API-16 atomic signal regression (AC-07, ALREADY_SIGNALLED)", () => {
       if (reads <= 2) {
         return { ...OWN_OPEN_TICKET } as any;
       }
-      return { ...OWN_OPEN_TICKET, appearsResolvedAt: signalledAt } as any;
+      return {
+        ...OWN_OPEN_TICKET,
+        appearsResolvedAt: signalledAt,
+        version: 2,
+      } as any;
     }) as any);
     const updateMany = vi
       .spyOn(prisma.ticket, "updateMany")
@@ -186,16 +206,18 @@ describe("API-16 atomic signal regression (AC-07, ALREADY_SIGNALLED)", () => {
     const [first, second] = await Promise.all([
       request(app)
         .post("/api/tickets/7/appears-resolved")
-        .set("Cookie", cookie),
+        .set("Cookie", cookie)
+        .send({ expectedVersion: 1 }),
       request(app)
         .post("/api/tickets/7/appears-resolved")
-        .set("Cookie", cookie),
+        .set("Cookie", cookie)
+        .send({ expectedVersion: 1 }),
     ]);
 
     const statuses = [first.status, second.status].sort();
     expect(statuses).toEqual([200, 409]);
     const loser = first.status === 409 ? first : second;
-    expect(loser.body.error.code).toBe("ALREADY_SIGNALLED");
+    expect(loser.body.error.code).toBe("STALE_WRITE");
     expect(updateMany).toHaveBeenCalledTimes(2);
     // The conditional WHERE carried the expected state both times.
     for (const call of updateMany.mock.calls) {
@@ -204,29 +226,31 @@ describe("API-16 atomic signal regression (AC-07, ALREADY_SIGNALLED)", () => {
           id: 7,
           requesterId: 1,
           appearsResolvedAt: null,
+          version: 1,
         })
       );
     }
   });
 
-  it("does not overwrite a terminal transition that lands mid-signal: 422 INVALID_TRANSITION", async () => {
-    // Pre-check sees OPEN, but by write time staff have closed the ticket, so
-    // the conditional write matches nothing and the re-read reports terminal.
+  it("rejects a stale signal after a terminal transition", async () => {
     const cookie = authAs(1);
-    vi.spyOn(prisma.ticket, "findUnique")
-      .mockResolvedValueOnce({ ...OWN_OPEN_TICKET } as any)
-      .mockResolvedValue({ ...OWN_OPEN_TICKET, status: "CLOSED" } as any);
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
+      ...OWN_OPEN_TICKET,
+      status: "CLOSED",
+      version: 2,
+    } as any);
     const updateMany = vi
       .spyOn(prisma.ticket, "updateMany")
       .mockResolvedValue({ count: 0 } as any);
 
     const res = await request(app)
       .post("/api/tickets/7/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 1 });
 
-    expect(res.status).toBe(422);
-    expect(res.body.error.code).toBe("INVALID_TRANSITION");
-    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("STALE_WRITE");
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });
 

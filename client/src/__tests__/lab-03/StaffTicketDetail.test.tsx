@@ -15,6 +15,8 @@ const BASE_STAFF_TICKET = {
   number: "TKT-2026-00020",
   ticketDate: "2026-09-01T10:00:00.000Z",
   status: "OPEN",
+  version: 1,
+  resolvedAt: null,
   requestedPriority: "MEDIUM",
   itPriority: "MEDIUM",
   summary: "VPN disconnects after ten minutes",
@@ -105,6 +107,7 @@ function mockStaffDetailApi(options: MockOptions = {}) {
                   name: "Kittipong Saelim",
                 }),
           status: ticket.status,
+          version: body.expectedVersion + 1,
         }),
       } as Response;
     }
@@ -116,7 +119,10 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ itPriority: body.itPriority }),
+        json: async () => ({
+          itPriority: body.itPriority,
+          version: body.expectedVersion + 1,
+        }),
       } as Response;
     }
     if (
@@ -130,6 +136,10 @@ function mockStaffDetailApi(options: MockOptions = {}) {
         json: async () => ({
           status: body.status,
           resolutionSummary: body.resolutionSummary ?? null,
+          appearsResolvedAt: null,
+          resolvedAt:
+            body.status === "RESOLVED" ? "2026-09-12T10:00:00.000Z" : null,
+          version: body.expectedVersion + 1,
         }),
       } as Response;
     }
@@ -270,6 +280,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     const ownerCall = calls.find((c) => c.url.includes("/owner"));
     expect(ownerCall?.init?.method).toBe("PATCH");
     expect(String(ownerCall?.init?.body)).toContain('"ownerId":9');
+    expect(JSON.parse(String(ownerCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("issues an IT priority PATCH and keeps the requested priority read-only", async () => {
@@ -293,6 +306,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     expect(priorityCall?.init?.method).toBe("PATCH");
     expect(String(priorityCall?.init?.body)).toContain('"itPriority":"HIGH"');
     expect(String(priorityCall?.init?.body)).not.toContain("requestedPriority");
+    expect(JSON.parse(String(priorityCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("restricts the status select to the legal targets for the current status", async () => {
@@ -349,6 +365,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     expect(String(statusCall?.init?.body)).toContain(
       "Replaced the VPN profile."
     );
+    expect(JSON.parse(String(statusCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("confirms before closing or cancelling on the client and sends no confirm flag", async () => {
@@ -372,6 +391,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     const statusCall = calls.find((c) => c.url.includes("/status"));
     expect(statusCall?.init?.method).toBe("PATCH");
     expect(String(statusCall?.init?.body)).not.toContain("confirm");
+    expect(JSON.parse(String(statusCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("surfaces a rejected transition's server message rather than a generic error", async () => {

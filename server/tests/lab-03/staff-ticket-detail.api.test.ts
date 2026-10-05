@@ -15,8 +15,44 @@ import { sessionCookie, sessionUser } from "../helpers/session";
  * app with Prisma stubbed, no database.
  */
 
+function installWorkflowMocks() {
+  vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
+    ...BASE_TICKET,
+  } as never);
+  vi.spyOn(prisma.ticket, "update").mockImplementation(
+    (async (args: { data?: Record<string, unknown> }) =>
+      ({ ...BASE_TICKET, ...args.data }) as never) as never
+  );
+  vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([] as never);
+  vi.spyOn(prisma, "$transaction").mockImplementation((async (
+    callback: (tx: object) => Promise<unknown>
+  ) => {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      ticket: {
+        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
+        updateMany: async (args: { where: unknown; data: unknown }) => {
+          await prisma.ticket.update({
+            where: args.where,
+            data: args.data,
+          } as never);
+          return { count: 1 };
+        },
+      },
+      actionTaken: {
+        findMany: (args: unknown) => prisma.actionTaken.findMany(args as never),
+      },
+      user: {
+        findUnique: (args: unknown) => prisma.user.findUnique(args as never),
+      },
+    };
+    return callback(tx);
+  }) as never);
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
+  installWorkflowMocks();
 });
 
 function authAs(id: number, role: Role = Role.IT_STAFF) {
@@ -72,6 +108,8 @@ const BASE_TICKET = {
   requestedPriority: "MEDIUM",
   itPriority: "MEDIUM",
   status: "OPEN",
+  version: 4,
+  resolvedAt: null,
   requesterId: 2,
   ownerId: null as number | null,
   owner: null as { id: number; name: string } | null,
@@ -196,6 +234,7 @@ describe("staff detail read (AC-09..AC-11, BR-25 read exemption)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.ticket.number).toBe("TKT-2026-00020");
+    expect(res.body.ticket).toMatchObject({ version: 4, resolvedAt: null });
     expect(res.body.ticket.requestedPriority).toBe("MEDIUM");
     expect(res.body.ticket.itPriority).toBe("MEDIUM");
     expect(res.body.ticket.requester).toEqual({
@@ -265,16 +304,17 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 10 });
+      .send({ ownerId: 10, expectedVersion: 4 });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       owner: { id: 10, name: "Manasporn Thongdee" },
       status: "OPEN",
+      version: 5,
     });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 20 },
+        where: expect.objectContaining({ id: 20, version: 4 }),
         data: expect.objectContaining({ ownerId: 10 }),
       })
     );
@@ -298,7 +338,7 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: null });
+      .send({ ownerId: null, expectedVersion: 4 });
 
     expect(res.status).toBe(200);
     expect(res.body.owner).toBeNull();
@@ -318,21 +358,21 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
     const inactive = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 50 });
+      .send({ ownerId: 50, expectedVersion: 4 });
     expect(inactive.status).toBe(422);
     expect(inactive.body.error.code).toBe("INVALID_OWNER");
 
     const wrongRole = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 51 });
+      .send({ ownerId: 51, expectedVersion: 4 });
     expect(wrongRole.status).toBe(422);
     expect(wrongRole.body.error.code).toBe("INVALID_OWNER");
 
     const unknown = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 999 });
+      .send({ ownerId: 999, expectedVersion: 4 });
     expect(unknown.status).toBe(422);
     expect(unknown.body.error.code).toBe("INVALID_OWNER");
 
@@ -354,7 +394,7 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
     const badId = await request(app)
       .patch("/api/staff/tickets/abc/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: null });
+      .send({ ownerId: null, expectedVersion: 4 });
     expect(badId.status).toBe(400);
     expect(badId.body.error.code).toBe("INVALID_ID");
   });
@@ -365,7 +405,7 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: null });
+      .send({ ownerId: null, expectedVersion: 4 });
     expect(res.status).toBe(403);
   });
 });
@@ -391,7 +431,7 @@ describe("API-13 claim-auto-open (AC-09, BR-23, D16)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 9 });
+      .send({ ownerId: 9, expectedVersion: 4 });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("OPEN");
@@ -425,12 +465,13 @@ describe("API-13 claim-auto-open (AC-09, BR-23, D16)", () => {
       const res = await request(app)
         .patch("/api/staff/tickets/20/owner")
         .set("Cookie", cookie)
-        .send({ ownerId: 9 });
+        .send({ ownerId: 9, expectedVersion: 4 });
       expect(res.status).toBe(200);
       expect(res.body.status).toBe(status);
     }
 
     vi.restoreAllMocks();
+    installWorkflowMocks();
     authWithUsers(9, Role.IT_STAFF, {
       10: { role: Role.IT_STAFF, isActive: true, name: "Manasporn Thongdee" },
     });
@@ -449,7 +490,7 @@ describe("API-13 claim-auto-open (AC-09, BR-23, D16)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 10 });
+      .send({ ownerId: 10, expectedVersion: 4 });
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("OPEN");
     expect(reassign).toHaveBeenCalledWith(
@@ -474,13 +515,13 @@ describe("API-14 IT priority (AC-10, BR-11)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", cookie)
-      .send({ itPriority: "HIGH" });
+      .send({ itPriority: "HIGH", expectedVersion: 4 });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ itPriority: "HIGH" });
+    expect(res.body).toEqual({ itPriority: "HIGH", version: 5 });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 20 },
+        where: expect.objectContaining({ id: 20, version: 4 }),
         data: expect.objectContaining({ itPriority: "HIGH" }),
       })
     );
@@ -492,7 +533,7 @@ describe("API-14 IT priority (AC-10, BR-11)", () => {
     const forbidden = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", requesterCookie)
-      .send({ itPriority: "HIGH" });
+      .send({ itPriority: "HIGH", expectedVersion: 4 });
     expect(forbidden.status).toBe(403);
 
     const staffCookie = authAs(9);
@@ -502,7 +543,7 @@ describe("API-14 IT priority (AC-10, BR-11)", () => {
     const bad = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", staffCookie)
-      .send({ itPriority: "URGENT" });
+      .send({ itPriority: "URGENT", expectedVersion: 4 });
     expect(bad.status).toBe(400);
   });
 
@@ -520,16 +561,15 @@ describe("API-14 IT priority (AC-10, BR-11)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", cookie)
-      .send({ itPriority: "LOW", requestedPriority: "HIGH" });
+      .send({
+        itPriority: "LOW",
+        requestedPriority: "HIGH",
+        expectedVersion: 4,
+      });
 
-    expect(res.status).toBe(200);
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.not.objectContaining({
-          requestedPriority: expect.anything(),
-        }),
-      })
-    );
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(update).not.toHaveBeenCalled();
   });
 });
 
@@ -551,7 +591,7 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "IN_PROGRESS" });
+      .send({ status: "IN_PROGRESS", expectedVersion: 4 });
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("IN_PROGRESS");
@@ -576,7 +616,7 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "RESOLVED" });
+      .send({ status: "RESOLVED", expectedVersion: 4 });
 
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe("INVALID_TRANSITION");
@@ -598,7 +638,7 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
       const res = await request(app)
         .patch("/api/staff/tickets/20/status")
         .set("Cookie", cookie)
-        .send({ status: "OPEN" });
+        .send({ status: "OPEN", expectedVersion: 4 });
       expect(res.status).toBe(422);
       expect(res.body.error.code).toBe("INVALID_TRANSITION");
     }
@@ -612,7 +652,11 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
       const res = await request(app)
         .patch("/api/staff/tickets/20/status")
         .set("Cookie", cookie)
-        .send({ status, resolutionSummary: "Did the work." });
+        .send({
+          status,
+          resolutionSummary: "Did the work.",
+          expectedVersion: 4,
+        });
       expect(res.status).toBe(403);
     }
   });
@@ -625,18 +669,18 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
     const bad = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "BOGUS" });
+      .send({ status: "BOGUS", expectedVersion: 4 });
     expect(bad.status).toBe(400);
 
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue(null);
     const missing = await request(app)
       .patch("/api/staff/tickets/999/status")
       .set("Cookie", cookie)
-      .send({ status: "OPEN" });
+      .send({ status: "OPEN", expectedVersion: 4 });
     expect(missing.status).toBe(404);
   });
 
-  it("needs no confirm flag to close or cancel: both succeed without it and ignore it when sent", async () => {
+  it("needs no confirm flag to close and rejects unknown status fields", async () => {
     const cookie = authAs(9);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...BASE_TICKET,
@@ -651,7 +695,7 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
     const plain = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "CLOSED" });
+      .send({ status: "CLOSED", expectedVersion: 4 });
     expect(plain.status).toBe(200);
     expect(plain.body.status).toBe("CLOSED");
 
@@ -667,14 +711,18 @@ describe("API-15 status transitions (AC-11, BR-13)", () => {
     const withConfirm = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "CLOSED", confirm: true });
-    expect(withConfirm.status).toBe(200);
+      .send({ status: "CLOSED", expectedVersion: 4, confirm: true });
+    expect(withConfirm.status).toBe(400);
+    expect(withConfirm.body.error.code).toBe("VALIDATION_ERROR");
   });
 });
 
 describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
   it("requires a summary to resolve: 400 RESOLUTION_SUMMARY_REQUIRED when none is stored or supplied", async () => {
     const cookie = authAs(9);
+    vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([
+      { result: "Verified the repair." },
+    ] as never);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...BASE_TICKET,
       status: "IN_PROGRESS",
@@ -685,7 +733,7 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "RESOLVED" });
+      .send({ status: "RESOLVED", expectedVersion: 4 });
 
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("RESOLUTION_SUMMARY_REQUIRED");
@@ -694,6 +742,9 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
 
   it("resolves with a supplied summary and exposes it on the staff detail", async () => {
     const cookie = authAs(9);
+    vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([
+      { result: "Verified the repair." },
+    ] as never);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...BASE_TICKET,
       status: "IN_PROGRESS",
@@ -711,17 +762,22 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
       .send({
         status: "RESOLVED",
         resolutionSummary: "  Replaced the VPN profile.  ",
+        expectedVersion: 4,
       });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       status: "RESOLVED",
       resolutionSummary: "Replaced the VPN profile.",
+      version: 5,
     });
   });
 
   it("reuses an already-stored summary when none is supplied, and rejects whitespace-only", async () => {
     const cookie = authAs(9);
+    vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([
+      { result: "Verified the repair." },
+    ] as never);
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
       ...BASE_TICKET,
       status: "IN_PROGRESS",
@@ -735,7 +791,7 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
     const reused = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "RESOLVED" });
+      .send({ status: "RESOLVED", expectedVersion: 4 });
     expect(reused.status).toBe(200);
 
     vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
@@ -746,7 +802,11 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
     const blank = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "RESOLVED", resolutionSummary: "    " });
+      .send({
+        status: "RESOLVED",
+        resolutionSummary: "    ",
+        expectedVersion: 4,
+      });
     expect(blank.status).toBe(400);
     expect(blank.body.error.code).toBe("RESOLUTION_SUMMARY_REQUIRED");
   });
@@ -790,10 +850,16 @@ describe("API-23 resolution summary (AC-23, BR-26, FR-28, D11)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "REOPENED" });
+      .send({ status: "REOPENED", expectedVersion: 4 });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: "REOPENED", resolutionSummary: null });
+    expect(res.body).toMatchObject({
+      status: "REOPENED",
+      resolutionSummary: null,
+      appearsResolvedAt: null,
+      resolvedAt: null,
+      version: 5,
+    });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -817,6 +883,7 @@ describe("API-09 internal notes content and validation (AC-12, FR-25, BR-14)", (
   it("serves notes to IT Staff and Administrators alike (D2)", async () => {
     for (const role of [Role.IT_STAFF, Role.ADMINISTRATOR]) {
       vi.restoreAllMocks();
+      installWorkflowMocks();
       vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
         sessionUser({ id: 9, role, mustChangePassword: false })
       );
@@ -958,21 +1025,21 @@ describe("API-24 self-service ban (AC-24, BR-25)", () => {
     const claim = await request(app)
       .patch("/api/staff/tickets/20/owner")
       .set("Cookie", cookie)
-      .send({ ownerId: 10 });
+      .send({ ownerId: 10, expectedVersion: 4 });
     expect(claim.status).toBe(403);
     expect(claim.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
 
     const priority = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", cookie)
-      .send({ itPriority: "HIGH" });
+      .send({ itPriority: "HIGH", expectedVersion: 4 });
     expect(priority.status).toBe(403);
     expect(priority.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
 
     const status = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)
-      .send({ status: "IN_PROGRESS" });
+      .send({ status: "IN_PROGRESS", expectedVersion: 4 });
     expect(status.status).toBe(403);
     expect(status.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
 
@@ -1015,6 +1082,7 @@ describe("API-24 self-service ban (AC-24, BR-25)", () => {
       id: 20,
       requesterId: 9,
       status: "OPEN",
+      version: 4,
       appearsResolvedAt: null,
     } as never);
     vi.spyOn(prisma.publicComment, "create").mockResolvedValue({
@@ -1036,7 +1104,8 @@ describe("API-24 self-service ban (AC-24, BR-25)", () => {
 
     const signal = await request(app)
       .post("/api/tickets/20/appears-resolved")
-      .set("Cookie", cookie);
+      .set("Cookie", cookie)
+      .send({ expectedVersion: 4 });
     expect(signal.status).toBe(200);
   });
 
@@ -1052,7 +1121,7 @@ describe("API-24 self-service ban (AC-24, BR-25)", () => {
     const res = await request(app)
       .patch("/api/staff/tickets/20/priority")
       .set("Cookie", cookie)
-      .send({ itPriority: "HIGH" });
+      .send({ itPriority: "HIGH", expectedVersion: 4 });
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
   });

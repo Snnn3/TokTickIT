@@ -195,6 +195,7 @@ export function StaffTicketDetail({
   };
 
   async function patchOwner(ownerId: number | null) {
+    if (!ticket) return;
     setOwnerBusy(true);
     setOwnerError(null);
     setOwnerSuccess(false);
@@ -202,11 +203,15 @@ export function StaffTicketDetail({
       const res = await fetch(`/api/staff/tickets/${ticketId}/owner`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId }),
+        body: JSON.stringify({ ownerId, expectedVersion: ticket.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setOwnerError(data?.error?.message || "Failed to update the owner.");
+        setOwnerError(
+          data?.error?.code === "STALE_WRITE"
+            ? "This ticket changed. Reload the latest ticket before assigning it again."
+            : data?.error?.message || "Failed to update the owner."
+        );
         return;
       }
       const data = await res.json();
@@ -216,6 +221,7 @@ export function StaffTicketDetail({
               ...prev,
               owner: data.owner,
               status: data.status ?? prev.status,
+              version: data.version,
             }
           : prev
       );
@@ -228,6 +234,7 @@ export function StaffTicketDetail({
   }
 
   async function patchPriority(itPriority: string) {
+    if (!ticket) return;
     setPriorityBusy(true);
     setPriorityError(null);
     setPrioritySuccess(false);
@@ -237,18 +244,25 @@ export function StaffTicketDetail({
         headers: { "Content-Type": "application/json" },
         // Requested Priority is never sent: it is immutable after creation
         // and no body key can change it [BR-11].
-        body: JSON.stringify({ itPriority }),
+        body: JSON.stringify({
+          itPriority,
+          expectedVersion: ticket.version,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setPriorityError(
-          data?.error?.message || "Failed to update the IT priority."
+          data?.error?.code === "STALE_WRITE"
+            ? "This ticket changed. Reload the latest ticket before changing its priority again."
+            : data?.error?.message || "Failed to update the IT priority."
         );
         return;
       }
       const data = await res.json();
       setTicket((prev) =>
-        prev ? { ...prev, itPriority: data.itPriority } : prev
+        prev
+          ? { ...prev, itPriority: data.itPriority, version: data.version }
+          : prev
       );
       setPrioritySuccess(true);
     } catch {
@@ -259,6 +273,7 @@ export function StaffTicketDetail({
   }
 
   async function patchStatus(target: TicketStatus, summary?: string) {
+    if (!ticket) return;
     setStatusBusy(true);
     setStatusError(null);
     setStatusValidationError(null);
@@ -266,10 +281,17 @@ export function StaffTicketDetail({
     try {
       // Confirmation for Closed/Cancelled lives in the dialog above; the
       // server takes no confirm flag, so none is sent here by construction.
-      const payload: { status: TicketStatus; resolutionSummary?: string } =
-        target === "RESOLVED" && summary !== undefined
-          ? { status: target, resolutionSummary: summary }
-          : { status: target };
+      const payload: {
+        status: TicketStatus;
+        resolutionSummary?: string;
+        expectedVersion: number;
+      } = {
+        status: target,
+        expectedVersion: ticket.version,
+        ...(target === "RESOLVED" && summary !== undefined
+          ? { resolutionSummary: summary }
+          : {}),
+      };
       const res = await fetch(`/api/staff/tickets/${ticketId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -279,7 +301,11 @@ export function StaffTicketDetail({
         const data = await res.json().catch(() => ({}));
         // An illegal transition surfaces the server reason, never a generic
         // error, so staff learn what the workflow permits.
-        setStatusError(data?.error?.message || "Failed to update the status.");
+        setStatusError(
+          data?.error?.code === "STALE_WRITE"
+            ? "This ticket changed. Reload the latest ticket before updating its status again."
+            : data?.error?.message || "Failed to update the status."
+        );
         return;
       }
       const data = await res.json();
@@ -288,9 +314,10 @@ export function StaffTicketDetail({
           ? {
               ...prev,
               status: data.status,
-              resolutionSummary:
-                data.resolutionSummary ?? prev.resolutionSummary,
-              appearsResolvedAt: null,
+              version: data.version,
+              resolvedAt: data.resolvedAt,
+              resolutionSummary: data.resolutionSummary,
+              appearsResolvedAt: data.appearsResolvedAt,
             }
           : prev
       );

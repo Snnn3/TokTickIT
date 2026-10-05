@@ -193,17 +193,28 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/appears-resolved`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setSignalError(
-          data?.error?.message || "Failed to mark as appears resolved."
+          data?.error?.code === "STALE_WRITE"
+            ? "This ticket changed. Reload it before trying this action again."
+            : data?.error?.message || "Failed to mark as appears resolved."
         );
         return;
       }
       const data = await res.json();
       setAppearsResolvedAt(data.appearsResolvedAt);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              appearsResolvedAt: data.appearsResolvedAt,
+              version: data.version,
+            }
+          : prev
+      );
       setSignalConfirm(false);
       setSignalSuccess(true);
     } catch {
@@ -220,13 +231,18 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/reopen`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setReopenError(data?.error?.message || "Failed to reopen the ticket.");
+        setReopenError(
+          data?.error?.code === "STALE_WRITE"
+            ? "This ticket changed. Reload it before trying to reopen it again."
+            : data?.error?.message || "Failed to reopen the ticket."
+        );
         return;
       }
+      const data = await res.json();
       // Reopening clears the signal and the summary server-side [BR-26];
       // mirror that locally so the actions and panels follow at once.
       setTicket((prev) =>
@@ -234,6 +250,8 @@ export function RequesterTicketDetail({
           ? {
               ...prev,
               status: "REOPENED",
+              version: data.version,
+              resolvedAt: null,
               appearsResolvedAt: null,
               resolutionSummary: null,
             }
