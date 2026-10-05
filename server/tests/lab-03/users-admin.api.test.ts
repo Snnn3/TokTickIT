@@ -491,6 +491,7 @@ describe("API-21 deactivation and demotion cascade (AC-21, BR-24)", () => {
         { id: 102 },
         { id: 103 },
       ] as never);
+      vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([] as never);
 
       const res = await request(app)
         .patch("/api/admin/users/2")
