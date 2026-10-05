@@ -11,6 +11,7 @@
 |----|--------|------------------|
 | https://github.com/Snnn3/TokTickIT/pull/63 | feature/lab4-1-contract | Approved - merged into `lab4-staging` on 2026-09-30 |
 | https://github.com/Snnn3/TokTickIT/pull/64 | feature/lab4-2-actions-foundation | Open; peer review pending; targets `lab4-staging` |
+| https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested 2026-10-04; regression-test fix and peer-review record updated locally 2026-10-05; re-review pending; targets `lab4-staging` |
 
 ### Reviewer comments I received and how I responded
 
@@ -22,6 +23,10 @@
 **PR #64 - feature/lab4-2-actions-foundation** (OPEN)
 - **Implementation:** Added the Actions Taken schema and migration, stable seed fixtures, append-only audit events, restrictive history-preserving foreign keys, repeat-seed handling, and real disposable migration/restore evidence for Issue #55.
 - **Peer review:** Pending. The PR targets `lab4-staging`; Issue #55 is in the Kanban `PR Review` column.
+
+**PR #65 - feature/lab4-3-actions-api** (OPEN)
+- **Reviewer review (YummieGG, CHANGES_REQUESTED, 2026-10-04):** Accepted the Actions Taken API design, authorization/body precedence, optimistic concurrency, and audit logging. Requested a missing `prisma.actionTaken.findMany` mock in the Lab 3 admin deactivation/demotion regression fixture, which otherwise tried to reach PostgreSQL in isolated tests, plus documentation updates.
+- **Response (2026-10-05):** Added the Action query stub to the existing regression test and recorded this review and response here. The targeted deactivation/demotion cases pass (2/2) without a database connection. Full server tests report 244/245 passing; the remaining failure is the documented Lab 1 seeded-category test because PostgreSQL is unavailable. Server build and focused formatter check pass. The PR remains open pending peer re-review; no approval or merge is claimed.
 
 ---
 

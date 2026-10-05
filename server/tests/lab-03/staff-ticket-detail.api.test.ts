@@ -1058,16 +1058,24 @@ describe("API-24 self-service ban (AC-24, BR-25)", () => {
   });
 });
 
-describe("no service-actions surface (out of scope)", () => {
-  it("exposes no service-actions route under staff or tickets", async () => {
+describe("action routes are owned by Lab 4", () => {
+  it("keeps the old service-actions path unavailable while exposing Lab 4 actions", async () => {
     const cookie = authAs(9);
-    for (const path of [
-      "/api/staff/tickets/20/actions",
-      "/api/staff/tickets/20/service-actions",
-      "/api/tickets/20/actions",
-    ]) {
-      const res = await request(app).get(path).set("Cookie", cookie);
-      expect(res.status).toBe(404);
-    }
+    const serviceActions = await request(app)
+      .get("/api/staff/tickets/20/service-actions")
+      .set("Cookie", cookie);
+    expect(serviceActions.status).toBe(404);
+
+    vi.spyOn(prisma.ticket, "findUnique").mockResolvedValue({
+      id: 20,
+      requesterId: 2,
+      status: "OPEN",
+      version: 1,
+    } as never);
+    vi.spyOn(prisma.actionTaken, "findMany").mockResolvedValue([] as never);
+    const actions = await request(app)
+      .get("/api/tickets/20/actions")
+      .set("Cookie", cookie);
+    expect(actions.status).toBe(200);
   });
 });

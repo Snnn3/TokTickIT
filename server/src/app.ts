@@ -6,6 +6,7 @@ import type { NextFunction, Request, Response } from "express";
 import { requireAuth, requireJsonBody } from "./middleware/auth";
 import { prisma } from "./prisma";
 import { attachmentsRouter } from "./routes/attachments";
+import { actionRequesterRouter, actionStaffRouter } from "./routes/actions";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
 import { staffRouter } from "./routes/staff";
@@ -13,13 +14,36 @@ import { ticketsRouter } from "./routes/tickets";
 
 export const app = express();
 
+function shouldDeferActionBodyParsing(req: Request): boolean {
+  const isWrite =
+    (req.method === "POST" &&
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/i.test(req.path)) ||
+    (req.method === "PATCH" &&
+      /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/i.test(req.path));
+  const isRead =
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/tickets\/[^/]+\/actions(?:\/[^/]+(?:\/history)?)?\/?$/i.test(
+        req.path
+      )) ||
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/staff\/action-assignees\/?$/i.test(req.path));
+
+  return isWrite || isRead;
+}
+
+const parseJsonBody = express.json();
+
 // CORS without credentials, deliberately: no foreign origin can cause the
 // session cookie to be sent, which is the second of the three properties
 // BR-22 relies on instead of a CSRF token [D14].
 app.use(cors({ credentials: false }));
-app.use(express.json());
+app.use((req, res, next) =>
+  shouldDeferActionBodyParsing(req) ? next() : parseJsonBody(req, res, next)
+);
 app.use(cookieParser());
-app.use(requireJsonBody);
+app.use((req, res, next) =>
+  shouldDeferActionBodyParsing(req) ? next() : requireJsonBody(req, res, next)
+);
 
 app.get("/", (_req, res) => {
   res.status(200).json({ service: "TokTickIT API" });
@@ -110,7 +134,9 @@ app.use("/api/admin", adminRouter);
 // Mounted after the requester routes; the /api/staff/* prefix keeps the two
 // from ever colliding, and the router's role guard makes Administrator a
 // superset of IT Staff here (D2).
+app.use("/api/staff", actionStaffRouter);
 app.use("/api/staff", staffRouter);
+app.use("/api/tickets", actionRequesterRouter);
 app.use("/api/tickets", ticketsRouter);
 app.use("/api/attachments", attachmentsRouter);
 

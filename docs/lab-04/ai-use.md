@@ -180,3 +180,197 @@ Do format docs\lab-04\reviewer.md like docs\lab-02\reviewer.md
 review record structure, updated PR #63 with its verified approval and merge,
 and added the current PR #64 implementation status. The six selected prompts
 in the grading table remain unchanged.
+
+### Prompt 15 - Fix the PR #64 review
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr64-feature-lab4-2-actions-foundation-348d407.md coder fix following this review make it good and run test
+```
+
+**Outcome:** Reviewed the PR #64 findings, identified the incomplete Lab 2/3
+regression evidence and the missing database invariant for `completedAt`, and
+prepared the implementation fix and verification plan.
+
+### Prompt 16 - Complete and self-review the fix
+
+**Prompt (verbatim):**
+
+```text
+Coder fix it c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr64-feature-lab4-2-actions-foundation-348d407.md if you finish review yourself once
+```
+
+**Outcome:** Added `ActionTaken_completedAt_state_check`, corrected the clean
+User Management expectation to the seeded 12 users, recorded Lab 2/3 E2E
+coverage, and regenerated the browser evidence. Verification passed with
+server 190/190, client 135/135, Playwright 13/13, both builds, client lint,
+Prisma validation, migration status and a fresh-database constraint probe.
+The repository formatter still reports the pre-existing CRLF baseline
+diagnostics; no new whitespace errors were found in the committed diff.
+
+### Prompt 17 - Record the complete prompt history
+
+**Prompt (verbatim):**
+
+```text
+after this save the all prompt into docs\lab-04\ai-use.md
+```
+
+**Outcome:** Appended the PR #64 implementation and self-review prompts to
+this archival log while preserving the six selected key prompts used for the
+Lab 4 disclosure table.
+
+### Prompt 18 - Review PR #64 against Issue #55 only
+
+**Prompt (verbatim):**
+
+```text
+reviewer review PR#64 feature/lab4-2-actions-foundation following issue#55 only the issue scope
+```
+
+**Outcome:** Reviewed the current PR head against Issue #55 only, without
+applying requirements from the broader Lab 4 specification.
+
+### Prompt 19 - Record prompts from this review exchange
+
+**Prompt (verbatim):**
+
+```text
+save all prompt after this into docs\lab-04\ai-use.md
+```
+
+**Outcome:** Added the prompts from this review exchange to the Lab 4 AI-use
+log. Continue recording subsequent user prompts in later entries.
+
+### Prompt 20 - Implement the Actions API issue
+
+**Prompt (verbatim):**
+
+```text
+coder implement the issue#56 move the kanban and dont open the PR
+```
+
+**Outcome:** Implemented the Issue #56 Actions Taken REST API on
+`feature/lab4-3-actions-api` without opening a pull request. The implementation
+adds ownership-scoped reads, Staff/Administrator writes, active-staff
+assignment validation, status/follow-up/result guards, optimistic Ticket and
+Action versions, serializable idempotent creation, audit events and focused
+API tests. The issue remains in the Kanban `Started` column while it is not
+merged.
+
+### Prompt 21 - Fix the Issue #56 review findings
+
+**Prompt (verbatim):**
+
+```text
+coder fix following this reviee c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-feature-lab4-3-actions-api-issue56.md
+```
+
+**Outcome:** Rejected unsupported query parameters on the action-assignee
+endpoint and added API coverage for Administrator creation, Requester create
+and edit denial, and stale Action updates that leave the Action, Ticket and
+history unchanged. The focused Action API suite passed 14/14 tests; the full
+server suite passed 204/204 tests; the server build and changed-file Biome
+checks passed.
+
+### Prompt 22 - Fix the remaining Issue #56 review finding
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-feature-lab4-3-actions-api-issue56-e712136.md coder fix this and recheck your result again once
+```
+
+**Outcome:** Added successful Administrator PATCH coverage asserting the
+updated Action response and authenticated Admin audit actor. Rechecked the
+review findings; the focused Action API suite passed 15/15, the full server
+suite passed 205/205, and the server build and changed-file Biome checks passed.
+
+### Prompt 23 - Complete the Issue #56 review recommendations
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-feature-lab4-3-actions-api-issue56.md coder implement the following review do all recommend recheck yourself once
+```
+
+**Outcome:** Centralized idempotency replay and payload-conflict handling for
+both transaction replays and unique-key race recovery, and added regression
+coverage for replaying the winning request after a `P2002` race. The full
+server suite passed 206/206, the server build passed, and changed-file Biome
+and whitespace checks passed. Rechecked the review's API coverage and
+idempotency recommendations.
+
+### Prompt 24 - Place the agent setup in `.agents`
+
+**Prompt (verbatim):**
+
+```text
+make the agents in .agents
+```
+
+**Outcome:** Relocated the setup target from the initially drafted `docs/agents/`
+location to the repository's local-only `.agents/` configuration.
+
+### Prompt 25 - Use the `.agents/` folder
+
+**Prompt (verbatim):**
+
+```text
+make the folder in .agents/
+```
+
+**Outcome:** Reused `.agents/AGENTS.md` and the existing tracker/domain guides,
+added the default triage-label mapping and Wayfinder conventions under
+`.agents/agents/`, and removed the temporary `docs/agents/` drafts. These
+configuration files remain ignored and local-only.
+
+### Prompt 26 - Complete the remaining Issue #56 review and open a PR
+
+**Prompt (verbatim):**
+
+```text
+coder it still missing c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-feature-lab4-3-actions-api-issue56-2368b43.md impelment it then review yourself once. after that open the PR
+```
+
+**Outcome:** Completed the remaining review finding by rejecting JSON and
+unparsed request bodies on all four bodyless Action GET endpoints before
+resource lookup. Added route-level regression coverage for JSON and
+`text/plain` bodies; the focused API suite passed 24/24 tests, the full server
+suite passed 214/214 tests, and the server build, changed-file Biome checks,
+and diff checks passed. A separate branch self-review found and drove the
+non-JSON body fix. Opened [PR #65](https://github.com/Snnn3/TokTickIT/pull/65)
+to merge into `lab4-staging`.
+
+### Prompt 27 - Implement the PR #65 review findings
+
+**Prompt (verbatim):**
+
+```text
+c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr65-feature-lab4-3-actions-api-f1790d5.md coder read this review and implement following this. and review yourself one time.
+```
+
+**Outcome:** Deferred malformed Action-write parsing until after authentication
+and role checks; corrected Action read-error precedence; added atomic release of
+nonterminal Action assignments when IT Staff become inactive or change roles,
+with Action/Ticket versions, Admin audit events and response counts; and tested
+an illegal Action transition for zero writes. Full tests passed (223 server,
+135 client), the server build and changed-file formatter/whitespace checks
+passed. The Standards self-review found no findings. The repository-wide
+formatter check still reports existing CRLF formatting differences in other
+files.
+
+### Prompt 28 - Fix the remaining PR #65 spec finding and duplication
+
+**Prompt (verbatim):**
+
+```text
+coder fix the spec issue c:\KMUTT\Y3T1\CPE334\ToktikIT\.reviews\review-pr65-feature-lab4-3-actions-api-issue56-4e829f8.md in this review and delete the duplicatd code smell
+```
+
+**Outcome:** Deferred Action GET parsing until after auth/access checks and
+Action write parsing until after path, Ticket, self-service and Action checks.
+Consolidated Serializable retry behavior and repeated Action test transaction
+setup. The full server/client suites passed (233/135), as did the server build,
+focused formatter check and whitespace check.
