@@ -69,6 +69,7 @@ export type QueueTicket = {
   number: string;
   summary: string;
   status: string;
+  version: number;
   requester: { id: number; name: string };
   owner: { id: number; name: string } | null;
 };
@@ -152,22 +153,36 @@ export async function signInWithPassword(
 export async function requestJson<T>(
   page: Page,
   url: string,
-  options: { method?: string; body?: unknown } = {}
+  options: {
+    method?: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {}
 ): Promise<ApiResponse<T>> {
   const response = await page.evaluate(
-    async ({ body, method, url: requestUrl }) => {
+    async ({ body, headers, method, url: requestUrl }) => {
       const result = await fetch(requestUrl, {
         body: body === undefined ? undefined : JSON.stringify(body),
         headers:
-          body === undefined
+          body === undefined && Object.keys(headers).length === 0
             ? undefined
-            : { "Content-Type": "application/json" },
+            : {
+                ...(body === undefined
+                  ? {}
+                  : { "Content-Type": "application/json" }),
+                ...headers,
+              },
         method,
       });
       const responseBody = await result.json().catch(() => null);
       return { body: responseBody, status: result.status };
     },
-    { body: options.body, method: options.method ?? "GET", url }
+    {
+      body: options.body,
+      headers: options.headers ?? {},
+      method: options.method ?? "GET",
+      url,
+    }
   );
 
   return response as ApiResponse<T>;
