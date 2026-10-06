@@ -10,6 +10,7 @@ import {
 } from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
 import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
+import { sendUnexpectedError } from "../utils/unexpected-response";
 import {
   markTicketAppearsResolved,
   reopenRequesterTicket,
@@ -61,12 +62,7 @@ function handleMulterError(err: unknown, res: Response): boolean {
     });
     return true;
   }
-  res.status(500).json({
-    error: {
-      code: "UNEXPECTED",
-      message: "Failed to process attachment upload",
-    },
-  });
+  sendUnexpectedError(res, "Failed to process attachment upload");
   return true;
 }
 
@@ -513,12 +509,7 @@ ticketsRouter.get(
         totalPages,
       });
     } catch (error) {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve tickets",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve tickets");
     }
   }
 );
@@ -595,12 +586,10 @@ ticketsRouter.post(
           },
         });
       }
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "An unexpected error occurred while creating the ticket",
-        },
-      });
+      return sendUnexpectedError(
+        res,
+        "An unexpected error occurred while creating the ticket"
+      );
     }
   }
 );
@@ -844,12 +833,7 @@ ticketsRouter.get(
         },
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve ticket",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve ticket");
     }
   }
 );
@@ -936,12 +920,7 @@ ticketsRouter.post(
       // Response per api-spec.md:114 (- 201: attachment metadata object)
       return res.status(201).json(serializeAttachment(attachment));
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to upload attachment",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to upload attachment");
     }
   }
 );
@@ -1022,12 +1001,7 @@ ticketsRouter.get(
         comments: comments.map(serializePublicComment),
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve comments",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve comments");
     }
   }
 );
@@ -1088,12 +1062,7 @@ ticketsRouter.post(
         })
       );
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to create comment",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to create comment");
     }
   }
 );
@@ -1124,12 +1093,10 @@ ticketsRouter.post(
       return res.status(200).json(result);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to mark the ticket as appears resolved",
-        },
-      });
+      return sendUnexpectedError(
+        res,
+        "Failed to mark the ticket as appears resolved"
+      );
     }
   }
 );
@@ -1156,12 +1123,7 @@ ticketsRouter.post(
       return res.status(200).json(result);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to reopen the ticket",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to reopen the ticket");
     }
   }
 );

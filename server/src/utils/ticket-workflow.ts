@@ -5,7 +5,10 @@ import {
   TicketStatus,
 } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
-import { runSerializableTransaction } from "./serializable-transaction";
+import {
+  isSerializationConflict,
+  runSerializableTransaction,
+} from "./serializable-transaction";
 import { lockActionAssignmentRows } from "./action-assignment-lock";
 import { prisma } from "../prisma";
 import { isTicketStatus } from "./ticketStatus";
@@ -213,25 +216,16 @@ function invalidTransition(from: TicketStatus, to: TicketStatus) {
   );
 }
 
-function isSerializationConflict(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "P2034"
-  );
-}
-
 async function runVersionedWrite<T>(
   ticketId: number,
-  version: number | (() => number | undefined),
+  version: () => number | undefined,
   work: () => Promise<T>
 ): Promise<T> {
   try {
     return await work();
   } catch (error) {
     if (!isSerializationConflict(error)) throw error;
-    const expected = typeof version === "function" ? version() : version;
+    const expected = version();
     const current = await prisma.ticket.findUnique({
       where: { id: ticketId },
       select: { version: true },

@@ -8,6 +8,7 @@ import {
 } from "../middleware/auth";
 import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
 import { getLegalTargets } from "../utils/transitions";
+import { sendUnexpectedError } from "../utils/unexpected-response";
 import {
   assignStaffTicketOwner,
   changeStaffTicketPriority,
@@ -262,12 +263,7 @@ staffRouter.get(
 
       return res.status(200).json({ assignees });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve assignees",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve assignees");
     }
   }
 );
@@ -396,12 +392,7 @@ staffRouter.get(
         totalPages,
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve the ticket queue",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve the ticket queue");
     }
   }
 );
@@ -564,12 +555,7 @@ staffRouter.get(
         },
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve the ticket",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve the ticket");
     }
   }
 );
@@ -597,12 +583,7 @@ staffRouter.patch(
       return res.status(200).json(updated);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the ticket owner",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to update the ticket owner");
     }
   }
 );
@@ -634,12 +615,7 @@ staffRouter.patch(
       return res.status(200).json(updated);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the IT priority",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to update the IT priority");
     }
   }
 );
@@ -671,12 +647,7 @@ staffRouter.patch(
       return res.status(200).json(updated);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the ticket status",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to update the ticket status");
     }
   }
 );
@@ -728,12 +699,7 @@ staffRouter.get(
         notes: notes.map((n) => serializeStaffComment(n as never)),
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve internal notes",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve internal notes");
     }
   }
 );
@@ -802,12 +768,7 @@ staffRouter.post(
         })
       );
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to create internal note",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to create internal note");
     }
   }
 );

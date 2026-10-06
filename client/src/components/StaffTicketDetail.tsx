@@ -116,56 +116,66 @@ export function StaffTicketDetail({
     }
   }, [pendingStatus]);
 
-  const fetchDetail = useCallback(async () => {
-    setLoading(true);
-    setForbidden(false);
-    setNotFound(false);
-    setFailure(null);
+  const fetchDetail = useCallback(
+    async (preserveSummaryDraft = false) => {
+      setLoading(true);
+      setForbidden(false);
+      setNotFound(false);
+      setFailure(null);
 
-    try {
-      const [detailRes, assigneeRes] = await Promise.all([
-        fetch(`/api/staff/tickets/${ticketId}`),
-        fetch("/api/staff/assignees"),
-      ]);
+      try {
+        const [detailRes, assigneeRes] = await Promise.all([
+          fetch(`/api/staff/tickets/${ticketId}`),
+          fetch("/api/staff/assignees"),
+        ]);
 
-      if (detailRes.status === 403) {
-        setForbidden(true);
-        return;
-      }
-      if (detailRes.status === 404) {
-        setNotFound(true);
-        return;
-      }
-      if (!detailRes.ok) {
-        const data = await detailRes.json().catch(() => ({}));
-        setFailure(data?.error?.message || "Failed to load ticket detail.");
-        return;
-      }
+        if (detailRes.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        if (detailRes.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        if (!detailRes.ok) {
+          const data = await detailRes.json().catch(() => ({}));
+          setFailure(data?.error?.message || "Failed to load ticket detail.");
+          return;
+        }
 
-      const data = await detailRes.json();
-      setTicket(data.ticket);
-      setSelfService(data.selfService === true);
-      setComments(data.ticket?.publicComments ?? []);
-      // A self-filed ticket carries no notes key at all; anything else
-      // carries the array (possibly empty) [BR-04, BR-25].
-      setNotes(data.ticket?.internalNotes ?? []);
-      setSummaryDraft(data.ticket?.resolutionSummary ?? "");
-      setPendingStatus("");
-      setStatusSuccess(false);
-      setStatusError(null);
-      setStatusValidationError(null);
-      setStatusConfirm(false);
+        const data = await detailRes.json();
+        setTicket(data.ticket);
+        setSelfService(data.selfService === true);
+        setComments(data.ticket?.publicComments ?? []);
+        // A self-filed ticket carries no notes key at all; anything else
+        // carries the array (possibly empty) [BR-04, BR-25].
+        setNotes(data.ticket?.internalNotes ?? []);
+        if (!preserveSummaryDraft) {
+          setSummaryDraft(data.ticket?.resolutionSummary ?? "");
+        }
+        setPendingStatus("");
+        setStatusSuccess(false);
+        setStatusError(null);
+        setStatusValidationError(null);
+        setStatusConfirm(false);
 
-      if (assigneeRes.ok) {
-        const assigneeData = await assigneeRes.json().catch(() => ({}));
-        setAssignees(assigneeData.assignees ?? []);
+        if (assigneeRes.ok) {
+          const assigneeData = await assigneeRes.json().catch(() => ({}));
+          setAssignees(assigneeData.assignees ?? []);
+        }
+      } catch {
+        setFailure("Network error. Unable to connect to the server.");
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setFailure("Network error. Unable to connect to the server.");
-    } finally {
-      setLoading(false);
-    }
-  }, [ticketId]);
+    },
+    [ticketId]
+  );
+
+  const fetchDetailPreservingSummaryDraft = useCallback(
+    () => fetchDetail(true),
+    [fetchDetail]
+  );
 
   useEffect(() => {
     fetchDetail();
@@ -212,7 +222,7 @@ export function StaffTicketDetail({
         if (
           await refetchAfterStaleWrite(
             data?.error?.code,
-            fetchDetail,
+            fetchDetailPreservingSummaryDraft,
             setOwnerError,
             "This ticket changed. The latest ticket has been loaded; review it before assigning it again."
           )
@@ -261,7 +271,7 @@ export function StaffTicketDetail({
         if (
           await refetchAfterStaleWrite(
             data?.error?.code,
-            fetchDetail,
+            fetchDetailPreservingSummaryDraft,
             setPriorityError,
             "This ticket changed. The latest ticket has been loaded; review it before changing its priority again."
           )
@@ -316,7 +326,7 @@ export function StaffTicketDetail({
         if (
           await refetchAfterStaleWrite(
             data?.error?.code,
-            fetchDetail,
+            fetchDetailPreservingSummaryDraft,
             setStatusError,
             "This ticket changed. The latest ticket has been loaded; review it before trying again."
           )

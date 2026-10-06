@@ -540,7 +540,7 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     });
   });
 
-  it("reloads the current Ticket after a stale status write and uses its new version on retry", async () => {
+  it("preserves an unsaved resolution summary after a stale status conflict and requires explicit retry", async () => {
     let detailReads = 0;
     let statusWrites = 0;
     const calls: { url: string; init?: RequestInit }[] = [];
@@ -576,6 +576,8 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
           json: async () => ({
             ticket: {
               ...BASE_STAFF_TICKET,
+              status: "IN_PROGRESS",
+              resolutionSummary: "Saved server summary",
               version: detailReads === 1 ? 1 : 2,
             },
           }),
@@ -602,7 +604,7 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
           json: async () => ({
             status: body.status,
             version: body.expectedVersion + 1,
-            resolutionSummary: null,
+            resolutionSummary: body.resolutionSummary ?? null,
             appearsResolvedAt: null,
             resolvedAt: null,
           }),
@@ -615,8 +617,12 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     await waitFor(() => {
       expect(screen.getByTestId("staff-detail-view")).toBeInTheDocument();
     });
+    const summaryDraft = "Draft resolution summary";
+    fireEvent.change(screen.getByTestId("resolution-summary-input"), {
+      target: { value: summaryDraft },
+    });
     fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
-      target: { value: "IN_PROGRESS" },
+      target: { value: "RESOLVED" },
     });
     fireEvent.click(screen.getByTestId("status-save-btn"));
 
@@ -626,20 +632,28 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
         /ticket changed.*latest ticket/i
       );
     });
+    expect(screen.getByTestId("resolution-summary-input")).toHaveValue(
+      summaryDraft
+    );
+    expect(statusWrites).toBe(1);
 
     fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
-      target: { value: "IN_PROGRESS" },
+      target: { value: "RESOLVED" },
     });
     fireEvent.click(screen.getByTestId("status-save-btn"));
     await waitFor(() => expect(statusWrites).toBe(2));
 
     const statusCalls = calls.filter((call) => call.url.endsWith("/status"));
-    expect(JSON.parse(String(statusCalls[0].init?.body)).expectedVersion).toBe(
-      1
-    );
-    expect(JSON.parse(String(statusCalls[1].init?.body)).expectedVersion).toBe(
-      2
-    );
+    expect(JSON.parse(String(statusCalls[0].init?.body))).toMatchObject({
+      status: "RESOLVED",
+      expectedVersion: 1,
+      resolutionSummary: summaryDraft,
+    });
+    expect(JSON.parse(String(statusCalls[1].init?.body))).toMatchObject({
+      status: "RESOLVED",
+      expectedVersion: 2,
+      resolutionSummary: summaryDraft,
+    });
   });
 });
 
