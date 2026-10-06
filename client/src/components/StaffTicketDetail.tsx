@@ -11,6 +11,7 @@ import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import { legalStatusTargets, needsStatusConfirm } from "../utils/transitions";
 import { formatDateTime, formatDateOnly } from "../utils/format";
+import { refetchAfterStaleWrite } from "../utils/staleWrite";
 import {
   ZenItPriorityBadge,
   ZenPriorityBadge,
@@ -208,13 +209,15 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error?.code === "STALE_WRITE") {
-          await fetchDetail();
-          setOwnerError(
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetail,
+            setOwnerError,
             "This ticket changed. The latest ticket has been loaded; review it before assigning it again."
-          );
+          )
+        )
           return;
-        }
         setOwnerError(data?.error?.message || "Failed to update the owner.");
         return;
       }
@@ -255,13 +258,15 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error?.code === "STALE_WRITE") {
-          await fetchDetail();
-          setPriorityError(
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetail,
+            setPriorityError,
             "This ticket changed. The latest ticket has been loaded; review it before changing its priority again."
-          );
+          )
+        )
           return;
-        }
         setPriorityError(
           data?.error?.message || "Failed to update the IT priority."
         );
@@ -308,13 +313,15 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error?.code === "STALE_WRITE") {
-          await fetchDetail();
-          setStatusError(
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetail,
+            setStatusError,
             "This ticket changed. The latest ticket has been loaded; review it before trying again."
-          );
+          )
+        )
           return;
-        }
         // An illegal transition surfaces the server reason, never a generic
         // error, so staff learn what the workflow permits.
         setStatusError(data?.error?.message || "Failed to update the status.");

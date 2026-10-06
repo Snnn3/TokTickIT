@@ -10,6 +10,7 @@ import { AttachmentSection } from "./AttachmentSection";
 import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
+import { refetchAfterStaleWrite } from "../utils/staleWrite";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -197,13 +198,15 @@ export function RequesterTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error?.code === "STALE_WRITE") {
-          await fetchTicketDetail();
-          setSignalError(
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setSignalError,
             "This ticket changed. The latest ticket has been loaded; review it before trying again."
-          );
+          )
+        )
           return;
-        }
         setSignalError(
           data?.error?.message || "Failed to mark as appears resolved."
         );
@@ -240,13 +243,15 @@ export function RequesterTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        if (data?.error?.code === "STALE_WRITE") {
-          await fetchTicketDetail();
-          setReopenError(
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setReopenError,
             "This ticket changed. The latest ticket has been loaded; review it before trying again."
-          );
+          )
+        )
           return;
-        }
         setReopenError(data?.error?.message || "Failed to reopen the ticket.");
         return;
       }
