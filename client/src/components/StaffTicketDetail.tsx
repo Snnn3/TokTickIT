@@ -82,6 +82,9 @@ export function StaffTicketDetail({
   >(null);
   const [statusSuccess, setStatusSuccess] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState("");
+  const [conflictSavedSummary, setConflictSavedSummary] = useState<{
+    value: string | null;
+  } | null>(null);
 
   const [commentDraft, setCommentDraft] = useState("");
   const [commentBusy, setCommentBusy] = useState(false);
@@ -152,6 +155,11 @@ export function StaffTicketDetail({
         setNotes(data.ticket?.internalNotes ?? []);
         if (!preserveSummaryDraft) {
           setSummaryDraft(data.ticket?.resolutionSummary ?? "");
+          setConflictSavedSummary(null);
+        } else {
+          setConflictSavedSummary({
+            value: data.ticket?.resolutionSummary ?? null,
+          });
         }
         setPendingStatus("");
         setStatusSuccess(false);
@@ -355,6 +363,7 @@ export function StaffTicketDetail({
       } else if (data.resolutionSummary !== undefined) {
         setSummaryDraft(data.resolutionSummary ?? "");
       }
+      setConflictSavedSummary(null);
       setPendingStatus("");
       setStatusConfirm(false);
       setStatusSuccess(true);
@@ -878,6 +887,25 @@ export function StaffTicketDetail({
               data-testid="resolution-summary-input"
               aria-required={pendingStatus === "RESOLVED"}
             />
+            {conflictSavedSummary && (
+              <div
+                className="alert alert-info small mt-2 mb-0"
+                data-testid="resolution-summary-conflict"
+                role="status"
+              >
+                <div className="fw-semibold mb-1">
+                  Latest saved resolution summary
+                </div>
+                <div style={{ whiteSpace: "pre-wrap" }}>
+                  {conflictSavedSummary.value?.trim()
+                    ? conflictSavedSummary.value
+                    : "No resolution summary is currently saved."}
+                </div>
+                <div className="mt-1">
+                  Compare it with your draft before saving again.
+                </div>
+              </div>
+            )}
             <div className="d-flex justify-content-between align-items-center mt-2">
               <span className="text-muted" style={{ fontSize: "0.75rem" }}>
                 {summaryDraft.length}/2000 characters

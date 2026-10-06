@@ -577,7 +577,10 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
             ticket: {
               ...BASE_STAFF_TICKET,
               status: "IN_PROGRESS",
-              resolutionSummary: "Saved server summary",
+              resolutionSummary:
+                detailReads === 1
+                  ? "Earlier saved summary"
+                  : "Latest server summary",
               version: detailReads === 1 ? 1 : 2,
             },
           }),
@@ -634,6 +637,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     });
     expect(screen.getByTestId("resolution-summary-input")).toHaveValue(
       summaryDraft
+    );
+    expect(screen.getByTestId("resolution-summary-conflict")).toHaveTextContent(
+      "Latest server summary"
     );
     expect(statusWrites).toBe(1);
 
