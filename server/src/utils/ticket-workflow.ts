@@ -439,7 +439,9 @@ export async function assignStaffTicketOwner(
         }
 
         const shouldAutoOpen =
-          current.ownerId === null && current.status === TicketStatus.NEW;
+          change.ownerId === actorId &&
+          current.ownerId === null &&
+          current.status === TicketStatus.NEW;
         const status = shouldAutoOpen ? TicketStatus.OPEN : current.status;
         await writeTicket(
           tx,

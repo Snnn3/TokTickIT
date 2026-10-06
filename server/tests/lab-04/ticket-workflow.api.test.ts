@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role, TicketStatus } from "@prisma/client";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../src/app";
@@ -23,6 +23,17 @@ const workflowEdges = [
   ["REOPENED", "WAITING_FOR_REQUESTER"],
   ["REOPENED", "CANCELLED"],
 ] as const;
+
+const forbiddenWorkflowEdges = Object.values(TicketStatus).flatMap((from) =>
+  Object.values(TicketStatus)
+    .filter(
+      (to) =>
+        !workflowEdges.some(
+          ([allowedFrom, allowedTo]) => allowedFrom === from && allowedTo === to
+        )
+    )
+    .map((to) => [from, to] as const)
+);
 
 const actor = { id: 9, role: Role.IT_STAFF };
 
@@ -96,7 +107,7 @@ beforeEach(() => vi.restoreAllMocks());
 
 describe("Lab 4 versioned Ticket workflow API", () => {
   it("versions owner assignment and preserves the NEW auto-open rule", async () => {
-    const cookie = authAs();
+    const cookie = authAs(10, Role.IT_STAFF);
     const { tx } = workflowTransaction(
       ticket({ status: "NEW", ownerId: null })
     );
@@ -125,6 +136,50 @@ describe("Lab 4 versioned Ticket workflow API", () => {
           status: "OPEN",
           version: { increment: 1 },
         }),
+      })
+    );
+  });
+
+  it("does not auto-open an unassigned NEW Ticket when ownerId is null", async () => {
+    const cookie = authAs();
+    const { tx } = workflowTransaction(
+      ticket({ status: "NEW", ownerId: null })
+    );
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/owner")
+      .set("Cookie", cookie)
+      .send({ ownerId: null, expectedVersion: 4 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ owner: null, status: "NEW", version: 5 });
+    expect(tx.ticket.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({ status: "OPEN" }),
+      })
+    );
+  });
+
+  it("does not auto-open an unowned NEW Ticket assigned to another Staff member", async () => {
+    const cookie = authAs();
+    const { tx } = workflowTransaction(
+      ticket({ status: "NEW", ownerId: null })
+    );
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/owner")
+      .set("Cookie", cookie)
+      .send({ ownerId: 10, expectedVersion: 4 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      owner: { id: 10 },
+      status: "NEW",
+      version: 5,
+    });
+    expect(tx.ticket.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.not.objectContaining({ status: "OPEN" }),
       })
     );
   });
@@ -177,6 +232,26 @@ describe("Lab 4 versioned Ticket workflow API", () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({ status: to, version: 5 });
       expect(tx.ticket.updateMany).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it.each(forbiddenWorkflowEdges)(
+    "rejects forbidden or same-status transition %s -> %s without a write",
+    async (from, to) => {
+      const cookie = authAs();
+      const { tx } = workflowTransaction(
+        ticket({ status: from, resolutionSummary: "Existing summary." }),
+        [{ result: "Verified the fix." }]
+      );
+
+      const response = await request(app)
+        .patch("/api/staff/tickets/20/status")
+        .set("Cookie", cookie)
+        .send({ status: to, expectedVersion: 4 });
+
+      expect(response.status).toBe(422);
+      expect(response.body.error.code).toBe("INVALID_TRANSITION");
+      expect(tx.ticket.updateMany).not.toHaveBeenCalled();
     }
   );
 
@@ -317,6 +392,59 @@ describe("Lab 4 versioned Ticket workflow API", () => {
     });
     expect(tx.ticket.updateMany).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      operation: "priority",
+      method: "PATCH",
+      path: "/api/staff/tickets/20/priority",
+      userId: actor.id,
+      role: actor.role,
+      initial: ticket({ version: 5 }),
+      body: { itPriority: "HIGH", expectedVersion: 4 },
+    },
+    {
+      operation: "appears-resolved",
+      method: "POST",
+      path: "/api/tickets/20/appears-resolved",
+      userId: 2,
+      role: Role.REQUESTER,
+      initial: ticket({ requesterId: 2, status: "OPEN", version: 5 }),
+      body: { expectedVersion: 4 },
+    },
+    {
+      operation: "requester reopen",
+      method: "POST",
+      path: "/api/tickets/20/reopen",
+      userId: 2,
+      role: Role.REQUESTER,
+      initial: ticket({ requesterId: 2, status: "RESOLVED", version: 5 }),
+      body: { expectedVersion: 4 },
+    },
+  ])(
+    "rejects stale $operation writes without mutation",
+    async ({ method, path, userId, role, initial, body }) => {
+      const cookie = authAs(userId, role);
+      const { tx, ticket: currentTicket } = workflowTransaction(initial);
+      const route =
+        method === "PATCH" ? request(app).patch(path) : request(app).post(path);
+
+      const response = await route.set("Cookie", cookie).send(body);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toMatchObject({
+        code: "STALE_WRITE",
+        details: {
+          resource: "TICKET",
+          id: 20,
+          expectedVersion: 4,
+          currentVersion: 5,
+        },
+      });
+      expect(tx.ticket.updateMany).not.toHaveBeenCalled();
+      expect(currentTicket).toEqual(initial);
+    }
+  );
 
   it("rejects missing versions and unknown request fields", async () => {
     const cookie = authAs();
