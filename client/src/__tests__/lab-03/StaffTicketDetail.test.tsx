@@ -454,6 +454,108 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
       );
     });
   });
+
+  it("reloads the current Ticket after a stale status write and uses its new version on retry", async () => {
+    let detailReads = 0;
+    let statusWrites = 0;
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url.includes("/api/reference/categories")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ categories: [{ id: 1, name: "Network" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/reference/systems")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ systems: [{ id: 3, name: "VPN" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/staff/assignees")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ assignees: ASSIGNEES }),
+        } as Response;
+      }
+      if (url.match(/\/api\/staff\/tickets\/\d+$/)) {
+        detailReads += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ticket: {
+              ...BASE_STAFF_TICKET,
+              version: detailReads === 1 ? 1 : 2,
+            },
+          }),
+        } as Response;
+      }
+      if (url.endsWith("/status")) {
+        statusWrites += 1;
+        if (statusWrites === 1) {
+          return {
+            ok: false,
+            status: 409,
+            json: async () => ({
+              error: {
+                code: "STALE_WRITE",
+                message: "The Ticket has changed",
+              },
+            }),
+          } as Response;
+        }
+        const body = JSON.parse(String(init?.body));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: body.status,
+            version: body.expectedVersion + 1,
+            resolutionSummary: null,
+            appearsResolvedAt: null,
+            resolvedAt: null,
+          }),
+        } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    renderStaffDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("staff-detail-view")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
+      target: { value: "IN_PROGRESS" },
+    });
+    fireEvent.click(screen.getByTestId("status-save-btn"));
+
+    await waitFor(() => {
+      expect(detailReads).toBe(2);
+      expect(screen.getByTestId("status-error")).toHaveTextContent(
+        /ticket changed.*latest ticket/i
+      );
+    });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
+      target: { value: "IN_PROGRESS" },
+    });
+    fireEvent.click(screen.getByTestId("status-save-btn"));
+    await waitFor(() => expect(statusWrites).toBe(2));
+
+    const statusCalls = calls.filter((call) => call.url.endsWith("/status"));
+    expect(JSON.parse(String(statusCalls[0].init?.body)).expectedVersion).toBe(
+      1
+    );
+    expect(JSON.parse(String(statusCalls[1].init?.body)).expectedVersion).toBe(
+      2
+    );
+  });
 });
 
 describe("StaffTicketDetail comments versus notes (C-05, AC-05, AC-12, AC-24)", () => {

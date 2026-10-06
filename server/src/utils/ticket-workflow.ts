@@ -179,19 +179,23 @@ function isSerializationConflict(error: unknown): boolean {
 
 async function runVersionedWrite<T>(
   ticketId: number,
-  version: number,
+  version: number | (() => number | undefined),
   work: () => Promise<T>
 ): Promise<T> {
   try {
     return await work();
   } catch (error) {
     if (!isSerializationConflict(error)) throw error;
+    const expected = typeof version === "function" ? version() : version;
     const current = await prisma.ticket.findUnique({
       where: { id: ticketId },
       select: { version: true },
     });
-    if (current) throw staleWrite(ticketId, version, current.version);
-    throw notFound();
+    if (!current) throw notFound();
+    if (expected !== undefined && current.version !== expected) {
+      throw staleWrite(ticketId, expected, current.version);
+    }
+    throw error;
   }
 }
 
@@ -219,105 +223,113 @@ async function writeTicket(
 export async function changeStaffTicketStatus(
   ticketId: number,
   actorId: number,
-  change: StatusChange
+  body: unknown
 ) {
-  return runVersionedWrite(ticketId, change.expectedVersion, () =>
-    runSerializableTransaction(async (tx) => {
-      // The same parent-row lock serializes Ticket workflow changes with
-      // Action writes, so the resolution prerequisite cannot race a completion.
-      await lockActionAssignmentRows(tx, [], [ticketId]);
-      const current = await tx.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          version: true,
-          resolutionSummary: true,
-          appearsResolvedAt: true,
-          resolvedAt: true,
-        },
-      });
-      if (!current) throw notFound();
-      if (current.requesterId === actorId) {
-        throw new TicketWorkflowError(
-          403,
-          "SELF_SERVICE_FORBIDDEN",
-          "Staff workflow changes are not allowed on your own Ticket"
-        );
-      }
-      if (current.version !== change.expectedVersion) {
-        throw staleWrite(ticketId, change.expectedVersion, current.version);
-      }
-      if (!isTransitionAllowed(current.status, change.status)) {
-        throw invalidTransition(current.status, change.status);
-      }
-
-      let resolutionSummary = current.resolutionSummary;
-      if (change.status === TicketStatus.RESOLVED) {
-        const completedActions = await tx.actionTaken.findMany({
-          where: { ticketId, status: ActionStatus.COMPLETED },
-          select: { result: true },
+  let expectedVersion: number | undefined;
+  return runVersionedWrite(
+    ticketId,
+    () => expectedVersion,
+    () =>
+      runSerializableTransaction(async (tx) => {
+        // The same parent-row lock serializes Ticket workflow changes with
+        // Action writes, so the resolution prerequisite cannot race a completion.
+        await lockActionAssignmentRows(tx, [], [ticketId]);
+        const current = await tx.ticket.findUnique({
+          where: { id: ticketId },
+          select: {
+            id: true,
+            requesterId: true,
+            status: true,
+            version: true,
+            resolutionSummary: true,
+            appearsResolvedAt: true,
+            resolvedAt: true,
+          },
         });
-        if (!completedActions.some((action) => action.result?.trim())) {
+        if (!current) throw notFound();
+        if (current.requesterId === actorId) {
           throw new TicketWorkflowError(
-            400,
-            "ACTION_RESULT_REQUIRED",
-            "A completed Action with a meaningful result is required to resolve this Ticket"
+            403,
+            "SELF_SERVICE_FORBIDDEN",
+            "Staff workflow changes are not allowed on your own Ticket"
           );
         }
-
-        if (Object.prototype.hasOwnProperty.call(change, "resolutionSummary")) {
-          const supplied = change.resolutionSummary;
-          if (typeof supplied !== "string" || supplied.length === 0) {
-            throw new TicketWorkflowError(
-              400,
-              "RESOLUTION_SUMMARY_REQUIRED",
-              "A resolution summary is required to resolve this Ticket"
-            );
-          }
-          resolutionSummary = supplied;
-        } else {
-          const stored = current.resolutionSummary?.trim() ?? "";
-          if (!stored || stored.length > 2000) {
-            throw new TicketWorkflowError(
-              400,
-              "RESOLUTION_SUMMARY_REQUIRED",
-              "A resolution summary is required to resolve this Ticket"
-            );
-          }
-          resolutionSummary = stored;
+        const change = parseStatusChange(body);
+        expectedVersion = change.expectedVersion;
+        if (current.version !== change.expectedVersion) {
+          throw staleWrite(ticketId, change.expectedVersion, current.version);
         }
-      }
+        if (!isTransitionAllowed(current.status, change.status)) {
+          throw invalidTransition(current.status, change.status);
+        }
 
-      if (change.status === TicketStatus.REOPENED) {
-        resolutionSummary = null;
-      }
+        let resolutionSummary = current.resolutionSummary;
+        if (change.status === TicketStatus.RESOLVED) {
+          const completedActions = await tx.actionTaken.findMany({
+            where: { ticketId, status: ActionStatus.COMPLETED },
+            select: { result: true },
+          });
+          if (!completedActions.some((action) => action.result?.trim())) {
+            throw new TicketWorkflowError(
+              400,
+              "ACTION_RESULT_REQUIRED",
+              "A completed Action with a meaningful result is required to resolve this Ticket"
+            );
+          }
 
-      const now = new Date();
-      const resolvedAt =
-        change.status === TicketStatus.RESOLVED
-          ? now
-          : change.status === TicketStatus.REOPENED
-            ? null
-            : current.resolvedAt;
-      await writeTicket(tx, ticketId, change.expectedVersion, {
-        status: change.status,
-        resolutionSummary,
-        appearsResolvedAt: null,
-        resolvedAt,
-        updatedAt: now,
-        version: { increment: 1 },
-      });
+          if (
+            Object.prototype.hasOwnProperty.call(change, "resolutionSummary")
+          ) {
+            const supplied = change.resolutionSummary;
+            if (typeof supplied !== "string" || supplied.length === 0) {
+              throw new TicketWorkflowError(
+                400,
+                "RESOLUTION_SUMMARY_REQUIRED",
+                "A resolution summary is required to resolve this Ticket"
+              );
+            }
+            resolutionSummary = supplied;
+          } else {
+            const stored = current.resolutionSummary?.trim() ?? "";
+            if (!stored || stored.length > 2000) {
+              throw new TicketWorkflowError(
+                400,
+                "RESOLUTION_SUMMARY_REQUIRED",
+                "A resolution summary is required to resolve this Ticket"
+              );
+            }
+            resolutionSummary = stored;
+          }
+        }
 
-      return {
-        status: change.status,
-        resolutionSummary,
-        appearsResolvedAt: null,
-        resolvedAt,
-        version: change.expectedVersion + 1,
-      };
-    })
+        if (change.status === TicketStatus.REOPENED) {
+          resolutionSummary = null;
+        }
+
+        const now = new Date();
+        const resolvedAt =
+          change.status === TicketStatus.RESOLVED
+            ? now
+            : change.status === TicketStatus.REOPENED
+              ? null
+              : current.resolvedAt;
+        await writeTicket(tx, ticketId, change.expectedVersion, {
+          status: change.status,
+          resolutionSummary,
+          appearsResolvedAt: null,
+          resolvedAt,
+          updatedAt: now,
+          version: { increment: 1 },
+        });
+
+        return {
+          status: change.status,
+          resolutionSummary,
+          appearsResolvedAt: null,
+          resolvedAt,
+          version: change.expectedVersion + 1,
+        };
+      })
   );
 }
 

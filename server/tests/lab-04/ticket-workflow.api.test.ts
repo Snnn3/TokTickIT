@@ -231,6 +231,33 @@ describe("Lab 4 versioned Ticket workflow API", () => {
     );
   });
 
+  it("returns NOT_FOUND before validating a malformed status body", async () => {
+    const cookie = authAs();
+    const { tx } = workflowTransaction(ticket());
+    tx.ticket.findUnique.mockResolvedValueOnce(null);
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/status")
+      .set("Cookie", cookie)
+      .send({ status: "NOT_A_STATUS", expectedVersion: "not-a-version" });
+
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns SELF_SERVICE_FORBIDDEN before validating a malformed status body", async () => {
+    const cookie = authAs();
+    workflowTransaction(ticket({ requesterId: actor.id }));
+
+    const response = await request(app)
+      .patch("/api/staff/tickets/20/status")
+      .set("Cookie", cookie)
+      .send({ status: "NOT_A_STATUS", expectedVersion: "not-a-version" });
+
+    expect(response.status).toBe(403);
+    expect(response.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
+  });
+
   it("returns 409 STALE_WRITE without changing the Ticket when expectedVersion is old", async () => {
     const cookie = authAs();
     const { tx } = workflowTransaction(ticket({ version: 5 }));
@@ -255,6 +282,7 @@ describe("Lab 4 versioned Ticket workflow API", () => {
 
   it("rejects missing versions and unknown request fields", async () => {
     const cookie = authAs();
+    workflowTransaction(ticket());
     const first = await request(app)
       .patch("/api/staff/tickets/20/status")
       .set("Cookie", cookie)

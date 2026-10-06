@@ -153,6 +153,7 @@ export function StaffTicketDetail({
       setStatusSuccess(false);
       setStatusError(null);
       setStatusValidationError(null);
+      setStatusConfirm(false);
 
       if (assigneeRes.ok) {
         const assigneeData = await assigneeRes.json().catch(() => ({}));
@@ -299,13 +300,16 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (data?.error?.code === "STALE_WRITE") {
+          await fetchDetail();
+          setStatusError(
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          );
+          return;
+        }
         // An illegal transition surfaces the server reason, never a generic
         // error, so staff learn what the workflow permits.
-        setStatusError(
-          data?.error?.code === "STALE_WRITE"
-            ? "This ticket changed. Reload the latest ticket before updating its status again."
-            : data?.error?.message || "Failed to update the status."
-        );
+        setStatusError(data?.error?.message || "Failed to update the status.");
         return;
       }
       const data = await res.json();

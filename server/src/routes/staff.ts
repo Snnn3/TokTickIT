@@ -14,7 +14,6 @@ import {
   changeStaffTicketStatus,
   parseOwnerChange,
   parsePriorityChange,
-  parseStatusChange,
   sendTicketWorkflowError,
 } from "../utils/ticket-workflow";
 import {
@@ -668,8 +667,11 @@ staffRouter.patch(
     }
 
     try {
-      const change = parseStatusChange(req.body);
-      const updated = await changeStaffTicketStatus(ticketId, user.id, change);
+      const updated = await changeStaffTicketStatus(
+        ticketId,
+        user.id,
+        req.body
+      );
       return res.status(200).json(updated);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
