@@ -12,7 +12,6 @@ import { getOwnedResource } from "../utils/ownership";
 import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
 import {
   markTicketAppearsResolved,
-  parseExpectedVersion,
   reopenRequesterTicket,
   sendTicketWorkflowError,
 } from "../utils/ticket-workflow";
@@ -1117,11 +1116,10 @@ ticketsRouter.post(
     }
 
     try {
-      const version = parseExpectedVersion(req.body);
       const result = await markTicketAppearsResolved(
         ticketId,
         user.id,
-        version
+        req.body
       );
       return res.status(200).json(result);
     } catch (error) {
@@ -1154,8 +1152,7 @@ ticketsRouter.post(
     }
 
     try {
-      const version = parseExpectedVersion(req.body);
-      const result = await reopenRequesterTicket(ticketId, user.id, version);
+      const result = await reopenRequesterTicket(ticketId, user.id, req.body);
       return res.status(200).json(result);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;

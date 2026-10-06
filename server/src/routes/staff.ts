@@ -12,8 +12,6 @@ import {
   assignStaffTicketOwner,
   changeStaffTicketPriority,
   changeStaffTicketStatus,
-  parseOwnerChange,
-  parsePriorityChange,
   sendTicketWorkflowError,
 } from "../utils/ticket-workflow";
 import {
@@ -595,8 +593,7 @@ staffRouter.patch(
     }
 
     try {
-      const change = parseOwnerChange(req.body);
-      const updated = await assignStaffTicketOwner(ticketId, user.id, change);
+      const updated = await assignStaffTicketOwner(ticketId, user.id, req.body);
       return res.status(200).json(updated);
     } catch (error) {
       if (sendTicketWorkflowError(res, error)) return;
@@ -629,11 +626,10 @@ staffRouter.patch(
     }
 
     try {
-      const change = parsePriorityChange(req.body);
       const updated = await changeStaffTicketPriority(
         ticketId,
         user.id,
-        change
+        req.body
       );
       return res.status(200).json(updated);
     } catch (error) {

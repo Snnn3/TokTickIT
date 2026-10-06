@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
 import { sessionCookie, sessionUser } from "../helpers/session";
+import { installPassThroughTicketTransactionMock } from "../helpers/transaction-mock";
 
 /**
  * API-07, API-08 (read parts), API-22, API-24 (read parts) and API-25 from
@@ -23,16 +24,7 @@ import { sessionCookie, sessionUser } from "../helpers/session";
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.spyOn(prisma, "$transaction").mockImplementation((async (
-    callback: (tx: object) => Promise<unknown>
-  ) =>
-    callback({
-      $queryRaw: vi.fn().mockResolvedValue([]),
-      ticket: {
-        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
-        updateMany: (args: unknown) => prisma.ticket.updateMany(args as never),
-      },
-    })) as never);
+  installPassThroughTicketTransactionMock();
 });
 
 describe("API-07 authenticated identity beats any client-supplied id (AC-04)", () => {

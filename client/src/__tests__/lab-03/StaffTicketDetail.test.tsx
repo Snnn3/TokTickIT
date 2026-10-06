@@ -49,8 +49,8 @@ const BASE_STAFF_TICKET = {
 };
 
 const ASSIGNEES = [
-  { id: 9, name: "Kittipong Saelim", role: "IT_STAFF" },
-  { id: 20, name: "Apinya Ratchada", role: "ADMINISTRATOR" },
+  { id: 9, name: "Kittipong Saelim", role: "IT_STAFF", isActive: true },
+  { id: 20, name: "Apinya Ratchada", role: "ADMINISTRATOR", isActive: true },
 ];
 
 type MockOptions = {
@@ -58,6 +58,8 @@ type MockOptions = {
   selfService?: boolean;
   status?: number;
   assignees?: unknown[];
+  staleOwner?: boolean;
+  stalePriority?: boolean;
 };
 
 function mockStaffDetailApi(options: MockOptions = {}) {
@@ -66,6 +68,9 @@ function mockStaffDetailApi(options: MockOptions = {}) {
     string,
     unknown
   >;
+  let currentVersion = Number(ticket.version ?? 1);
+  let ownerWrites = 0;
+  let priorityWrites = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
@@ -95,6 +100,18 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       init?.method === "PATCH"
     ) {
       const body = JSON.parse(String(init.body));
+      ownerWrites += 1;
+      if (options.staleOwner && ownerWrites === 1) {
+        currentVersion = body.expectedVersion + 1;
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      currentVersion = body.expectedVersion + 1;
       return {
         ok: true,
         status: 200,
@@ -105,9 +122,11 @@ function mockStaffDetailApi(options: MockOptions = {}) {
               : (ASSIGNEES.find((a) => a.id === body.ownerId) ?? {
                   id: body.ownerId,
                   name: "Kittipong Saelim",
+                  role: "IT_STAFF",
+                  isActive: true,
                 }),
           status: ticket.status,
-          version: body.expectedVersion + 1,
+          version: currentVersion,
         }),
       } as Response;
     }
@@ -116,12 +135,24 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       init?.method === "PATCH"
     ) {
       const body = JSON.parse(String(init.body));
+      priorityWrites += 1;
+      if (options.stalePriority && priorityWrites === 1) {
+        currentVersion = body.expectedVersion + 1;
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      currentVersion = body.expectedVersion + 1;
       return {
         ok: true,
         status: 200,
         json: async () => ({
           itPriority: body.itPriority,
-          version: body.expectedVersion + 1,
+          version: currentVersion,
         }),
       } as Response;
     }
@@ -202,7 +233,7 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ ticket }),
+        json: async () => ({ ticket: { ...ticket, version: currentVersion } }),
       } as Response;
     }
     return { ok: true, status: 200, json: async () => ({}) } as Response;
@@ -309,6 +340,60 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     expect(JSON.parse(String(priorityCall?.init?.body))).toMatchObject({
       expectedVersion: 1,
     });
+  });
+
+  it("refetches and uses the current version after an owner conflict", async () => {
+    const calls = await renderLoaded({ staleOwner: true });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /ticket owner/i }), {
+      target: { value: "9" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("owner-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(
+      calls.filter((call) => call.url === "/api/staff/tickets/20")
+    ).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /ticket owner/i }), {
+      target: { value: "9" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("owner-success")).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) => call.url.endsWith("/owner"));
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
+  });
+
+  it("refetches and uses the current version after a priority conflict", async () => {
+    const calls = await renderLoaded({ stalePriority: true });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /it priority/i }), {
+      target: { value: "HIGH" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("priority-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(
+      calls.filter((call) => call.url === "/api/staff/tickets/20")
+    ).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /it priority/i }), {
+      target: { value: "HIGH" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("priority-success")).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) => call.url.endsWith("/priority"));
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
   });
 
   it("restricts the status select to the legal targets for the current status", async () => {

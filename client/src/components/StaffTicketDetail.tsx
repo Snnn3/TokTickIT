@@ -208,11 +208,14 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setOwnerError(
-          data?.error?.code === "STALE_WRITE"
-            ? "This ticket changed. Reload the latest ticket before assigning it again."
-            : data?.error?.message || "Failed to update the owner."
-        );
+        if (data?.error?.code === "STALE_WRITE") {
+          await fetchDetail();
+          setOwnerError(
+            "This ticket changed. The latest ticket has been loaded; review it before assigning it again."
+          );
+          return;
+        }
+        setOwnerError(data?.error?.message || "Failed to update the owner.");
         return;
       }
       const data = await res.json();
@@ -252,10 +255,15 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (data?.error?.code === "STALE_WRITE") {
+          await fetchDetail();
+          setPriorityError(
+            "This ticket changed. The latest ticket has been loaded; review it before changing its priority again."
+          );
+          return;
+        }
         setPriorityError(
-          data?.error?.code === "STALE_WRITE"
-            ? "This ticket changed. Reload the latest ticket before changing its priority again."
-            : data?.error?.message || "Failed to update the IT priority."
+          data?.error?.message || "Failed to update the IT priority."
         );
         return;
       }

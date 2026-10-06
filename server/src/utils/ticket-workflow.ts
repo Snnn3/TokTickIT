@@ -103,7 +103,7 @@ export function parseStatusChange(body: unknown): StatusChange {
   };
 }
 
-export function parseExpectedVersion(body: unknown): number {
+function parseExpectedVersion(body: unknown): number {
   const record = requestRecord(body, ["expectedVersion"]);
   return expectedVersion(record);
 }
@@ -179,6 +179,28 @@ function assertExpectedTicketVersion(
   if (currentVersion !== expectedVersion) {
     throw staleWrite(ticketId, expectedVersion, currentVersion);
   }
+}
+
+function assertRequesterOwnsTicket(
+  currentRequesterId: number,
+  requesterId: number
+): void {
+  if (currentRequesterId !== requesterId) {
+    throw new TicketWorkflowError(403, "FORBIDDEN", "Access denied");
+  }
+}
+
+async function assertStaffTicketCanBeChanged(
+  tx: Prisma.TransactionClient,
+  ticketId: number,
+  actorId: number
+): Promise<void> {
+  const current = await tx.ticket.findUnique({
+    where: { id: ticketId },
+    select: { requesterId: true },
+  });
+  if (!current) throw notFound();
+  assertStaffCanManageTicket(current.requesterId, actorId);
 }
 
 function invalidTransition(from: TicketStatus, to: TicketStatus) {
@@ -355,227 +377,260 @@ export async function changeStaffTicketStatus(
 export async function assignStaffTicketOwner(
   ticketId: number,
   actorId: number,
-  change: OwnerChange
+  body: unknown
 ) {
-  return runVersionedWrite(ticketId, change.expectedVersion, () =>
-    runSerializableTransaction(async (tx) => {
-      await lockActionAssignmentRows(tx, [change.ownerId], [ticketId]);
-      const current = await tx.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          ownerId: true,
-          status: true,
-          version: true,
-        },
-      });
-      if (!current) throw notFound();
-      assertStaffCanManageTicket(current.requesterId, actorId);
-      assertExpectedTicketVersion(
-        ticketId,
-        current.version,
-        change.expectedVersion
-      );
-
-      let owner: { id: number; name: string } | null = null;
-      if (change.ownerId !== null) {
-        const target = await tx.user.findUnique({
-          where: { id: change.ownerId },
-          select: { id: true, name: true, role: true, isActive: true },
+  let expectedVersion: number | undefined;
+  return runVersionedWrite(
+    ticketId,
+    () => expectedVersion,
+    () =>
+      runSerializableTransaction(async (tx) => {
+        await assertStaffTicketCanBeChanged(tx, ticketId, actorId);
+        const change = parseOwnerChange(body);
+        expectedVersion = change.expectedVersion;
+        await lockActionAssignmentRows(tx, [change.ownerId], [ticketId]);
+        const current = await tx.ticket.findUnique({
+          where: { id: ticketId },
+          select: {
+            id: true,
+            requesterId: true,
+            ownerId: true,
+            status: true,
+            version: true,
+          },
         });
-        if (
-          !target ||
-          !target.isActive ||
-          (target.role !== Role.IT_STAFF && target.role !== Role.ADMINISTRATOR)
-        ) {
-          throw new TicketWorkflowError(
-            422,
-            "INVALID_OWNER",
-            "Owner must be an active IT Staff or Administrator user"
-          );
-        }
-        owner = { id: target.id, name: target.name };
-      }
+        if (!current) throw notFound();
+        assertStaffCanManageTicket(current.requesterId, actorId);
+        assertExpectedTicketVersion(
+          ticketId,
+          current.version,
+          change.expectedVersion
+        );
 
-      const shouldAutoOpen =
-        current.ownerId === null && current.status === TicketStatus.NEW;
-      const status = shouldAutoOpen ? TicketStatus.OPEN : current.status;
-      await writeTicket(
-        tx,
-        ticketId,
-        change.expectedVersion,
-        {
-          ownerId: change.ownerId,
-          ...(shouldAutoOpen ? { status: TicketStatus.OPEN } : {}),
-          updatedAt: new Date(),
-          version: { increment: 1 },
-        },
-        {
-          requesterId: { not: actorId },
-          ownerId: current.ownerId,
-          status: current.status,
+        let owner: {
+          id: number;
+          name: string;
+          role: Role;
+          isActive: boolean;
+        } | null = null;
+        if (change.ownerId !== null) {
+          const target = await tx.user.findUnique({
+            where: { id: change.ownerId },
+            select: { id: true, name: true, role: true, isActive: true },
+          });
+          if (
+            !target ||
+            !target.isActive ||
+            (target.role !== Role.IT_STAFF &&
+              target.role !== Role.ADMINISTRATOR)
+          ) {
+            throw new TicketWorkflowError(
+              422,
+              "INVALID_OWNER",
+              "Owner must be an active IT Staff or Administrator user"
+            );
+          }
+          owner = {
+            id: target.id,
+            name: target.name,
+            role: target.role,
+            isActive: target.isActive,
+          };
         }
-      );
-      return { owner, status, version: change.expectedVersion + 1 };
-    })
+
+        const shouldAutoOpen =
+          current.ownerId === null && current.status === TicketStatus.NEW;
+        const status = shouldAutoOpen ? TicketStatus.OPEN : current.status;
+        await writeTicket(
+          tx,
+          ticketId,
+          change.expectedVersion,
+          {
+            ownerId: change.ownerId,
+            ...(shouldAutoOpen ? { status: TicketStatus.OPEN } : {}),
+            updatedAt: new Date(),
+            version: { increment: 1 },
+          },
+          {
+            requesterId: { not: actorId },
+            ownerId: current.ownerId,
+            status: current.status,
+          }
+        );
+        return { owner, status, version: change.expectedVersion + 1 };
+      })
   );
 }
 
 export async function changeStaffTicketPriority(
   ticketId: number,
   actorId: number,
-  change: PriorityChange
+  body: unknown
 ) {
-  return runVersionedWrite(ticketId, change.expectedVersion, () =>
-    runSerializableTransaction(async (tx) => {
-      await lockActionAssignmentRows(tx, [], [ticketId]);
-      const current = await tx.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, requesterId: true, version: true },
-      });
-      if (!current) throw notFound();
-      assertStaffCanManageTicket(current.requesterId, actorId);
-      assertExpectedTicketVersion(
-        ticketId,
-        current.version,
-        change.expectedVersion
-      );
+  let expectedVersion: number | undefined;
+  return runVersionedWrite(
+    ticketId,
+    () => expectedVersion,
+    () =>
+      runSerializableTransaction(async (tx) => {
+        await assertStaffTicketCanBeChanged(tx, ticketId, actorId);
+        const change = parsePriorityChange(body);
+        expectedVersion = change.expectedVersion;
+        await lockActionAssignmentRows(tx, [], [ticketId]);
+        const current = await tx.ticket.findUnique({
+          where: { id: ticketId },
+          select: { id: true, requesterId: true, version: true },
+        });
+        if (!current) throw notFound();
+        assertStaffCanManageTicket(current.requesterId, actorId);
+        assertExpectedTicketVersion(
+          ticketId,
+          current.version,
+          change.expectedVersion
+        );
 
-      await writeTicket(
-        tx,
-        ticketId,
-        change.expectedVersion,
-        {
+        await writeTicket(
+          tx,
+          ticketId,
+          change.expectedVersion,
+          {
+            itPriority: change.itPriority,
+            updatedAt: new Date(),
+            version: { increment: 1 },
+          },
+          { requesterId: { not: actorId } }
+        );
+        return {
           itPriority: change.itPriority,
-          updatedAt: new Date(),
-          version: { increment: 1 },
-        },
-        { requesterId: { not: actorId } }
-      );
-      return {
-        itPriority: change.itPriority,
-        version: change.expectedVersion + 1,
-      };
-    })
+          version: change.expectedVersion + 1,
+        };
+      })
   );
 }
 
 export async function markTicketAppearsResolved(
   ticketId: number,
   requesterId: number,
-  version: number
+  body: unknown
 ) {
-  return runVersionedWrite(ticketId, version, () =>
-    runSerializableTransaction(async (tx) => {
-      await lockActionAssignmentRows(tx, [], [ticketId]);
-      const current = await tx.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          version: true,
-          appearsResolvedAt: true,
-        },
-      });
-      if (!current) throw notFound();
-      if (current.requesterId !== requesterId) {
-        throw new TicketWorkflowError(403, "FORBIDDEN", "Access denied");
-      }
-      assertExpectedTicketVersion(ticketId, current.version, version);
-      if (
-        current.status === TicketStatus.CLOSED ||
-        current.status === TicketStatus.CANCELLED
-      ) {
-        throw new TicketWorkflowError(
-          422,
-          "INVALID_TRANSITION",
-          "A Closed or Cancelled ticket cannot be marked as appears resolved"
-        );
-      }
-      if (current.appearsResolvedAt !== null) {
-        throw new TicketWorkflowError(
-          409,
-          "ALREADY_SIGNALLED",
-          "This Ticket is already marked as appears resolved"
-        );
-      }
-
-      const signalledAt = new Date();
-      await writeTicket(
-        tx,
-        ticketId,
-        version,
-        {
-          appearsResolvedAt: signalledAt,
-          updatedAt: signalledAt,
-          version: { increment: 1 },
-        },
-        {
-          requesterId,
-          status: { notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED] },
-          appearsResolvedAt: null,
+  let expectedVersion: number | undefined;
+  return runVersionedWrite(
+    ticketId,
+    () => expectedVersion,
+    () =>
+      runSerializableTransaction(async (tx) => {
+        await lockActionAssignmentRows(tx, [], [ticketId]);
+        const current = await tx.ticket.findUnique({
+          where: { id: ticketId },
+          select: {
+            id: true,
+            requesterId: true,
+            status: true,
+            version: true,
+            appearsResolvedAt: true,
+          },
+        });
+        if (!current) throw notFound();
+        assertRequesterOwnsTicket(current.requesterId, requesterId);
+        const version = parseExpectedVersion(body);
+        expectedVersion = version;
+        assertExpectedTicketVersion(ticketId, current.version, version);
+        if (
+          current.status === TicketStatus.CLOSED ||
+          current.status === TicketStatus.CANCELLED
+        ) {
+          throw new TicketWorkflowError(
+            422,
+            "INVALID_TRANSITION",
+            "A Closed or Cancelled ticket cannot be marked as appears resolved"
+          );
         }
-      );
-      return { appearsResolvedAt: signalledAt, version: version + 1 };
-    })
+        if (current.appearsResolvedAt !== null) {
+          throw new TicketWorkflowError(
+            409,
+            "ALREADY_SIGNALLED",
+            "This Ticket is already marked as appears resolved"
+          );
+        }
+
+        const signalledAt = new Date();
+        await writeTicket(
+          tx,
+          ticketId,
+          version,
+          {
+            appearsResolvedAt: signalledAt,
+            updatedAt: signalledAt,
+            version: { increment: 1 },
+          },
+          {
+            requesterId,
+            status: { notIn: [TicketStatus.CLOSED, TicketStatus.CANCELLED] },
+            appearsResolvedAt: null,
+          }
+        );
+        return { appearsResolvedAt: signalledAt, version: version + 1 };
+      })
   );
 }
 
 export async function reopenRequesterTicket(
   ticketId: number,
   requesterId: number,
-  version: number
+  body: unknown
 ) {
-  return runVersionedWrite(ticketId, version, () =>
-    runSerializableTransaction(async (tx) => {
-      await lockActionAssignmentRows(tx, [], [ticketId]);
-      const current = await tx.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          version: true,
-        },
-      });
-      if (!current) throw notFound();
-      if (current.requesterId !== requesterId) {
-        throw new TicketWorkflowError(403, "FORBIDDEN", "Access denied");
-      }
-      assertExpectedTicketVersion(ticketId, current.version, version);
-      if (current.status !== TicketStatus.RESOLVED) {
-        throw new TicketWorkflowError(
-          422,
-          "INVALID_TRANSITION",
-          "Only a Resolved Ticket can be reopened"
-        );
-      }
+  let expectedVersion: number | undefined;
+  return runVersionedWrite(
+    ticketId,
+    () => expectedVersion,
+    () =>
+      runSerializableTransaction(async (tx) => {
+        await lockActionAssignmentRows(tx, [], [ticketId]);
+        const current = await tx.ticket.findUnique({
+          where: { id: ticketId },
+          select: {
+            id: true,
+            requesterId: true,
+            status: true,
+            version: true,
+          },
+        });
+        if (!current) throw notFound();
+        assertRequesterOwnsTicket(current.requesterId, requesterId);
+        const version = parseExpectedVersion(body);
+        expectedVersion = version;
+        assertExpectedTicketVersion(ticketId, current.version, version);
+        if (current.status !== TicketStatus.RESOLVED) {
+          throw new TicketWorkflowError(
+            422,
+            "INVALID_TRANSITION",
+            "Only a Resolved Ticket can be reopened"
+          );
+        }
 
-      const now = new Date();
-      await writeTicket(
-        tx,
-        ticketId,
-        version,
-        {
+        const now = new Date();
+        await writeTicket(
+          tx,
+          ticketId,
+          version,
+          {
+            status: TicketStatus.REOPENED,
+            appearsResolvedAt: null,
+            resolutionSummary: null,
+            resolvedAt: null,
+            updatedAt: now,
+            version: { increment: 1 },
+          },
+          { requesterId, status: TicketStatus.RESOLVED }
+        );
+        return {
           status: TicketStatus.REOPENED,
-          appearsResolvedAt: null,
           resolutionSummary: null,
+          appearsResolvedAt: null,
           resolvedAt: null,
-          updatedAt: now,
-          version: { increment: 1 },
-        },
-        { requesterId, status: TicketStatus.RESOLVED }
-      );
-      return {
-        status: TicketStatus.REOPENED,
-        resolutionSummary: null,
-        appearsResolvedAt: null,
-        resolvedAt: null,
-        version: version + 1,
-      };
-    })
+          version: version + 1,
+        };
+      })
   );
 }
 

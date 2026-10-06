@@ -27,10 +27,18 @@ function installWorkflowMocks() {
   vi.spyOn(prisma, "$transaction").mockImplementation((async (
     callback: (tx: object) => Promise<unknown>
   ) => {
+    let ticketSnapshot: unknown;
+    let hasTicketSnapshot = false;
     const tx = {
       $queryRaw: vi.fn().mockResolvedValue([]),
       ticket: {
-        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
+        findUnique: async (args: unknown) => {
+          if (!hasTicketSnapshot) {
+            ticketSnapshot = await prisma.ticket.findUnique(args as never);
+            hasTicketSnapshot = true;
+          }
+          return ticketSnapshot as never;
+        },
         updateMany: async (args: { where: unknown; data: unknown }) => {
           await prisma.ticket.update({
             where: args.where,
@@ -308,7 +316,12 @@ describe("API-12 owner claim/assign/reassign (AC-09, BR-10)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      owner: { id: 10, name: "Manasporn Thongdee" },
+      owner: {
+        id: 10,
+        name: "Manasporn Thongdee",
+        role: Role.IT_STAFF,
+        isActive: true,
+      },
       status: "OPEN",
       version: 5,
     });

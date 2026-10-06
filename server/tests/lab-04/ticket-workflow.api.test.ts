@@ -108,7 +108,12 @@ describe("Lab 4 versioned Ticket workflow API", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      owner: { id: 10, name: "Assigned Staff" },
+      owner: {
+        id: 10,
+        name: "Assigned Staff",
+        role: Role.IT_STAFF,
+        isActive: true,
+      },
       status: "OPEN",
       version: 5,
     });
@@ -258,6 +263,39 @@ describe("Lab 4 versioned Ticket workflow API", () => {
     expect(response.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
   });
 
+  it.each(["owner", "priority"])(
+    "returns NOT_FOUND before validating a malformed %s body",
+    async (operation) => {
+      const cookie = authAs();
+      const { tx } = workflowTransaction(ticket());
+      tx.ticket.findUnique.mockResolvedValueOnce(null);
+
+      const response = await request(app)
+        .patch(`/api/staff/tickets/20/${operation}`)
+        .set("Cookie", cookie)
+        .send({ unexpected: true });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe("NOT_FOUND");
+    }
+  );
+
+  it.each(["owner", "priority"])(
+    "returns SELF_SERVICE_FORBIDDEN before validating a malformed %s body",
+    async (operation) => {
+      const cookie = authAs();
+      workflowTransaction(ticket({ requesterId: actor.id }));
+
+      const response = await request(app)
+        .patch(`/api/staff/tickets/20/${operation}`)
+        .set("Cookie", cookie)
+        .send({ unexpected: true });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("SELF_SERVICE_FORBIDDEN");
+    }
+  );
+
   it("returns 409 STALE_WRITE without changing the Ticket when expectedVersion is old", async () => {
     const cookie = authAs();
     const { tx } = workflowTransaction(ticket({ version: 5 }));
@@ -330,6 +368,39 @@ describe("Lab 4 versioned Ticket workflow API", () => {
       })
     );
   });
+
+  it.each(["appears-resolved", "reopen"])(
+    "returns NOT_FOUND before validating a malformed %s body",
+    async (operation) => {
+      const cookie = authAs(2, Role.REQUESTER);
+      const { tx } = workflowTransaction(ticket({ requesterId: 2 }));
+      tx.ticket.findUnique.mockResolvedValueOnce(null);
+
+      const response = await request(app)
+        .post(`/api/tickets/20/${operation}`)
+        .set("Cookie", cookie)
+        .send({ expectedVersion: "not-a-version" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe("NOT_FOUND");
+    }
+  );
+
+  it.each(["appears-resolved", "reopen"])(
+    "returns FORBIDDEN before validating a malformed %s body",
+    async (operation) => {
+      const cookie = authAs(2, Role.REQUESTER);
+      workflowTransaction(ticket({ requesterId: 3 }));
+
+      const response = await request(app)
+        .post(`/api/tickets/20/${operation}`)
+        .set("Cookie", cookie)
+        .send({ expectedVersion: "not-a-version" });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error.code).toBe("FORBIDDEN");
+    }
+  );
 
   it("reopens only the requester's Resolved Ticket and clears resolution state", async () => {
     const cookie = authAs(2, Role.REQUESTER);

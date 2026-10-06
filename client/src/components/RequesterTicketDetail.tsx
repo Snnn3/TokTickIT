@@ -197,10 +197,15 @@ export function RequesterTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (data?.error?.code === "STALE_WRITE") {
+          await fetchTicketDetail();
+          setSignalError(
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          );
+          return;
+        }
         setSignalError(
-          data?.error?.code === "STALE_WRITE"
-            ? "This ticket changed. Reload it before trying this action again."
-            : data?.error?.message || "Failed to mark as appears resolved."
+          data?.error?.message || "Failed to mark as appears resolved."
         );
         return;
       }
@@ -235,11 +240,14 @@ export function RequesterTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setReopenError(
-          data?.error?.code === "STALE_WRITE"
-            ? "This ticket changed. Reload it before trying to reopen it again."
-            : data?.error?.message || "Failed to reopen the ticket."
-        );
+        if (data?.error?.code === "STALE_WRITE") {
+          await fetchTicketDetail();
+          setReopenError(
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          );
+          return;
+        }
+        setReopenError(data?.error?.message || "Failed to reopen the ticket.");
         return;
       }
       const data = await res.json();

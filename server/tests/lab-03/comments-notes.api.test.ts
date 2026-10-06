@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../../src/app";
 import { prisma } from "../../src/prisma";
 import { sessionCookie, sessionUser } from "../helpers/session";
+import { installPassThroughTicketTransactionMock } from "../helpers/transaction-mock";
 
 /**
  * API-16 and API-17 from tests.md (AC-07, AC-12, FR-21, FR-25, BR-05, BR-14).
@@ -20,16 +21,7 @@ import { sessionCookie, sessionUser } from "../helpers/session";
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.spyOn(prisma, "$transaction").mockImplementation((async (
-    callback: (tx: object) => Promise<unknown>
-  ) =>
-    callback({
-      $queryRaw: vi.fn().mockResolvedValue([]),
-      ticket: {
-        findUnique: (args: unknown) => prisma.ticket.findUnique(args as never),
-        updateMany: (args: unknown) => prisma.ticket.updateMany(args as never),
-      },
-    })) as never);
+  installPassThroughTicketTransactionMock();
 });
 
 const OWN_OPEN_TICKET = {
