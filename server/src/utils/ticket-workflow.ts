@@ -158,6 +158,29 @@ function staleWrite(
   });
 }
 
+function assertStaffCanManageTicket(
+  requesterId: number,
+  actorId: number
+): void {
+  if (requesterId === actorId) {
+    throw new TicketWorkflowError(
+      403,
+      "SELF_SERVICE_FORBIDDEN",
+      "Staff workflow changes are not allowed on your own Ticket"
+    );
+  }
+}
+
+function assertExpectedTicketVersion(
+  ticketId: number,
+  currentVersion: number,
+  expectedVersion: number
+): void {
+  if (currentVersion !== expectedVersion) {
+    throw staleWrite(ticketId, expectedVersion, currentVersion);
+  }
+}
+
 function invalidTransition(from: TicketStatus, to: TicketStatus) {
   return new TicketWorkflowError(
     422,
@@ -247,18 +270,14 @@ export async function changeStaffTicketStatus(
           },
         });
         if (!current) throw notFound();
-        if (current.requesterId === actorId) {
-          throw new TicketWorkflowError(
-            403,
-            "SELF_SERVICE_FORBIDDEN",
-            "Staff workflow changes are not allowed on your own Ticket"
-          );
-        }
+        assertStaffCanManageTicket(current.requesterId, actorId);
         const change = parseStatusChange(body);
         expectedVersion = change.expectedVersion;
-        if (current.version !== change.expectedVersion) {
-          throw staleWrite(ticketId, change.expectedVersion, current.version);
-        }
+        assertExpectedTicketVersion(
+          ticketId,
+          current.version,
+          change.expectedVersion
+        );
         if (!isTransitionAllowed(current.status, change.status)) {
           throw invalidTransition(current.status, change.status);
         }
@@ -352,16 +371,12 @@ export async function assignStaffTicketOwner(
         },
       });
       if (!current) throw notFound();
-      if (current.requesterId === actorId) {
-        throw new TicketWorkflowError(
-          403,
-          "SELF_SERVICE_FORBIDDEN",
-          "Staff workflow changes are not allowed on your own Ticket"
-        );
-      }
-      if (current.version !== change.expectedVersion) {
-        throw staleWrite(ticketId, change.expectedVersion, current.version);
-      }
+      assertStaffCanManageTicket(current.requesterId, actorId);
+      assertExpectedTicketVersion(
+        ticketId,
+        current.version,
+        change.expectedVersion
+      );
 
       let owner: { id: number; name: string } | null = null;
       if (change.ownerId !== null) {
@@ -420,16 +435,12 @@ export async function changeStaffTicketPriority(
         select: { id: true, requesterId: true, version: true },
       });
       if (!current) throw notFound();
-      if (current.requesterId === actorId) {
-        throw new TicketWorkflowError(
-          403,
-          "SELF_SERVICE_FORBIDDEN",
-          "Staff workflow changes are not allowed on your own Ticket"
-        );
-      }
-      if (current.version !== change.expectedVersion) {
-        throw staleWrite(ticketId, change.expectedVersion, current.version);
-      }
+      assertStaffCanManageTicket(current.requesterId, actorId);
+      assertExpectedTicketVersion(
+        ticketId,
+        current.version,
+        change.expectedVersion
+      );
 
       await writeTicket(
         tx,
@@ -472,9 +483,7 @@ export async function markTicketAppearsResolved(
       if (current.requesterId !== requesterId) {
         throw new TicketWorkflowError(403, "FORBIDDEN", "Access denied");
       }
-      if (current.version !== version) {
-        throw staleWrite(ticketId, version, current.version);
-      }
+      assertExpectedTicketVersion(ticketId, current.version, version);
       if (
         current.status === TicketStatus.CLOSED ||
         current.status === TicketStatus.CANCELLED
@@ -535,9 +544,7 @@ export async function reopenRequesterTicket(
       if (current.requesterId !== requesterId) {
         throw new TicketWorkflowError(403, "FORBIDDEN", "Access denied");
       }
-      if (current.version !== version) {
-        throw staleWrite(ticketId, version, current.version);
-      }
+      assertExpectedTicketVersion(ticketId, current.version, version);
       if (current.status !== TicketStatus.RESOLVED) {
         throw new TicketWorkflowError(
           422,
