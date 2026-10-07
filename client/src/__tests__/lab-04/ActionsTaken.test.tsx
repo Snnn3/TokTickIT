@@ -449,9 +449,8 @@ describe("ActionsTakenPanel", () => {
     async (terminalStatus, terminalLabel) => {
       let actionReads = 0;
       let patchWrites = 0;
-      vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-        const url = String(input);
-        if (url === "/api/tickets/42/actions") {
+      mockActionApi({
+        "GET /api/tickets/42/actions": () => {
           actionReads += 1;
           return response({
             actions: [
@@ -472,18 +471,14 @@ describe("ActionsTakenPanel", () => {
             ],
             ticketVersion: actionReads === 1 ? 7 : 8,
           });
-        }
-        if (url === "/api/staff/action-assignees") {
+        },
+        "GET /api/staff/action-assignees": () => {
           return response({ assignees: [] });
-        }
-        if (
-          url === "/api/staff/tickets/42/actions/31" &&
-          init?.method === "PATCH"
-        ) {
+        },
+        "PATCH /api/staff/tickets/42/actions/31": () => {
           patchWrites += 1;
           return response({ error: { code: "STALE_WRITE" } }, 409);
-        }
-        return response({ error: { code: "NOT_FOUND" } }, 404);
+        },
       });
 
       render(

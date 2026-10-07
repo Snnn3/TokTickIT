@@ -318,15 +318,17 @@ export function ActionsTakenPanel({
     editingActionId !== null && editingAction === null;
   const editorWritesAllowed =
     writesAllowed && !editingActionIsTerminal && !editingActionUnavailable;
-  const editorReadOnlyMessage = !writesAllowed
-    ? writeDisabledMessage
-      ? null
-      : "Action changes are not available to this account."
-    : editingAction !== null && editingActionIsTerminal
-      ? `This action is ${ACTION_STATUS_LABELS[editingAction.status]} and is read-only. Your unsaved draft is preserved.`
-      : editingActionUnavailable
-        ? "This action is no longer available. Your unsaved draft is preserved but cannot be submitted."
-        : null;
+  let editorReadOnlyMessage: string | null = null;
+  if (!writesAllowed && writeDisabledMessage === null) {
+    editorReadOnlyMessage = "Action changes are not available to this account.";
+  }
+  if (writesAllowed && editingActionIsTerminal && editingAction !== null) {
+    editorReadOnlyMessage = `This action is ${ACTION_STATUS_LABELS[editingAction.status]} and is read-only. Your unsaved draft is preserved.`;
+  }
+  if (writesAllowed && editingActionUnavailable) {
+    editorReadOnlyMessage =
+      "This action is no longer available. Your unsaved draft is preserved but cannot be submitted.";
+  }
 
   const closeConfirmation = useCallback(() => {
     if (!saving) setConfirmation(null);
