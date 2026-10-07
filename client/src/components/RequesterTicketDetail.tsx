@@ -10,6 +10,7 @@ import { AttachmentSection } from "./AttachmentSection";
 import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
+import { refetchAfterStaleWrite } from "../utils/staleWrite";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -193,10 +194,19 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/appears-resolved`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setSignalError,
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          )
+        )
+          return;
         setSignalError(
           data?.error?.message || "Failed to mark as appears resolved."
         );
@@ -204,6 +214,15 @@ export function RequesterTicketDetail({
       }
       const data = await res.json();
       setAppearsResolvedAt(data.appearsResolvedAt);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              appearsResolvedAt: data.appearsResolvedAt,
+              version: data.version,
+            }
+          : prev
+      );
       setSignalConfirm(false);
       setSignalSuccess(true);
     } catch {
@@ -220,13 +239,23 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/reopen`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setReopenError,
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          )
+        )
+          return;
         setReopenError(data?.error?.message || "Failed to reopen the ticket.");
         return;
       }
+      const data = await res.json();
       // Reopening clears the signal and the summary server-side [BR-26];
       // mirror that locally so the actions and panels follow at once.
       setTicket((prev) =>
@@ -234,6 +263,8 @@ export function RequesterTicketDetail({
           ? {
               ...prev,
               status: "REOPENED",
+              version: data.version,
+              resolvedAt: null,
               appearsResolvedAt: null,
               resolutionSummary: null,
             }

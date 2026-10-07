@@ -3,7 +3,7 @@ import { prisma } from "../prisma";
 
 const MAX_SERIALIZATION_RETRIES = 3;
 
-function isSerializationConflict(error: unknown): boolean {
+export function isSerializationConflict(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&

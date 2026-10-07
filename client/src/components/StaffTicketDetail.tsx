@@ -11,6 +11,7 @@ import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import { legalStatusTargets, needsStatusConfirm } from "../utils/transitions";
 import { formatDateTime, formatDateOnly } from "../utils/format";
+import { refetchAfterStaleWrite } from "../utils/staleWrite";
 import {
   ZenItPriorityBadge,
   ZenPriorityBadge,
@@ -81,6 +82,9 @@ export function StaffTicketDetail({
   >(null);
   const [statusSuccess, setStatusSuccess] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState("");
+  const [conflictSavedSummary, setConflictSavedSummary] = useState<{
+    value: string | null;
+  } | null>(null);
 
   const [commentDraft, setCommentDraft] = useState("");
   const [commentBusy, setCommentBusy] = useState(false);
@@ -115,55 +119,71 @@ export function StaffTicketDetail({
     }
   }, [pendingStatus]);
 
-  const fetchDetail = useCallback(async () => {
-    setLoading(true);
-    setForbidden(false);
-    setNotFound(false);
-    setFailure(null);
+  const fetchDetail = useCallback(
+    async (preserveSummaryDraft = false) => {
+      setLoading(true);
+      setForbidden(false);
+      setNotFound(false);
+      setFailure(null);
 
-    try {
-      const [detailRes, assigneeRes] = await Promise.all([
-        fetch(`/api/staff/tickets/${ticketId}`),
-        fetch("/api/staff/assignees"),
-      ]);
+      try {
+        const [detailRes, assigneeRes] = await Promise.all([
+          fetch(`/api/staff/tickets/${ticketId}`),
+          fetch("/api/staff/assignees"),
+        ]);
 
-      if (detailRes.status === 403) {
-        setForbidden(true);
-        return;
-      }
-      if (detailRes.status === 404) {
-        setNotFound(true);
-        return;
-      }
-      if (!detailRes.ok) {
-        const data = await detailRes.json().catch(() => ({}));
-        setFailure(data?.error?.message || "Failed to load ticket detail.");
-        return;
-      }
+        if (detailRes.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        if (detailRes.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        if (!detailRes.ok) {
+          const data = await detailRes.json().catch(() => ({}));
+          setFailure(data?.error?.message || "Failed to load ticket detail.");
+          return;
+        }
 
-      const data = await detailRes.json();
-      setTicket(data.ticket);
-      setSelfService(data.selfService === true);
-      setComments(data.ticket?.publicComments ?? []);
-      // A self-filed ticket carries no notes key at all; anything else
-      // carries the array (possibly empty) [BR-04, BR-25].
-      setNotes(data.ticket?.internalNotes ?? []);
-      setSummaryDraft(data.ticket?.resolutionSummary ?? "");
-      setPendingStatus("");
-      setStatusSuccess(false);
-      setStatusError(null);
-      setStatusValidationError(null);
+        const data = await detailRes.json();
+        setTicket(data.ticket);
+        setSelfService(data.selfService === true);
+        setComments(data.ticket?.publicComments ?? []);
+        // A self-filed ticket carries no notes key at all; anything else
+        // carries the array (possibly empty) [BR-04, BR-25].
+        setNotes(data.ticket?.internalNotes ?? []);
+        if (!preserveSummaryDraft) {
+          setSummaryDraft(data.ticket?.resolutionSummary ?? "");
+          setConflictSavedSummary(null);
+        } else {
+          setConflictSavedSummary({
+            value: data.ticket?.resolutionSummary ?? null,
+          });
+        }
+        setPendingStatus("");
+        setStatusSuccess(false);
+        setStatusError(null);
+        setStatusValidationError(null);
+        setStatusConfirm(false);
 
-      if (assigneeRes.ok) {
-        const assigneeData = await assigneeRes.json().catch(() => ({}));
-        setAssignees(assigneeData.assignees ?? []);
+        if (assigneeRes.ok) {
+          const assigneeData = await assigneeRes.json().catch(() => ({}));
+          setAssignees(assigneeData.assignees ?? []);
+        }
+      } catch {
+        setFailure("Network error. Unable to connect to the server.");
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setFailure("Network error. Unable to connect to the server.");
-    } finally {
-      setLoading(false);
-    }
-  }, [ticketId]);
+    },
+    [ticketId]
+  );
+
+  const fetchDetailPreservingSummaryDraft = useCallback(
+    () => fetchDetail(true),
+    [fetchDetail]
+  );
 
   useEffect(() => {
     fetchDetail();
@@ -195,6 +215,7 @@ export function StaffTicketDetail({
   };
 
   async function patchOwner(ownerId: number | null) {
+    if (!ticket) return;
     setOwnerBusy(true);
     setOwnerError(null);
     setOwnerSuccess(false);
@@ -202,10 +223,19 @@ export function StaffTicketDetail({
       const res = await fetch(`/api/staff/tickets/${ticketId}/owner`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId }),
+        body: JSON.stringify({ ownerId, expectedVersion: ticket.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetailPreservingSummaryDraft,
+            setOwnerError,
+            "This ticket changed. The latest ticket has been loaded; review it before assigning it again."
+          )
+        )
+          return;
         setOwnerError(data?.error?.message || "Failed to update the owner.");
         return;
       }
@@ -216,6 +246,7 @@ export function StaffTicketDetail({
               ...prev,
               owner: data.owner,
               status: data.status ?? prev.status,
+              version: data.version,
             }
           : prev
       );
@@ -228,6 +259,7 @@ export function StaffTicketDetail({
   }
 
   async function patchPriority(itPriority: string) {
+    if (!ticket) return;
     setPriorityBusy(true);
     setPriorityError(null);
     setPrioritySuccess(false);
@@ -237,10 +269,22 @@ export function StaffTicketDetail({
         headers: { "Content-Type": "application/json" },
         // Requested Priority is never sent: it is immutable after creation
         // and no body key can change it [BR-11].
-        body: JSON.stringify({ itPriority }),
+        body: JSON.stringify({
+          itPriority,
+          expectedVersion: ticket.version,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetailPreservingSummaryDraft,
+            setPriorityError,
+            "This ticket changed. The latest ticket has been loaded; review it before changing its priority again."
+          )
+        )
+          return;
         setPriorityError(
           data?.error?.message || "Failed to update the IT priority."
         );
@@ -248,7 +292,9 @@ export function StaffTicketDetail({
       }
       const data = await res.json();
       setTicket((prev) =>
-        prev ? { ...prev, itPriority: data.itPriority } : prev
+        prev
+          ? { ...prev, itPriority: data.itPriority, version: data.version }
+          : prev
       );
       setPrioritySuccess(true);
     } catch {
@@ -259,6 +305,7 @@ export function StaffTicketDetail({
   }
 
   async function patchStatus(target: TicketStatus, summary?: string) {
+    if (!ticket) return;
     setStatusBusy(true);
     setStatusError(null);
     setStatusValidationError(null);
@@ -266,10 +313,17 @@ export function StaffTicketDetail({
     try {
       // Confirmation for Closed/Cancelled lives in the dialog above; the
       // server takes no confirm flag, so none is sent here by construction.
-      const payload: { status: TicketStatus; resolutionSummary?: string } =
-        target === "RESOLVED" && summary !== undefined
-          ? { status: target, resolutionSummary: summary }
-          : { status: target };
+      const payload: {
+        status: TicketStatus;
+        resolutionSummary?: string;
+        expectedVersion: number;
+      } = {
+        status: target,
+        expectedVersion: ticket.version,
+        ...(target === "RESOLVED" && summary !== undefined
+          ? { resolutionSummary: summary }
+          : {}),
+      };
       const res = await fetch(`/api/staff/tickets/${ticketId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -277,6 +331,15 @@ export function StaffTicketDetail({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchDetailPreservingSummaryDraft,
+            setStatusError,
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          )
+        )
+          return;
         // An illegal transition surfaces the server reason, never a generic
         // error, so staff learn what the workflow permits.
         setStatusError(data?.error?.message || "Failed to update the status.");
@@ -288,9 +351,10 @@ export function StaffTicketDetail({
           ? {
               ...prev,
               status: data.status,
-              resolutionSummary:
-                data.resolutionSummary ?? prev.resolutionSummary,
-              appearsResolvedAt: null,
+              version: data.version,
+              resolvedAt: data.resolvedAt,
+              resolutionSummary: data.resolutionSummary,
+              appearsResolvedAt: data.appearsResolvedAt,
             }
           : prev
       );
@@ -299,6 +363,7 @@ export function StaffTicketDetail({
       } else if (data.resolutionSummary !== undefined) {
         setSummaryDraft(data.resolutionSummary ?? "");
       }
+      setConflictSavedSummary(null);
       setPendingStatus("");
       setStatusConfirm(false);
       setStatusSuccess(true);
@@ -822,6 +887,25 @@ export function StaffTicketDetail({
               data-testid="resolution-summary-input"
               aria-required={pendingStatus === "RESOLVED"}
             />
+            {conflictSavedSummary && (
+              <div
+                className="alert alert-info small mt-2 mb-0"
+                data-testid="resolution-summary-conflict"
+                role="status"
+              >
+                <div className="fw-semibold mb-1">
+                  Latest saved resolution summary
+                </div>
+                <div style={{ whiteSpace: "pre-wrap" }}>
+                  {conflictSavedSummary.value?.trim()
+                    ? conflictSavedSummary.value
+                    : "No resolution summary is currently saved."}
+                </div>
+                <div className="mt-1">
+                  Compare it with your draft before saving again.
+                </div>
+              </div>
+            )}
             <div className="d-flex justify-content-between align-items-center mt-2">
               <span className="text-muted" style={{ fontSize: "0.75rem" }}>
                 {summaryDraft.length}/2000 characters

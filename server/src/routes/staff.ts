@@ -7,7 +7,14 @@ import {
   requireRole,
 } from "../middleware/auth";
 import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
-import { getLegalTargets, isTransitionAllowed } from "../utils/transitions";
+import { getLegalTargets } from "../utils/transitions";
+import { sendUnexpectedError } from "../utils/unexpected-response";
+import {
+  assignStaffTicketOwner,
+  changeStaffTicketPriority,
+  changeStaffTicketStatus,
+  sendTicketWorkflowError,
+} from "../utils/ticket-workflow";
 import {
   parsePositiveIntParam,
   serializeAttachment,
@@ -256,12 +263,7 @@ staffRouter.get(
 
       return res.status(200).json({ assignees });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve assignees",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve assignees");
     }
   }
 );
@@ -369,6 +371,8 @@ staffRouter.get(
           requestedPriority: ticket.requestedPriority,
           itPriority: ticket.itPriority,
           status: ticket.status,
+          version: ticket.version,
+          resolvedAt: ticket.resolvedAt ?? null,
           requester: {
             id: ticket.requester.id,
             name: ticket.requester.name,
@@ -388,12 +392,7 @@ staffRouter.get(
         totalPages,
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve the ticket queue",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve the ticket queue");
     }
   }
 );
@@ -459,25 +458,6 @@ function validateNoteBody(raw: unknown): {
   return { valid: true, body };
 }
 
-function validateResolutionSummary(raw: unknown): {
-  valid: boolean;
-  body: string;
-  issue?: string;
-} {
-  const body = typeof raw === "string" ? raw.trim() : "";
-  if (body.length < 1) {
-    return { valid: false, body, issue: "Resolution summary is required" };
-  }
-  if (body.length > 2000) {
-    return {
-      valid: false,
-      body,
-      issue: "Resolution summary must not exceed 2000 characters",
-    };
-  }
-  return { valid: true, body };
-}
-
 // GET /api/staff/tickets/:id [FR-23]
 staffRouter.get(
   "/tickets/:id",
@@ -529,6 +509,8 @@ staffRouter.get(
         number: ticket.number,
         ticketDate: ticket.ticketDate,
         status: ticket.status,
+        version: ticket.version,
+        resolvedAt: ticket.resolvedAt ?? null,
         requestedPriority: ticket.requestedPriority,
         itPriority: ticket.itPriority,
         summary: ticket.summary,
@@ -573,12 +555,7 @@ staffRouter.get(
         },
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve the ticket",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve the ticket");
     }
   }
 );
@@ -601,118 +578,12 @@ staffRouter.patch(
       });
     }
 
-    const { ownerId } = (req.body ?? {}) as { ownerId?: unknown };
-    if (ownerId === undefined) {
-      return res.status(400).json({
-        error: {
-          code: "VALIDATION_FAILED",
-          message: "Owner is required",
-          details: [{ field: "ownerId", issue: "Owner is required" }],
-        },
-      });
-    }
-    if (
-      ownerId !== null &&
-      (typeof ownerId !== "number" ||
-        !Number.isInteger(ownerId) ||
-        ownerId <= 0)
-    ) {
-      return res.status(400).json({
-        error: {
-          code: "VALIDATION_FAILED",
-          message: "Owner must be a user id or null",
-          details: [
-            { field: "ownerId", issue: "Owner must be a user id or null" },
-          ],
-        },
-      });
-    }
-
     try {
-      const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          ownerId: true,
-        },
-      });
-
-      if (!ticket) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Ticket not found" },
-        });
-      }
-
-      if (ticket.requesterId === user.id) {
-        return selfServiceRefusal(res);
-      }
-
-      if (ownerId !== null) {
-        const target = await prisma.user.findUnique({
-          where: { id: ownerId },
-          select: { id: true, name: true, role: true, isActive: true },
-        });
-        if (
-          !target ||
-          !target.isActive ||
-          (target.role !== Role.IT_STAFF && target.role !== Role.ADMINISTRATOR)
-        ) {
-          return res.status(422).json({
-            error: {
-              code: "INVALID_OWNER",
-              message: "Owner must be an active IT Staff or Administrator user",
-            },
-          });
-        }
-
-        // Claim side effect [BR-23, D16]: claiming an unowned NEW ticket also
-        // opens it so NEW keeps meaning genuinely unhandled. Reassignment,
-        // unassignment and claims from any other status leave status untouched.
-        const shouldAutoOpen =
-          ticket.ownerId === null && ticket.status === TicketStatus.NEW;
-        const updated = await prisma.ticket.update({
-          where: { id: ticketId },
-          data: shouldAutoOpen
-            ? { ownerId, status: TicketStatus.OPEN }
-            : { ownerId },
-          include: { owner: { select: { id: true, name: true } } },
-        });
-
-        const updatedOwner = (
-          updated as unknown as {
-            owner: { id: number; name: string } | null;
-            status: TicketStatus;
-          }
-        ).owner;
-        const updatedStatus = (updated as unknown as { status: TicketStatus })
-          .status;
-        return res.status(200).json({
-          owner: updatedOwner
-            ? { id: updatedOwner.id, name: updatedOwner.name }
-            : { id: target.id, name: target.name },
-          status: updatedStatus ?? (shouldAutoOpen ? "OPEN" : ticket.status),
-        });
-      }
-
-      const updated = await prisma.ticket.update({
-        where: { id: ticketId },
-        data: { ownerId: null },
-      });
-      const updatedStatus = (updated as unknown as { status?: TicketStatus })
-        .status;
-      return res.status(200).json({
-        owner: null,
-        status: updatedStatus ?? ticket.status,
-      });
-    } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the ticket owner",
-        },
-      });
+      const updated = await assignStaffTicketOwner(ticketId, user.id, req.body);
+      return res.status(200).json(updated);
+    } catch (error) {
+      if (sendTicketWorkflowError(res, error)) return;
+      return sendUnexpectedError(res, "Failed to update the ticket owner");
     }
   }
 );
@@ -735,58 +606,16 @@ staffRouter.patch(
       });
     }
 
-    // Requested Priority is never writable [BR-11]: only itPriority is read
-    // here and only itPriority is written below, so a requestedPriority key
-    // in the body is ignored outright rather than merged.
-    const { itPriority } = (req.body ?? {}) as { itPriority?: unknown };
-    if (
-      typeof itPriority !== "string" ||
-      !Object.values(TicketPriority).includes(itPriority as TicketPriority)
-    ) {
-      return res.status(400).json({
-        error: {
-          code: "VALIDATION_FAILED",
-          message: "IT priority must be LOW, MEDIUM, or HIGH",
-          details: [
-            {
-              field: "itPriority",
-              issue: "IT priority must be LOW, MEDIUM, or HIGH",
-            },
-          ],
-        },
-      });
-    }
-
     try {
-      const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: { id: true, requesterId: true },
-      });
-
-      if (!ticket) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Ticket not found" },
-        });
-      }
-
-      if (ticket.requesterId === user.id) {
-        return selfServiceRefusal(res);
-      }
-
-      const updated = await prisma.ticket.update({
-        where: { id: ticketId },
-        data: { itPriority: itPriority as TicketPriority },
-        select: { itPriority: true },
-      });
-
-      return res.status(200).json({ itPriority: updated.itPriority });
-    } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the IT priority",
-        },
-      });
+      const updated = await changeStaffTicketPriority(
+        ticketId,
+        user.id,
+        req.body
+      );
+      return res.status(200).json(updated);
+    } catch (error) {
+      if (sendTicketWorkflowError(res, error)) return;
+      return sendUnexpectedError(res, "Failed to update the IT priority");
     }
   }
 );
@@ -809,157 +638,16 @@ staffRouter.patch(
       });
     }
 
-    // Confirmation for CLOSED and CANCELLED is a client-side dialog only
-    // (ui-spec.md section 7): the server takes no confirm field, so one is
-    // ignored outright when present rather than validated or required.
-    const { status, resolutionSummary: rawSummary } = (req.body ?? {}) as {
-      status?: unknown;
-      resolutionSummary?: unknown;
-    };
-
-    if (typeof status !== "string" || !isTicketStatus(status)) {
-      return res.status(400).json({
-        error: {
-          code: "VALIDATION_FAILED",
-          message: `Status must be one of ${TICKET_STATUSES.join(", ")}`,
-          details: [
-            {
-              field: "status",
-              issue: `Status must be one of ${TICKET_STATUSES.join(", ")}`,
-            },
-          ],
-        },
-      });
-    }
-    const target = status as TicketStatus;
-
     try {
-      const ticket = await prisma.ticket.findUnique({
-        where: { id: ticketId },
-        select: {
-          id: true,
-          requesterId: true,
-          status: true,
-          resolutionSummary: true,
-          appearsResolvedAt: true,
-        },
-      });
-
-      if (!ticket) {
-        return res.status(404).json({
-          error: { code: "NOT_FOUND", message: "Ticket not found" },
-        });
-      }
-
-      if (ticket.requesterId === user.id) {
-        return selfServiceRefusal(res);
-      }
-
-      if (!isTransitionAllowed(ticket.status, target)) {
-        return res.status(422).json({
-          error: {
-            code: "INVALID_TRANSITION",
-            message:
-              ticket.status === TicketStatus.CLOSED ||
-              ticket.status === TicketStatus.CANCELLED
-                ? `Cannot transition out of terminal status ${ticket.status}`
-                : `Cannot transition from ${ticket.status} to ${target}`,
-          },
-        });
-      }
-
-      // Resolving requires a non-empty trimmed summary, supplied with the
-      // transition or already stored [BR-26, FR-28, D11].
-      let effectiveSummary: string | null = ticket.resolutionSummary ?? null;
-      if (target === TicketStatus.RESOLVED) {
-        if (rawSummary !== undefined) {
-          if (typeof rawSummary !== "string") {
-            return res.status(400).json({
-              error: {
-                code: "VALIDATION_FAILED",
-                message: "Resolution summary must be a string",
-                details: [
-                  {
-                    field: "resolutionSummary",
-                    issue: "Resolution summary must be a string",
-                  },
-                ],
-              },
-            });
-          }
-          const validation = validateResolutionSummary(rawSummary);
-          if (!validation.valid) {
-            if (validation.body.length < 1) {
-              return res.status(400).json({
-                error: {
-                  code: "RESOLUTION_SUMMARY_REQUIRED",
-                  message:
-                    "A resolution summary is required to resolve this ticket",
-                },
-              });
-            }
-            return res.status(400).json({
-              error: {
-                code: "VALIDATION_FAILED",
-                message: validation.issue ?? "Invalid resolution summary",
-                details: [
-                  {
-                    field: "resolutionSummary",
-                    issue: validation.issue ?? "Invalid resolution summary",
-                  },
-                ],
-              },
-            });
-          }
-          effectiveSummary = validation.body;
-        } else {
-          const stored = (ticket.resolutionSummary ?? "").trim();
-          if (stored.length < 1 || stored.length > 2000) {
-            return res.status(400).json({
-              error: {
-                code: "RESOLUTION_SUMMARY_REQUIRED",
-                message:
-                  "A resolution summary is required to resolve this ticket",
-              },
-            });
-          }
-          effectiveSummary = stored;
-        }
-      }
-
-      // Every successful transition clears the appears-resolved signal so the
-      // flag cannot go stale across a cycle; entering REOPENED additionally
-      // clears the summary so the next cycle needs a fresh explanation
-      // [BR-26]. Non-RESOLVED, non-REOPENED transitions leave the stored
-      // summary untouched.
-      const data: Prisma.TicketUpdateInput = {
-        status: target,
-        appearsResolvedAt: null,
-      };
-      if (target === TicketStatus.RESOLVED) {
-        data.resolutionSummary = effectiveSummary;
-      } else if (target === TicketStatus.REOPENED) {
-        data.resolutionSummary = null;
-        effectiveSummary = null;
-      }
-
-      const updated = await prisma.ticket.update({
-        where: { id: ticketId },
-        data,
-        select: { status: true, resolutionSummary: true },
-      });
-
-      return res.status(200).json({
-        status: updated.status,
-        resolutionSummary: updated.resolutionSummary ?? null,
-      });
-    } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to update the ticket status",
-        },
-      });
+      const updated = await changeStaffTicketStatus(
+        ticketId,
+        user.id,
+        req.body
+      );
+      return res.status(200).json(updated);
+    } catch (error) {
+      if (sendTicketWorkflowError(res, error)) return;
+      return sendUnexpectedError(res, "Failed to update the ticket status");
     }
   }
 );
@@ -1011,12 +699,7 @@ staffRouter.get(
         notes: notes.map((n) => serializeStaffComment(n as never)),
       });
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to retrieve internal notes",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to retrieve internal notes");
     }
   }
 );
@@ -1085,12 +768,7 @@ staffRouter.post(
         })
       );
     } catch {
-      return res.status(500).json({
-        error: {
-          code: "UNEXPECTED",
-          message: "Failed to create internal note",
-        },
-      });
+      return sendUnexpectedError(res, "Failed to create internal note");
     }
   }
 );

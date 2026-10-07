@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import {
   ACCOUNTS,
@@ -15,6 +16,11 @@ import {
 const SEED_NEW_TICKET = "TKT-2026-SEED-01";
 const SEED_CROSS_OWNER_TICKET = "TKT-2026-SEED-02";
 
+type ActionWriteResponse = {
+  action: { id: number; version: number };
+  ticketVersion: number;
+};
+
 test.describe("E-02 staff ticket flow and authorization evidence", () => {
   test.beforeEach(() => resetSeed());
   test.afterEach(() => cleanupE2EFixtures());
@@ -23,18 +29,50 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
     browser,
     page: staffPage,
   }) => {
+    const requesterContext = await browser.newContext({
+      baseURL: "http://localhost:5173",
+    });
+    const requesterPage = await requesterContext.newPage();
+    await signInAndChangePassword(
+      requesterPage,
+      ACCOUNTS.requester,
+      "E2E.Requester!2026"
+    );
+
+    const workflowSummary = "E2E Lab4 staff workflow " + Date.now();
+    await requesterPage.goto("/tickets/new");
+    await expect(requesterPage.getByTestId("create-ticket-form")).toBeVisible();
+    await requesterPage
+      .locator("#category-select")
+      .selectOption({ label: "Account and Access" });
+    await requesterPage
+      .locator("#system-select")
+      .selectOption({ label: "Email" });
+    await requesterPage.locator("#priority-select").selectOption("MEDIUM");
+    await requesterPage.locator("#summary-input").fill(workflowSummary);
+    await requesterPage
+      .locator("#description-input")
+      .fill("Verify the campus Wi-Fi access point and requester reopen flow.");
+    await requesterPage.getByRole("button", { name: "Submit Ticket" }).click();
+    const createdTicketPanel = requesterPage.getByTestId("success-panel");
+    await expect(createdTicketPanel).toBeVisible();
+    const workflowTicketNumber = (
+      await createdTicketPanel.getByTestId("success-ticket-number").innerText()
+    ).trim();
+    expect(workflowTicketNumber).toMatch(/^TKT-/);
+
     await signInAndChangePassword(staffPage, ACCOUNTS.staff, "E2E.Staff!2026");
 
     await expect(staffPage.getByTestId("staff-queue-view")).toBeVisible();
-    await staffPage.locator("#queue-search").fill(SEED_NEW_TICKET);
-    const seedRow = staffPage
+    await staffPage.locator("#queue-search").fill(workflowTicketNumber);
+    const workflowRow = staffPage
       .getByTestId("queue-row")
-      .filter({ hasText: SEED_NEW_TICKET });
-    await expect(seedRow).toBeVisible();
-    await seedRow.getByRole("button", { name: "Open" }).click();
+      .filter({ hasText: workflowTicketNumber });
+    await expect(workflowRow).toBeVisible();
+    await workflowRow.getByRole("button", { name: "Open" }).click();
     await expect(staffPage).toHaveURL(/\/staff\/tickets\/\d+$/);
     await expect(staffPage.getByTestId("staff-detail-number")).toHaveText(
-      SEED_NEW_TICKET
+      workflowTicketNumber
     );
 
     await staffPage.getByTestId("claim-btn").click();
@@ -60,6 +98,73 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
       internalNote
     );
 
+    const ticket = (await getQueue(staffPage)).tickets.find(
+      (candidate) => candidate.number === workflowTicketNumber
+    );
+    expect(ticket).toBeDefined();
+    if (!ticket) {
+      throw new Error("The E2E ticket for the staff flow was not found.");
+    }
+
+    const currentActions = await requestJson<{ ticketVersion: number }>(
+      staffPage,
+      "/api/tickets/" + ticket.id + "/actions"
+    );
+    expect(currentActions.status).toBe(200);
+
+    const createdAction = await requestJson<ActionWriteResponse>(
+      staffPage,
+      "/api/staff/tickets/" + ticket.id + "/actions",
+      {
+        method: "POST",
+        body: {
+          title: "Reconfigure campus Wi-Fi access point",
+          details: "Verify the access point configuration and connectivity.",
+          expectedTicketVersion: currentActions.body.ticketVersion,
+        },
+        headers: { "Idempotency-Key": randomUUID() },
+      }
+    );
+    expect(createdAction.status).toBe(201);
+
+    const startedAction = await requestJson<ActionWriteResponse>(
+      staffPage,
+      "/api/staff/tickets/" +
+        ticket.id +
+        "/actions/" +
+        createdAction.body.action.id,
+      {
+        method: "PATCH",
+        body: {
+          status: "IN_PROGRESS",
+          expectedVersion: createdAction.body.action.version,
+          expectedTicketVersion: createdAction.body.ticketVersion,
+        },
+      }
+    );
+    expect(startedAction.status).toBe(200);
+
+    const completedAction = await requestJson<ActionWriteResponse>(
+      staffPage,
+      "/api/staff/tickets/" +
+        ticket.id +
+        "/actions/" +
+        startedAction.body.action.id,
+      {
+        method: "PATCH",
+        body: {
+          status: "COMPLETED",
+          result:
+            "The access point was reconfigured and the connection is stable.",
+          expectedVersion: startedAction.body.action.version,
+          expectedTicketVersion: startedAction.body.ticketVersion,
+        },
+      }
+    );
+    expect(completedAction.status).toBe(200);
+
+    await staffPage.reload();
+    await expect(staffPage.getByTestId("staff-detail-view")).toBeVisible();
     await staffPage.getByTestId("status-select").selectOption("RESOLVED");
     await staffPage
       .getByTestId("resolution-summary-input")
@@ -70,19 +175,14 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
       "RESOLVED"
     );
 
-    const requesterContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
-    });
-    const requesterPage = await requesterContext.newPage();
-    await signInAndChangePassword(
-      requesterPage,
-      ACCOUNTS.requester,
-      "E2E.Requester!2026"
-    );
-    await requesterPage.locator("#ticket-search").fill(SEED_NEW_TICKET);
+    await requesterPage.goto("/tickets");
+    await expect(
+      requesterPage.getByRole("heading", { name: "My Tickets" })
+    ).toBeVisible();
+    await requesterPage.locator("#ticket-search").fill(workflowTicketNumber);
     await requesterPage
       .getByTestId("tickets-desktop-table")
-      .getByRole("button", { name: SEED_NEW_TICKET })
+      .getByRole("button", { name: workflowTicketNumber })
       .click();
     await expect(
       requesterPage.getByTestId("resolution-summary-panel")
@@ -92,18 +192,18 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
     await expect(requesterPage.getByTestId("reopen-success")).toBeVisible();
 
     const queue = await getQueue(staffPage);
-    const ownSeedTicket = queue.tickets.find(
-      (ticket) => ticket.number === SEED_NEW_TICKET
+    const workflowTicket = queue.tickets.find(
+      (ticket) => ticket.number === workflowTicketNumber
     );
     const crossOwnerTicket = queue.tickets.find(
       (ticket) => ticket.number === SEED_CROSS_OWNER_TICKET
     );
-    expect(ownSeedTicket).toBeDefined();
+    expect(workflowTicket).toBeDefined();
     expect(crossOwnerTicket).toBeDefined();
 
     const requesterNotesResponse = await requestJson(
       requesterPage,
-      `/api/staff/tickets/${ownSeedTicket?.id}/notes`
+      `/api/staff/tickets/${workflowTicket?.id}/notes`
     );
     const crossOwnerResponse = await requestJson(
       requesterPage,
@@ -142,7 +242,13 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
     const selfOwnerResponse = await requestJson(
       staffPage,
       `/api/staff/tickets/${ownTicket?.id}/owner`,
-      { method: "PATCH", body: { ownerId: staffIdentity.body.user.id } }
+      {
+        method: "PATCH",
+        body: {
+          ownerId: staffIdentity.body.user.id,
+          expectedVersion: ownTicket?.version,
+        },
+      }
     );
     const selfNotesResponse = await requestJson(
       staffPage,
@@ -156,7 +262,7 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
         {
           case: "requester-refused-internal-notes",
           method: "GET",
-          path: `/api/staff/tickets/${ownSeedTicket?.id}/notes`,
+          path: `/api/staff/tickets/${workflowTicket?.id}/notes`,
           status: requesterNotesResponse.status,
           expectedStatus: 403,
           body: requesterNotesResponse.body,

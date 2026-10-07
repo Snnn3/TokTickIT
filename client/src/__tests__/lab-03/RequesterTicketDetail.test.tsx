@@ -41,6 +41,8 @@ const BASE_TICKET: TicketDetail = {
   systemId: 2,
   requestedPriority: "HIGH",
   status: "OPEN",
+  version: 1,
+  resolvedAt: null,
   requester: { id: 1, name: "Anucha Wongchai" },
   ticketDate: "2026-08-30T09:00:00.000Z",
   createdAt: "2026-08-30T09:00:00.000Z",
@@ -51,8 +53,13 @@ const BASE_TICKET: TicketDetail = {
   attachments: [],
 };
 
-function mockApi(ticket: TicketDetail) {
+function mockApi(
+  ticket: TicketDetail,
+  staleWrite?: "appears-resolved" | "reopen"
+) {
   const calls: { url: string; init?: RequestInit }[] = [];
+  const writeAttempts = { "appears-resolved": 0, reopen: 0 };
+  let detailReads = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
@@ -82,25 +89,58 @@ function mockApi(ticket: TicketDetail) {
       } as Response;
     }
     if (url.endsWith("/appears-resolved") && init?.method === "POST") {
+      writeAttempts["appears-resolved"] += 1;
+      if (
+        staleWrite === "appears-resolved" &&
+        writeAttempts[staleWrite] === 1
+      ) {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      const body = JSON.parse(String(init.body));
       return {
         ok: true,
         status: 200,
         json: async () => ({
           appearsResolvedAt: "2026-09-12T08:00:00.000Z",
+          version: body.expectedVersion + 1,
         }),
       } as Response;
     }
     if (url.endsWith("/reopen") && init?.method === "POST") {
+      writeAttempts.reopen += 1;
+      if (staleWrite === "reopen" && writeAttempts.reopen === 1) {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      const body = JSON.parse(String(init.body));
       return {
         ok: true,
         status: 200,
-        json: async () => ({ status: "REOPENED" }),
+        json: async () => ({
+          status: "REOPENED",
+          version: body.expectedVersion + 1,
+          resolvedAt: null,
+        }),
       } as Response;
     }
     if (url.includes("/api/tickets/42")) {
+      detailReads += 1;
+      const currentTicket =
+        detailReads > 1 ? { ...ticket, version: ticket.version + 1 } : ticket;
       return {
         ok: true,
-        json: async () => ({ ticket }),
+        json: async () => ({ ticket: currentTicket }),
       } as Response;
     }
     return { ok: false, status: 404, json: async () => ({}) } as Response;
@@ -153,6 +193,9 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
 
     const reopenCall = calls.find((c) => c.url.endsWith("/reopen"));
     expect(reopenCall?.init?.method).toBe("POST");
+    expect(JSON.parse(String(reopenCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
     // The ticket now reads REOPENED, so the action is gone with it.
     expect(screen.queryByTestId("reopen-btn")).not.toBeInTheDocument();
   });
@@ -180,9 +223,77 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
 
     const signalCall = calls.find((c) => c.url.endsWith("/appears-resolved"));
     expect(signalCall?.init?.method).toBe("POST");
+    expect(JSON.parse(String(signalCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
     expect(screen.getByTestId("appears-resolved-badge")).toHaveTextContent(
       "REQUESTER SAYS FIXED"
     );
+  });
+
+  it("refetches and uses the current version after an appears-resolved conflict", async () => {
+    const calls = mockApi(BASE_TICKET, "appears-resolved");
+    render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("appears-resolved-btn"));
+    fireEvent.click(screen.getByTestId("appears-resolved-confirm-btn"));
+    await waitFor(() => {
+      expect(screen.getByTestId("appears-resolved-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(calls.filter((call) => call.url === "/api/tickets/42")).toHaveLength(
+      2
+    );
+
+    fireEvent.click(screen.getByTestId("appears-resolved-confirm-btn"));
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("appears-resolved-success")
+      ).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) =>
+      call.url.endsWith("/appears-resolved")
+    );
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
+  });
+
+  it("refetches and uses the current version after a reopen conflict", async () => {
+    const resolvedTicket = {
+      ...BASE_TICKET,
+      status: "RESOLVED" as const,
+      resolutionSummary: "Rebooted the server.",
+    };
+    const calls = mockApi(resolvedTicket, "reopen");
+    render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByTestId("ticket-detail-view")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId("reopen-btn"));
+    fireEvent.click(screen.getByTestId("reopen-confirm-btn"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reopen-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(calls.filter((call) => call.url === "/api/tickets/42")).toHaveLength(
+      2
+    );
+
+    fireEvent.click(screen.getByTestId("reopen-confirm-btn"));
+    await waitFor(() => {
+      expect(screen.getByTestId("reopen-success")).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) => call.url.endsWith("/reopen"));
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
   });
 
   it("renders the Resolution Summary read-only when present and hides the panel when absent", async () => {

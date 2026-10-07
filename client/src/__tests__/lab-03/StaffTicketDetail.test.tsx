@@ -15,6 +15,8 @@ const BASE_STAFF_TICKET = {
   number: "TKT-2026-00020",
   ticketDate: "2026-09-01T10:00:00.000Z",
   status: "OPEN",
+  version: 1,
+  resolvedAt: null,
   requestedPriority: "MEDIUM",
   itPriority: "MEDIUM",
   summary: "VPN disconnects after ten minutes",
@@ -47,8 +49,8 @@ const BASE_STAFF_TICKET = {
 };
 
 const ASSIGNEES = [
-  { id: 9, name: "Kittipong Saelim", role: "IT_STAFF" },
-  { id: 20, name: "Apinya Ratchada", role: "ADMINISTRATOR" },
+  { id: 9, name: "Kittipong Saelim", role: "IT_STAFF", isActive: true },
+  { id: 20, name: "Apinya Ratchada", role: "ADMINISTRATOR", isActive: true },
 ];
 
 type MockOptions = {
@@ -56,6 +58,8 @@ type MockOptions = {
   selfService?: boolean;
   status?: number;
   assignees?: unknown[];
+  staleOwner?: boolean;
+  stalePriority?: boolean;
 };
 
 function mockStaffDetailApi(options: MockOptions = {}) {
@@ -64,6 +68,9 @@ function mockStaffDetailApi(options: MockOptions = {}) {
     string,
     unknown
   >;
+  let currentVersion = Number(ticket.version ?? 1);
+  let ownerWrites = 0;
+  let priorityWrites = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
@@ -93,6 +100,18 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       init?.method === "PATCH"
     ) {
       const body = JSON.parse(String(init.body));
+      ownerWrites += 1;
+      if (options.staleOwner && ownerWrites === 1) {
+        currentVersion = body.expectedVersion + 1;
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      currentVersion = body.expectedVersion + 1;
       return {
         ok: true,
         status: 200,
@@ -103,8 +122,11 @@ function mockStaffDetailApi(options: MockOptions = {}) {
               : (ASSIGNEES.find((a) => a.id === body.ownerId) ?? {
                   id: body.ownerId,
                   name: "Kittipong Saelim",
+                  role: "IT_STAFF",
+                  isActive: true,
                 }),
           status: ticket.status,
+          version: currentVersion,
         }),
       } as Response;
     }
@@ -113,10 +135,25 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       init?.method === "PATCH"
     ) {
       const body = JSON.parse(String(init.body));
+      priorityWrites += 1;
+      if (options.stalePriority && priorityWrites === 1) {
+        currentVersion = body.expectedVersion + 1;
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: { code: "STALE_WRITE", message: "The Ticket has changed" },
+          }),
+        } as Response;
+      }
+      currentVersion = body.expectedVersion + 1;
       return {
         ok: true,
         status: 200,
-        json: async () => ({ itPriority: body.itPriority }),
+        json: async () => ({
+          itPriority: body.itPriority,
+          version: currentVersion,
+        }),
       } as Response;
     }
     if (
@@ -130,6 +167,10 @@ function mockStaffDetailApi(options: MockOptions = {}) {
         json: async () => ({
           status: body.status,
           resolutionSummary: body.resolutionSummary ?? null,
+          appearsResolvedAt: null,
+          resolvedAt:
+            body.status === "RESOLVED" ? "2026-09-12T10:00:00.000Z" : null,
+          version: body.expectedVersion + 1,
         }),
       } as Response;
     }
@@ -192,7 +233,7 @@ function mockStaffDetailApi(options: MockOptions = {}) {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ ticket }),
+        json: async () => ({ ticket: { ...ticket, version: currentVersion } }),
       } as Response;
     }
     return { ok: true, status: 200, json: async () => ({}) } as Response;
@@ -270,6 +311,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     const ownerCall = calls.find((c) => c.url.includes("/owner"));
     expect(ownerCall?.init?.method).toBe("PATCH");
     expect(String(ownerCall?.init?.body)).toContain('"ownerId":9');
+    expect(JSON.parse(String(ownerCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("issues an IT priority PATCH and keeps the requested priority read-only", async () => {
@@ -293,6 +337,63 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     expect(priorityCall?.init?.method).toBe("PATCH");
     expect(String(priorityCall?.init?.body)).toContain('"itPriority":"HIGH"');
     expect(String(priorityCall?.init?.body)).not.toContain("requestedPriority");
+    expect(JSON.parse(String(priorityCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
+  });
+
+  it("refetches and uses the current version after an owner conflict", async () => {
+    const calls = await renderLoaded({ staleOwner: true });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /ticket owner/i }), {
+      target: { value: "9" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("owner-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(
+      calls.filter((call) => call.url === "/api/staff/tickets/20")
+    ).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /ticket owner/i }), {
+      target: { value: "9" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("owner-success")).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) => call.url.endsWith("/owner"));
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
+  });
+
+  it("refetches and uses the current version after a priority conflict", async () => {
+    const calls = await renderLoaded({ stalePriority: true });
+
+    fireEvent.change(screen.getByRole("combobox", { name: /it priority/i }), {
+      target: { value: "HIGH" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("priority-error")).toHaveTextContent(
+        /latest ticket has been loaded/i
+      );
+    });
+    expect(
+      calls.filter((call) => call.url === "/api/staff/tickets/20")
+    ).toHaveLength(2);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /it priority/i }), {
+      target: { value: "HIGH" },
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("priority-success")).toBeInTheDocument();
+    });
+    const writes = calls.filter((call) => call.url.endsWith("/priority"));
+    expect(
+      writes.map((call) => JSON.parse(String(call.init?.body)).expectedVersion)
+    ).toEqual([1, 2]);
   });
 
   it("restricts the status select to the legal targets for the current status", async () => {
@@ -349,6 +450,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     expect(String(statusCall?.init?.body)).toContain(
       "Replaced the VPN profile."
     );
+    expect(JSON.parse(String(statusCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("confirms before closing or cancelling on the client and sends no confirm flag", async () => {
@@ -372,6 +476,9 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     const statusCall = calls.find((c) => c.url.includes("/status"));
     expect(statusCall?.init?.method).toBe("PATCH");
     expect(String(statusCall?.init?.body)).not.toContain("confirm");
+    expect(JSON.parse(String(statusCall?.init?.body))).toMatchObject({
+      expectedVersion: 1,
+    });
   });
 
   it("surfaces a rejected transition's server message rather than a generic error", async () => {
@@ -430,6 +537,128 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
       expect(screen.getByTestId("status-error")).toHaveTextContent(
         "Cannot transition from OPEN to RESOLVED"
       );
+    });
+  });
+
+  it("preserves an unsaved resolution summary after a stale status conflict and requires explicit retry", async () => {
+    let detailReads = 0;
+    let statusWrites = 0;
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url.includes("/api/reference/categories")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ categories: [{ id: 1, name: "Network" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/reference/systems")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ systems: [{ id: 3, name: "VPN" }] }),
+        } as Response;
+      }
+      if (url.includes("/api/staff/assignees")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ assignees: ASSIGNEES }),
+        } as Response;
+      }
+      if (url.match(/\/api\/staff\/tickets\/\d+$/)) {
+        detailReads += 1;
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ticket: {
+              ...BASE_STAFF_TICKET,
+              status: "IN_PROGRESS",
+              resolutionSummary:
+                detailReads === 1
+                  ? "Earlier saved summary"
+                  : "Latest server summary",
+              version: detailReads === 1 ? 1 : 2,
+            },
+          }),
+        } as Response;
+      }
+      if (url.endsWith("/status")) {
+        statusWrites += 1;
+        if (statusWrites === 1) {
+          return {
+            ok: false,
+            status: 409,
+            json: async () => ({
+              error: {
+                code: "STALE_WRITE",
+                message: "The Ticket has changed",
+              },
+            }),
+          } as Response;
+        }
+        const body = JSON.parse(String(init?.body));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            status: body.status,
+            version: body.expectedVersion + 1,
+            resolutionSummary: body.resolutionSummary ?? null,
+            appearsResolvedAt: null,
+            resolvedAt: null,
+          }),
+        } as Response;
+      }
+      return { ok: true, status: 200, json: async () => ({}) } as Response;
+    });
+
+    renderStaffDetail();
+    await waitFor(() => {
+      expect(screen.getByTestId("staff-detail-view")).toBeInTheDocument();
+    });
+    const summaryDraft = "Draft resolution summary";
+    fireEvent.change(screen.getByTestId("resolution-summary-input"), {
+      target: { value: summaryDraft },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
+      target: { value: "RESOLVED" },
+    });
+    fireEvent.click(screen.getByTestId("status-save-btn"));
+
+    await waitFor(() => {
+      expect(detailReads).toBe(2);
+      expect(screen.getByTestId("status-error")).toHaveTextContent(
+        /ticket changed.*latest ticket/i
+      );
+    });
+    expect(screen.getByTestId("resolution-summary-input")).toHaveValue(
+      summaryDraft
+    );
+    expect(screen.getByTestId("resolution-summary-conflict")).toHaveTextContent(
+      "Latest server summary"
+    );
+    expect(statusWrites).toBe(1);
+
+    fireEvent.change(screen.getByRole("combobox", { name: /new status/i }), {
+      target: { value: "RESOLVED" },
+    });
+    fireEvent.click(screen.getByTestId("status-save-btn"));
+    await waitFor(() => expect(statusWrites).toBe(2));
+
+    const statusCalls = calls.filter((call) => call.url.endsWith("/status"));
+    expect(JSON.parse(String(statusCalls[0].init?.body))).toMatchObject({
+      status: "RESOLVED",
+      expectedVersion: 1,
+      resolutionSummary: summaryDraft,
+    });
+    expect(JSON.parse(String(statusCalls[1].init?.body))).toMatchObject({
+      status: "RESOLVED",
+      expectedVersion: 2,
+      resolutionSummary: summaryDraft,
     });
   });
 });
