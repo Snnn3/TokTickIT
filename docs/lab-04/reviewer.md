@@ -10,8 +10,9 @@
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
 | https://github.com/Snnn3/TokTickIT/pull/63 | feature/lab4-1-contract | Approved - merged into `lab4-staging` on 2026-09-30 |
-| https://github.com/Snnn3/TokTickIT/pull/64 | feature/lab4-2-actions-foundation | Open; peer review pending; targets `lab4-staging` |
-| https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested 2026-10-04; regression-test fix and peer-review record updated locally 2026-10-05; re-review pending; targets `lab4-staging` |
+| https://github.com/Snnn3/TokTickIT/pull/64 | feature/lab4-2-actions-foundation | Approved - merged into `lab4-staging` on 2026-10-01 |
+| https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested, then approved - merged into `lab4-staging` on 2026-10-05 |
+| https://github.com/Snnn3/TokTickIT/pull/66 | feature/lab4-4-ticket-workflow | Approved - merged into `lab4-staging` on 2026-10-07 |
 
 ### Reviewer comments I received and how I responded
 
@@ -20,13 +21,29 @@
 - **My comment (2026-09-30):** Thanked the reviewer, acknowledged the documentation note, and recorded that PR #63 had merged into `lab4-staging`, completing the contract phase and unblocking implementation.
 - **Merge:** Merged into `lab4-staging` at `2026-09-30 12:23 UTC`.
 
-**PR #64 - feature/lab4-2-actions-foundation** (OPEN)
-- **Implementation:** Added the Actions Taken schema and migration, stable seed fixtures, append-only audit events, restrictive history-preserving foreign keys, repeat-seed handling, and real disposable migration/restore evidence for Issue #55.
-- **Peer review:** Pending. The PR targets `lab4-staging`; Issue #55 is in the Kanban `PR Review` column.
+**PR #64 - feature/lab4-2-actions-foundation** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-10-01):** Approved the schema constraints, legacy-data preservation, idempotent seed fixtures, migration evidence, and regression suite for Issue #55. The review verified 190 server tests, 135 client tests, and 13 Playwright tests at that time.
+- **Merge:** Merged into `lab4-staging` at `2026-10-01 16:16 UTC`.
 
-**PR #65 - feature/lab4-3-actions-api** (OPEN)
+**PR #65 - feature/lab4-3-actions-api** (MERGED)
 - **Reviewer review (YummieGG, CHANGES_REQUESTED, 2026-10-04):** Accepted the Actions Taken API design, authorization/body precedence, optimistic concurrency, and audit logging. Requested a missing `prisma.actionTaken.findMany` mock in the Lab 3 admin deactivation/demotion regression fixture, which otherwise tried to reach PostgreSQL in isolated tests, plus documentation updates.
-- **Response (2026-10-05):** Added the Action query stub to the existing regression test and recorded this review and response here. The targeted deactivation/demotion cases pass (2/2) without a database connection. Full server tests report 244/245 passing; the remaining failure is the documented Lab 1 seeded-category test because PostgreSQL is unavailable. Server build and focused formatter check pass. The PR remains open pending peer re-review; no approval or merge is claimed.
+- **Response (2026-10-05):** Added the Action query stub to the existing regression test and recorded the review response here. The targeted deactivation/demotion cases passed (2/2) without a database connection. The PR comment at the time reported 244/245 server tests passing; the remaining Lab 1 seeded-category test required PostgreSQL.
+- **Final GitHub state:** PR #65 is approved and merged into `lab4-staging` at `2026-10-05 09:11 UTC`. Its final approval review text refers to PR #64 and Issue #55, so that text is not treated here as additional PR #65-specific review evidence.
+
+**PR #66 - feature/lab4-4-ticket-workflow** (MERGED)
+- **Reviewer review (YummieGG, APPROVED, 2026-10-07):** Approved the Issue #57 workflow and resolution gate. The review verified the complete transition matrix and terminal protection, resolution prerequisites, requester advisory/reopen behavior, optimistic concurrency and conflict recovery, and the related API/client/E2E tests.
+- **My comment (2026-10-07):** Thanked the reviewer for the detailed review and help getting PR #66 merged.
+- **Merge:** Merged into `lab4-staging` at `2026-10-07 09:15 UTC`.
+
+## Verification for Issue #58
+
+The following results were run on implementation head `fea80f0` on 2026-10-08, before this reviewer-record update:
+
+- Server: `npm test --prefix server` - 18 files, 332 tests passed.
+- Client: `npm test --prefix client -- --maxWorkers=1` - 19 files, 158 tests passed.
+- Playwright: `npm run test:e2e` - 13 tests passed.
+- Client lint, server build, client build, and Prisma Client generation passed.
+- `npm run check` failed with 74 repository-wide formatter diagnostics across 121 checked files. The output includes line-ending normalization differences; the check did not modify files, and this repo-wide formatting issue is not resolved by the Issue #58 change.
 
 ---
 
