@@ -95,6 +95,20 @@ function mockStaffDetailApi(options: MockOptions = {}) {
         json: async () => ({ assignees: options.assignees ?? ASSIGNEES }),
       } as Response;
     }
+    if (url === `/api/tickets/${ticket.id}/actions`) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ actions: [], ticketVersion: currentVersion }),
+      } as Response;
+    }
+    if (url === "/api/staff/action-assignees") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ assignees: [ASSIGNEES[0]] }),
+      } as Response;
+    }
     if (
       url.match(/\/api\/staff\/tickets\/\d+\/owner/) &&
       init?.method === "PATCH"

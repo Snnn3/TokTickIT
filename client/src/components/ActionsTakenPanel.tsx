@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, MouseEvent } from "react";
+import type { CreateActionPayload, UpdateActionPayload } from "../api/actions";
 import {
   createTicketAction,
   getActionAssignees,
@@ -10,6 +11,11 @@ import {
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import {
   ACTION_STATUS_LABELS,
+  isActionStatus,
+  parseActionAssignees,
+  parseActionEvents,
+  parseActionListResponse,
+  parseActionWriteResponse,
   type ActionAssignee,
   type ActionEvent,
   type ActionSnapshot,
@@ -42,7 +48,7 @@ interface ActionFormValues {
 
 interface PendingCreateRequest {
   idempotencyKey: string;
-  payload: Record<string, unknown>;
+  payload: CreateActionPayload;
 }
 
 interface ActionHistoryState {
@@ -94,6 +100,12 @@ const HISTORY_FIELDS: Array<{
   { key: "attachmentNotes", label: "Attachment notes" },
 ];
 
+const FOLLOW_UP_NOTE_REQUIRED_MESSAGE =
+  "A follow-up note is required when follow-up is enabled.";
+const ACTION_RESULT_REQUIRED_MESSAGE =
+  "Enter a result before completing this action.";
+const EMPTY_API_FIELDS: Record<string, string> = {};
+
 function formatBangkokDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown";
@@ -137,7 +149,7 @@ function textValue(value: string | null): string {
 function historyValue(key: keyof ActionSnapshot, value: unknown): string {
   if (value === null || value === undefined || value === "") return "Not set";
   if (key === "status" && typeof value === "string") {
-    return ACTION_STATUS_LABELS[value as ActionStatus] ?? value;
+    return isActionStatus(value) ? ACTION_STATUS_LABELS[value] : value;
   }
   if (key === "followUpRequired") return value ? "Yes" : "No";
   if (key === "assigneeId" && typeof value === "number") {
@@ -178,8 +190,7 @@ function validateForm(values: ActionFormValues, editing: boolean) {
       "Enter an action description between 1 and 2000 characters.";
   }
   if (values.followUpRequired && !followUpNote) {
-    errors.followUpNote =
-      "A follow-up note is required when follow-up is enabled.";
+    errors.followUpNote = FOLLOW_UP_NOTE_REQUIRED_MESSAGE;
   } else if (followUpNote.length > 2000) {
     errors.followUpNote = "Follow-up note must not exceed 2000 characters.";
   }
@@ -188,7 +199,7 @@ function validateForm(values: ActionFormValues, editing: boolean) {
       "Attachment notes must not exceed 2000 characters.";
   }
   if (editing && values.status === "COMPLETED" && !result) {
-    errors.result = "Enter a result before completing this action.";
+    errors.result = ACTION_RESULT_REQUIRED_MESSAGE;
   } else if (result.length > 2000) {
     errors.result = "Result must not exceed 2000 characters.";
   }
@@ -196,29 +207,25 @@ function validateForm(values: ActionFormValues, editing: boolean) {
 }
 
 function apiErrorDetails(data: unknown) {
-  if (typeof data !== "object" || data === null || !("error" in data)) {
-    return { code: "", fields: {} as Record<string, string> };
+  if (!isRecord(data) || !isRecord(data.error)) {
+    return { code: "", fields: EMPTY_API_FIELDS };
   }
-  const error = (data as { error?: { code?: unknown; details?: unknown } })
-    .error;
+  const error = data.error;
   const details = error?.details;
   const rawFields =
-    typeof details === "object" &&
-    details !== null &&
-    "fields" in details &&
-    typeof details.fields === "object" &&
-    details.fields !== null
-      ? (details.fields as Record<string, unknown>)
-      : {};
-  const fields = Object.fromEntries(
-    Object.entries(rawFields).flatMap(([name, message]) =>
-      typeof message === "string" ? [[name, message]] : []
-    )
-  );
+    isRecord(details) && isRecord(details.fields) ? details.fields : {};
+  const fields: Record<string, string> = {};
+  for (const [name, message] of Object.entries(rawFields)) {
+    if (typeof message === "string") fields[name] = message;
+  }
   return {
     code: typeof error?.code === "string" ? error.code : "",
     fields,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function safeActionError(code: string): string {
@@ -287,7 +294,10 @@ export function ActionsTakenPanel({
 
   const panelRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const confirmationTriggerRef = useRef<HTMLElement | null>(null);
+  const confirmationWasOpenRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogConfirmRef = useRef<HTMLButtonElement>(null);
 
@@ -320,6 +330,20 @@ export function ActionsTakenPanel({
   useEffect(() => {
     setCurrentTicketVersion(ticketVersion);
   }, [ticketVersion]);
+
+  useEffect(() => {
+    if (confirmation !== null) {
+      confirmationWasOpenRef.current = true;
+      return;
+    }
+    if (!confirmationWasOpenRef.current) return;
+    confirmationWasOpenRef.current = false;
+    const trigger = confirmationTriggerRef.current;
+    if (trigger?.isConnected && !trigger.hasAttribute("disabled")) {
+      trigger.focus();
+    }
+    confirmationTriggerRef.current = null;
+  }, [confirmation]);
 
   useEffect(() => {
     if (editorOpen) {
@@ -356,15 +380,16 @@ export function ActionsTakenPanel({
         return null;
       }
 
-      const data = await response.json();
-      const loaded = sortActions(
-        Array.isArray(data.actions) ? (data.actions as ActionTaken[]) : []
-      );
-      setActions(loaded);
-      if (Number.isInteger(data.ticketVersion) && data.ticketVersion > 0) {
-        setCurrentTicketVersion(data.ticketVersion);
-        onTicketVersionChange?.(data.ticketVersion);
+      const data: unknown = await response.json();
+      const actionList = parseActionListResponse(data);
+      if (!actionList) {
+        setFailure("The server returned an unexpected Actions Taken response.");
+        return null;
       }
+      const loaded = sortActions(actionList.actions);
+      setActions(loaded);
+      setCurrentTicketVersion(actionList.ticketVersion);
+      onTicketVersionChange?.(actionList.ticketVersion);
       return loaded;
     } catch {
       setFailure(
@@ -392,8 +417,15 @@ export function ActionsTakenPanel({
         );
         return;
       }
-      const data = await response.json();
-      setAssignees(Array.isArray(data.assignees) ? data.assignees : []);
+      const data: unknown = await response.json();
+      const activeAssignees = parseActionAssignees(data);
+      if (!activeAssignees) {
+        setAssigneesError(
+          "Active IT Staff could not be loaded. Retry, or leave this action unassigned."
+        );
+        return;
+      }
+      setAssignees(activeAssignees);
       setAssigneesLoaded(true);
     } catch {
       setAssigneesError(
@@ -445,6 +477,7 @@ export function ActionsTakenPanel({
   }
 
   function closeEditor() {
+    setConfirmation(null);
     setCreating(false);
     setEditingActionId(null);
     setFormValues({ ...EMPTY_FORM });
@@ -455,9 +488,10 @@ export function ActionsTakenPanel({
     setPendingCreateRequest(null);
   }
 
-  function requestEditorClose() {
+  function requestEditorClose(event: MouseEvent<HTMLButtonElement>) {
     if (pendingCreateRequest) return;
     if (conflictMessage) {
+      confirmationTriggerRef.current = event.currentTarget;
       setConfirmation("discard-conflict");
       return;
     }
@@ -494,7 +528,7 @@ export function ActionsTakenPanel({
     const errors = validateForm(formValues, !creating);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
-      setFormError("Correct the highlighted fields before saving.");
+      setFormError(null);
       return;
     }
 
@@ -512,6 +546,7 @@ export function ActionsTakenPanel({
       setFormError(
         "This action is no longer available. Reload the action list."
       );
+      if (confirmedCancellation) setConfirmation(null);
       return;
     }
 
@@ -524,19 +559,20 @@ export function ActionsTakenPanel({
     try {
       let response: Response;
       if (creating) {
+        const payload: CreateActionPayload = {
+          title: formValues.title.trim(),
+          details: formValues.details.trim(),
+          assigneeId: formValues.assigneeId
+            ? Number(formValues.assigneeId)
+            : null,
+          followUpRequired: formValues.followUpRequired,
+          followUpNote: formValues.followUpNote.trim() || null,
+          attachmentNotes: formValues.attachmentNotes.trim() || null,
+          expectedTicketVersion: currentTicketVersion,
+        };
         createRequest = pendingCreateRequest ?? {
           idempotencyKey: makeIdempotencyKey(),
-          payload: {
-            title: formValues.title.trim(),
-            details: formValues.details.trim(),
-            assigneeId: formValues.assigneeId
-              ? Number(formValues.assigneeId)
-              : null,
-            followUpRequired: formValues.followUpRequired,
-            followUpNote: formValues.followUpNote.trim() || null,
-            attachmentNotes: formValues.attachmentNotes.trim() || null,
-            expectedTicketVersion: currentTicketVersion,
-          },
+          payload,
         };
         response = await createTicketAction(
           ticketId,
@@ -545,7 +581,7 @@ export function ActionsTakenPanel({
         );
       } else {
         const action = editingAction!;
-        response = await updateTicketAction(ticketId, action.id, {
+        const payload: UpdateActionPayload = {
           expectedVersion: action.version,
           expectedTicketVersion: currentTicketVersion,
           title: formValues.title.trim(),
@@ -558,10 +594,11 @@ export function ActionsTakenPanel({
           followUpNote: formValues.followUpNote.trim() || null,
           attachmentNotes: formValues.attachmentNotes.trim() || null,
           status: formValues.status,
-        });
+        };
+        response = await updateTicketAction(ticketId, action.id, payload);
       }
 
-      const data = await response.json().catch(() => ({}));
+      const data: unknown = await response.json().catch((): unknown => ({}));
       if (!response.ok) {
         if (creating && response.status >= 500 && createRequest) {
           setPendingCreateRequest(createRequest);
@@ -578,12 +615,10 @@ export function ActionsTakenPanel({
         }
         const serverFieldErrors = { ...details.fields };
         if (details.code === "FOLLOW_UP_NOTE_REQUIRED") {
-          serverFieldErrors.followUpNote =
-            "A follow-up note is required when follow-up is enabled.";
+          serverFieldErrors.followUpNote = FOLLOW_UP_NOTE_REQUIRED_MESSAGE;
         }
         if (details.code === "ACTION_RESULT_REQUIRED") {
-          serverFieldErrors.result =
-            "Enter a meaningful result before completing this action.";
+          serverFieldErrors.result = ACTION_RESULT_REQUIRED_MESSAGE;
         }
         if (details.code === "ASSIGNEE_NOT_ELIGIBLE") {
           serverFieldErrors.assigneeId =
@@ -595,7 +630,22 @@ export function ActionsTakenPanel({
         return;
       }
 
-      const savedAction = data.action as ActionTaken;
+      const writeResult = parseActionWriteResponse(data);
+      if (!writeResult) {
+        if (creating && createRequest) {
+          setPendingCreateRequest(createRequest);
+          setFormError(
+            "The save response could not be confirmed. Retry uses the exact same request; your entries are locked until the result is confirmed."
+          );
+        } else {
+          setFormError(
+            "The server returned an unexpected response. Review the refreshed action before trying again."
+          );
+          await refreshForConflict();
+        }
+        return;
+      }
+      const savedAction = writeResult.action;
       setPendingCreateRequest(null);
       setActions((previous) =>
         sortActions(
@@ -606,10 +656,8 @@ export function ActionsTakenPanel({
               )
         )
       );
-      if (Number.isInteger(data.ticketVersion)) {
-        setCurrentTicketVersion(data.ticketVersion);
-        onTicketVersionChange?.(data.ticketVersion, savedAction.updatedAt);
-      }
+      setCurrentTicketVersion(writeResult.ticketVersion);
+      onTicketVersionChange?.(writeResult.ticketVersion, savedAction.updatedAt);
       if (isCreateRetry) {
         await loadActions();
         onRefreshTicket?.();
@@ -644,11 +692,13 @@ export function ActionsTakenPanel({
       }
     } finally {
       setSaving(false);
+      if (confirmedCancellation) setConfirmation(null);
     }
   }
 
   function handleEditorSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    confirmationTriggerRef.current = saveButtonRef.current;
     void saveEditor();
   }
 
@@ -682,12 +732,14 @@ export function ActionsTakenPanel({
         return;
       }
       if (!response.ok) throw new Error("history request failed");
-      const data = await response.json();
+      const data: unknown = await response.json();
+      const events = parseActionEvents(data);
+      if (!events) throw new Error("unexpected history response");
       setHistoryByAction((previous) => ({
         ...previous,
         [actionId]: {
           loading: false,
-          events: Array.isArray(data.events) ? data.events : [],
+          events,
           error: null,
         },
       }));
@@ -715,7 +767,6 @@ export function ActionsTakenPanel({
 
   function handleConfirmation() {
     const currentConfirmation = confirmation;
-    setConfirmation(null);
     if (currentConfirmation === "cancel-action") {
       void saveEditor(true);
     } else if (currentConfirmation === "discard-conflict") {
@@ -918,20 +969,18 @@ export function ActionsTakenPanel({
                           {action.followUpRequired ? "Yes" : "No"}
                         </dd>
                       </div>
-                      {action.followUpRequired && (
-                        <div className="col-12">
-                          <dt className="text-muted">Follow-up note</dt>
-                          <dd
-                            className="mb-0 text-zen-body"
-                            style={{
-                              whiteSpace: "pre-wrap",
-                              overflowWrap: "anywhere",
-                            }}
-                          >
-                            {textValue(action.followUpNote)}
-                          </dd>
-                        </div>
-                      )}
+                      <div className="col-12">
+                        <dt className="text-muted">Follow-up note</dt>
+                        <dd
+                          className="mb-0 text-zen-body"
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {textValue(action.followUpNote)}
+                        </dd>
+                      </div>
                       <div className="col-12">
                         <dt className="text-muted">Attachment notes</dt>
                         <dd
@@ -1040,10 +1089,14 @@ export function ActionsTakenPanel({
                                       ))}
                                     </ul>
                                   ) : (
-                                    <p className="small mb-0 mt-2">
-                                      Action created at version{" "}
-                                      {event.newVersion}.
-                                    </p>
+                                    <ul className="small mb-0 mt-2">
+                                      {HISTORY_FIELDS.map(({ key, label }) => (
+                                        <li key={key}>
+                                          {label}:{" "}
+                                          {historyValue(key, event.after[key])}
+                                        </li>
+                                      ))}
+                                    </ul>
                                   )}
                                 </li>
                               ))}
@@ -1136,7 +1189,7 @@ export function ActionsTakenPanel({
           {formError && (
             <div
               className="alert alert-danger small"
-              role="alert"
+              role={Object.keys(fieldErrors).length > 0 ? "status" : "alert"}
               data-testid="action-form-error"
             >
               {formError}
@@ -1343,9 +1396,10 @@ export function ActionsTakenPanel({
                 className="form-select"
                 value={formValues.status}
                 disabled={saving}
-                onChange={(event) =>
-                  changeForm("status", event.target.value as ActionStatus)
-                }
+                onChange={(event) => {
+                  const status = event.target.value;
+                  if (isActionStatus(status)) changeForm("status", status);
+                }}
               >
                 {getActionTransitions(editingAction?.status ?? "PLANNED").map(
                   (status) => (
@@ -1377,7 +1431,8 @@ export function ActionsTakenPanel({
             </label>
           </div>
 
-          {formValues.followUpRequired && (
+          {(formValues.followUpRequired ||
+            formValues.followUpNote.length > 0) && (
             <div className="mb-3">
               <label
                 htmlFor="action-follow-up-note"
@@ -1392,7 +1447,7 @@ export function ActionsTakenPanel({
                 maxLength={2000}
                 value={formValues.followUpNote}
                 disabled={saving || pendingCreateRequest !== null}
-                aria-required="true"
+                aria-required={formValues.followUpRequired}
                 aria-invalid={Boolean(fieldErrors.followUpNote)}
                 aria-describedby={
                   fieldErrors.followUpNote
@@ -1409,6 +1464,12 @@ export function ActionsTakenPanel({
                   className="text-danger small mt-1"
                 >
                   {fieldErrors.followUpNote}
+                </div>
+              )}
+              {!formValues.followUpRequired && (
+                <div className="form-text">
+                  Follow-up is optional. Keep this note to retain it, or clear
+                  it to remove it.
                 </div>
               )}
               <div className="form-text">
@@ -1458,7 +1519,11 @@ export function ActionsTakenPanel({
           <div className="d-flex flex-wrap gap-2">
             <button
               type="submit"
+              ref={saveButtonRef}
               className="btn btn-zen-primary btn-sm"
+              onClick={(event) => {
+                confirmationTriggerRef.current = event.currentTarget;
+              }}
               disabled={
                 saving ||
                 !writesAllowed ||
@@ -1489,43 +1554,50 @@ export function ActionsTakenPanel({
 
       {confirmation && (
         <div
-          className="zg-card p-3 border mt-3"
-          role="alertdialog"
-          aria-modal="false"
-          aria-label={
-            confirmation === "cancel-action"
-              ? "Confirm action cancellation"
-              : "Confirm discarding conflict draft"
-          }
-          tabIndex={-1}
-          ref={dialogRef}
-          data-testid="action-confirmation"
+          className="zg-dialog-backdrop"
+          data-testid="action-dialog-backdrop"
         >
-          <p className="small mb-3">
-            {confirmation === "cancel-action"
-              ? "Cancel this action? This is a terminal status; it cannot be edited afterward."
-              : "Discard your unsaved action changes and the conflict draft?"}
-          </p>
-          <div className="d-flex gap-2">
-            <button
-              type="button"
-              className="btn btn-zen-primary btn-sm"
-              disabled={saving}
-              ref={dialogConfirmRef}
-              onClick={handleConfirmation}
-            >
+          <div
+            className="zg-card zg-dialog p-3"
+            role="alertdialog"
+            aria-modal="true"
+            aria-label={
+              confirmation === "cancel-action"
+                ? "Confirm action cancellation"
+                : "Confirm discarding conflict draft"
+            }
+            tabIndex={-1}
+            ref={dialogRef}
+            data-testid="action-confirmation"
+          >
+            <p className="small mb-3">
               {confirmation === "cancel-action"
-                ? "Yes, cancel action"
-                : "Discard changes"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-zen-secondary btn-sm"
-              disabled={saving}
-              onClick={closeConfirmation}
-            >
-              Keep editing
-            </button>
+                ? "Cancel this action? This is a terminal status; it cannot be edited afterward."
+                : "Discard your unsaved action changes and the conflict draft?"}
+            </p>
+            <div className="d-flex gap-2">
+              <button
+                type="button"
+                className="btn btn-zen-primary btn-sm"
+                disabled={saving}
+                ref={dialogConfirmRef}
+                onClick={handleConfirmation}
+              >
+                {saving
+                  ? "Saving…"
+                  : confirmation === "cancel-action"
+                    ? "Yes, cancel action"
+                    : "Discard changes"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-zen-secondary btn-sm"
+                disabled={saving}
+                onClick={closeConfirmation}
+              >
+                Keep editing
+              </button>
+            </div>
           </div>
         </div>
       )}

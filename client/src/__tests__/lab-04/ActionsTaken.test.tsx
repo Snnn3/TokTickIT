@@ -207,6 +207,7 @@ describe("ActionsTakenPanel", () => {
     expect(
       await screen.findByText(/follow-up note is required/i)
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(calls.filter((call) => call.init?.method === "POST")).toHaveLength(
       0
     );
@@ -480,6 +481,17 @@ describe("ActionsTakenPanel", () => {
               id: 1,
               actionId: 31,
               actor: BASE_ACTION.performedBy,
+              type: "CREATED",
+              previousVersion: null,
+              newVersion: 1,
+              occurredAt: BASE_ACTION.createdAt,
+              before: null,
+              after: before,
+            },
+            {
+              id: 2,
+              actionId: 31,
+              actor: BASE_ACTION.performedBy,
               type: "EDITED",
               previousVersion: 1,
               newVersion: 2,
@@ -512,10 +524,14 @@ describe("ActionsTakenPanel", () => {
       })
     );
 
-    expect(await screen.findByTestId("action-history-event")).toHaveTextContent(
-      "Kittipong Saelim · EDITED"
+    const historyEvents = await screen.findAllByTestId("action-history-event");
+    expect(historyEvents[0]).toHaveTextContent("Kittipong Saelim · CREATED");
+    expect(historyEvents[0]).toHaveTextContent("Title: Inspect VPN gateway");
+    expect(historyEvents[0]).toHaveTextContent(
+      "Action Description: Collected gateway logs."
     );
-    expect(screen.getByTestId("action-history-event")).toHaveTextContent(
+    expect(historyEvents[1]).toHaveTextContent("Kittipong Saelim · EDITED");
+    expect(historyEvents[1]).toHaveTextContent(
       "Title: Inspect VPN gateway → Restart VPN gateway"
     );
     expect(calls).toContain("/api/tickets/42/actions/31/history");
@@ -717,13 +733,19 @@ describe("ActionsTakenPanel", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
 
-    expect(await screen.findByTestId("action-confirmation")).toHaveTextContent(
+    const confirmation = await screen.findByTestId("action-confirmation");
+    expect(confirmation).toHaveTextContent(
       /terminal status.*cannot be edited afterward/i
+    );
+    expect(confirmation).toHaveAttribute("aria-modal", "true");
+    expect(screen.getByTestId("action-dialog-backdrop")).toHaveClass(
+      "zg-dialog-backdrop"
     );
     expect(calls.filter((call) => call.init?.method === "PATCH")).toHaveLength(
       0
     );
     fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("button", { name: "Save Action" })).toHaveFocus();
     expect(screen.getByLabelText("Action status")).toHaveValue("CANCELLED");
     fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
     fireEvent.click(
@@ -738,6 +760,127 @@ describe("ActionsTakenPanel", () => {
     expect(calls.filter((call) => call.init?.method === "PATCH")).toHaveLength(
       1
     );
+    expect(screen.getByTestId("actions-taken-panel")).toHaveFocus();
+  });
+
+  it("keeps a stored follow-up note visible when follow-up is turned off and allows clearing it", async () => {
+    const patchBodies: Record<string, unknown>[] = [];
+    let savedFollowUpNote: string | null = BASE_ACTION.followUpNote;
+    let savedFollowUpRequired = true;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/tickets/42/actions") {
+        return response({
+          actions: [
+            {
+              ...BASE_ACTION,
+              status: "IN_PROGRESS",
+              followUpRequired: savedFollowUpRequired,
+              followUpNote: savedFollowUpNote,
+              completedAt: null,
+            },
+          ],
+          ticketVersion: 7,
+        });
+      }
+      if (url === "/api/staff/action-assignees") {
+        return response({
+          assignees: [
+            {
+              id: 9,
+              name: "Kittipong Saelim",
+              role: "IT_STAFF",
+              isActive: true,
+            },
+          ],
+        });
+      }
+      if (
+        url === "/api/staff/tickets/42/actions/31" &&
+        init?.method === "PATCH"
+      ) {
+        const body = JSON.parse(String(init.body));
+        patchBodies.push(body);
+        savedFollowUpRequired = body.followUpRequired;
+        savedFollowUpNote = body.followUpNote;
+        return response({
+          action: {
+            ...BASE_ACTION,
+            status: "IN_PROGRESS",
+            followUpRequired: savedFollowUpRequired,
+            followUpNote: savedFollowUpNote,
+            version: patchBodies.length + 2,
+          },
+          ticketVersion: patchBodies.length + 7,
+        });
+      }
+      return response({ error: { code: "NOT_FOUND" } }, 404);
+    });
+
+    render(
+      <ActionsTakenPanel
+        ticketId={42}
+        ticketVersion={7}
+        ticketStatus="OPEN"
+        canManage
+      />
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Restart VPN gateway" })
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText("Action assignee")).toBeEnabled();
+    });
+    fireEvent.click(screen.getByLabelText("Follow-up required"));
+
+    expect(screen.getByLabelText("Follow-up note")).toHaveValue(
+      "Check the connection again tomorrow."
+    );
+    expect(screen.getByLabelText("Follow-up note")).not.toHaveAttribute(
+      "aria-required",
+      "true"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("action-success")).toHaveTextContent(
+        "Action updated."
+      );
+    });
+    expect(patchBodies[0]).toMatchObject({
+      followUpRequired: false,
+      followUpNote: "Check the connection again tomorrow.",
+    });
+    expect(
+      within(screen.getByTestId("action-item")).getByText(
+        "Check the connection again tomorrow."
+      )
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit Restart VPN gateway" })
+    );
+    await waitFor(() => {
+      expect(screen.getByLabelText("Action assignee")).toBeEnabled();
+    });
+    fireEvent.change(screen.getByLabelText("Follow-up note"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("action-success")).toHaveTextContent(
+        "Action updated."
+      );
+    });
+    expect(patchBodies).toHaveLength(2);
+    expect(patchBodies[1]).toMatchObject({
+      followUpRequired: false,
+      followUpNote: null,
+    });
+    expect(
+      within(screen.getByTestId("action-item")).getByText("Not provided")
+    ).toBeInTheDocument();
   });
 
   it.each(["network loss", "server error"] as const)(
