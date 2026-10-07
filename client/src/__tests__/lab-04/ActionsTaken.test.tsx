@@ -45,13 +45,30 @@ function response(body: unknown, status = 200): Response {
   } as Response;
 }
 
+type RecordedRequest = { url: string; init?: RequestInit };
+type ActionApiRoute = (init?: RequestInit) => Response | Promise<Response>;
+
+function mockActionApi(
+  routes: Record<string, ActionApiRoute>
+): RecordedRequest[] {
+  const calls: RecordedRequest[] = [];
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input);
+    calls.push({ url, init });
+    const route = routes[`${init?.method ?? "GET"} ${url}`];
+    return route
+      ? route(init)
+      : response({ error: { code: "NOT_FOUND" } }, 404);
+  });
+  return calls;
+}
+
 describe("ActionsTakenPanel", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it("shows a Ticket's action history read-only, including inactive historical assignees", async () => {
-    const calls: string[] = [];
     const actions = [
       {
         ...BASE_ACTION,
@@ -67,13 +84,9 @@ describe("ActionsTakenPanel", () => {
         createdAt: "2026-10-07T03:00:00.000Z",
       },
     ];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
-      const url = String(input);
-      calls.push(url);
-      if (url === "/api/tickets/42/actions") {
-        return response({ actions, ticketVersion: 7 });
-      }
-      return response({ error: { code: "NOT_FOUND" } }, 404);
+    const calls = mockActionApi({
+      "GET /api/tickets/42/actions": () =>
+        response({ actions, ticketVersion: 7 }),
     });
 
     render(
@@ -118,7 +131,7 @@ describe("ActionsTakenPanel", () => {
     expect(screen.queryByRole("button", { name: /add action/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /edit action/i })).toBeNull();
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(calls).toEqual(["/api/tickets/42/actions"]);
+    expect(calls.map(({ url }) => url)).toEqual(["/api/tickets/42/actions"]);
 
     await waitFor(() => {
       expect(
@@ -128,16 +141,12 @@ describe("ActionsTakenPanel", () => {
   });
 
   it("creates an action with conditional follow-up validation and server-owned performer data", async () => {
-    const calls: { url: string; init?: RequestInit }[] = [];
     const onTicketVersionChange = vi.fn();
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = String(input);
-      calls.push({ url, init });
-      if (url === "/api/tickets/42/actions") {
-        return response({ actions: [], ticketVersion: 7 });
-      }
-      if (url === "/api/staff/action-assignees") {
-        return response({
+    const calls = mockActionApi({
+      "GET /api/tickets/42/actions": () =>
+        response({ actions: [], ticketVersion: 7 }),
+      "GET /api/staff/action-assignees": () =>
+        response({
           assignees: [
             {
               id: 9,
@@ -146,10 +155,9 @@ describe("ActionsTakenPanel", () => {
               isActive: true,
             },
           ],
-        });
-      }
-      if (url === "/api/staff/tickets/42/actions" && init?.method === "POST") {
-        const body = JSON.parse(String(init.body));
+        }),
+      "POST /api/staff/tickets/42/actions": (init) => {
+        const body = JSON.parse(String(init?.body));
         return response(
           {
             action: {
@@ -178,8 +186,7 @@ describe("ActionsTakenPanel", () => {
           },
           201
         );
-      }
-      return response({ error: { code: "NOT_FOUND" } }, 404);
+      },
     });
 
     render(
@@ -241,12 +248,9 @@ describe("ActionsTakenPanel", () => {
   });
 
   it("limits edit status choices and requires a result before completing an action", async () => {
-    const calls: { url: string; init?: RequestInit }[] = [];
-    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
-      const url = String(input);
-      calls.push({ url, init });
-      if (url === "/api/tickets/42/actions") {
-        return response({
+    const calls = mockActionApi({
+      "GET /api/tickets/42/actions": () =>
+        response({
           actions: [
             {
               ...BASE_ACTION,
@@ -256,10 +260,9 @@ describe("ActionsTakenPanel", () => {
             },
           ],
           ticketVersion: 7,
-        });
-      }
-      if (url === "/api/staff/action-assignees") {
-        return response({
+        }),
+      "GET /api/staff/action-assignees": () =>
+        response({
           assignees: [
             {
               id: 9,
@@ -268,13 +271,9 @@ describe("ActionsTakenPanel", () => {
               isActive: true,
             },
           ],
-        });
-      }
-      if (
-        url === "/api/staff/tickets/42/actions/31" &&
-        init?.method === "PATCH"
-      ) {
-        const body = JSON.parse(String(init.body));
+        }),
+      "PATCH /api/staff/tickets/42/actions/31": (init) => {
+        const body = JSON.parse(String(init?.body));
         return response({
           action: {
             ...BASE_ACTION,
@@ -285,8 +284,7 @@ describe("ActionsTakenPanel", () => {
           },
           ticketVersion: 8,
         });
-      }
-      return response({ error: { code: "NOT_FOUND" } }, 404);
+      },
     });
 
     render(
@@ -442,6 +440,86 @@ describe("ActionsTakenPanel", () => {
       BASE_ACTION.updatedAt
     );
   });
+
+  it.each([
+    ["COMPLETED", "Completed"],
+    ["CANCELLED", "Cancelled"],
+  ] as const)(
+    "keeps a stale edit read-only when another user makes the action %s",
+    async (terminalStatus, terminalLabel) => {
+      let actionReads = 0;
+      let patchWrites = 0;
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+        const url = String(input);
+        if (url === "/api/tickets/42/actions") {
+          actionReads += 1;
+          return response({
+            actions: [
+              {
+                ...BASE_ACTION,
+                title: actionReads === 1 ? "Original title" : "Latest title",
+                status: actionReads === 1 ? "PLANNED" : terminalStatus,
+                result:
+                  terminalStatus === "COMPLETED"
+                    ? "Completed by the other staff member."
+                    : null,
+                completedAt:
+                  terminalStatus === "COMPLETED"
+                    ? "2026-10-07T05:00:00.000Z"
+                    : null,
+                version: actionReads === 1 ? 2 : 3,
+              },
+            ],
+            ticketVersion: actionReads === 1 ? 7 : 8,
+          });
+        }
+        if (url === "/api/staff/action-assignees") {
+          return response({ assignees: [] });
+        }
+        if (
+          url === "/api/staff/tickets/42/actions/31" &&
+          init?.method === "PATCH"
+        ) {
+          patchWrites += 1;
+          return response({ error: { code: "STALE_WRITE" } }, 409);
+        }
+        return response({ error: { code: "NOT_FOUND" } }, 404);
+      });
+
+      render(
+        <ActionsTakenPanel
+          ticketId={42}
+          ticketVersion={7}
+          ticketStatus="OPEN"
+          canManage
+        />
+      );
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Edit Original title" })
+      );
+      fireEvent.change(screen.getByLabelText("Action title"), {
+        target: { value: "My unsaved title" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
+
+      expect(await screen.findByTestId("action-conflict")).toHaveTextContent(
+        "Latest title"
+      );
+      expect(screen.getByTestId("action-editor-readonly")).toHaveTextContent(
+        `This action is ${terminalLabel} and is read-only. Your unsaved draft is preserved.`
+      );
+      expect(screen.getByLabelText("Action title")).toHaveValue(
+        "My unsaved title"
+      );
+      expect(screen.getByLabelText("Action title")).toBeDisabled();
+      expect(screen.getByLabelText("Action status")).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Save Action" })
+      ).toBeDisabled();
+      expect(patchWrites).toBe(1);
+    }
+  );
 
   it("disables action writes when stale-conflict refresh finds a resolved Ticket", async () => {
     let actionReads = 0;

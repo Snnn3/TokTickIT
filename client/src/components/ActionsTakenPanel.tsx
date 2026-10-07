@@ -311,6 +311,22 @@ export function ActionsTakenPanel({
     ". Reopen it before making action changes.";
   const writeDisabledMessage =
     disabledReason ?? (!ticketIsActive && canManage ? terminalMessage : null);
+  const editingActionIsTerminal =
+    editingAction !== null &&
+    TERMINAL_ACTION_STATUSES.has(editingAction.status);
+  const editingActionUnavailable =
+    editingActionId !== null && editingAction === null;
+  const editorWritesAllowed =
+    writesAllowed && !editingActionIsTerminal && !editingActionUnavailable;
+  const editorReadOnlyMessage = !writesAllowed
+    ? writeDisabledMessage
+      ? null
+      : "Action changes are not available to this account."
+    : editingAction !== null && editingActionIsTerminal
+      ? `This action is ${ACTION_STATUS_LABELS[editingAction.status]} and is read-only. Your unsaved draft is preserved.`
+      : editingActionUnavailable
+        ? "This action is no longer available. Your unsaved draft is preserved but cannot be submitted."
+        : null;
 
   const closeConfirmation = useCallback(() => {
     if (!saving) setConfirmation(null);
@@ -524,7 +540,7 @@ export function ActionsTakenPanel({
   }
 
   function validateBeforeSave(confirmedCancellation: boolean): boolean {
-    if (!editorOpen || saving || !writesAllowed) return false;
+    if (!editorOpen || saving || !editorWritesAllowed) return false;
     const errors = validateForm(formValues, !creating);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
@@ -1177,6 +1193,15 @@ export function ActionsTakenPanel({
           <h3 className="h6 fw-semibold mb-3">
             {creating ? "Add Action Taken" : "Edit Action Taken"}
           </h3>
+          {editorReadOnlyMessage && (
+            <div
+              className="alert alert-info small"
+              role="status"
+              data-testid="action-editor-readonly"
+            >
+              {editorReadOnlyMessage}
+            </div>
+          )}
           {conflictMessage && (
             <div
               className="alert alert-warning small"
@@ -1272,7 +1297,7 @@ export function ActionsTakenPanel({
               maxLength={120}
               value={formValues.title}
               disabled={
-                saving || !writesAllowed || pendingCreateRequest !== null
+                saving || !editorWritesAllowed || pendingCreateRequest !== null
               }
               aria-invalid={Boolean(fieldErrors.title)}
               aria-describedby={
@@ -1304,7 +1329,7 @@ export function ActionsTakenPanel({
               maxLength={2000}
               value={formValues.details}
               disabled={
-                saving || !writesAllowed || pendingCreateRequest !== null
+                saving || !editorWritesAllowed || pendingCreateRequest !== null
               }
               aria-invalid={Boolean(fieldErrors.details)}
               aria-describedby={
@@ -1339,7 +1364,7 @@ export function ActionsTakenPanel({
                 rows={3}
                 maxLength={2000}
                 value={formValues.result}
-                disabled={saving || !writesAllowed}
+                disabled={saving || !editorWritesAllowed}
                 aria-invalid={Boolean(fieldErrors.result)}
                 aria-describedby={
                   fieldErrors.result ? "action-result-error" : undefined
@@ -1374,7 +1399,7 @@ export function ActionsTakenPanel({
               value={formValues.assigneeId}
               disabled={
                 saving ||
-                !writesAllowed ||
+                !editorWritesAllowed ||
                 pendingCreateRequest !== null ||
                 assigneesLoading
               }
@@ -1442,7 +1467,7 @@ export function ActionsTakenPanel({
                 id="action-status"
                 className="form-select"
                 value={formValues.status}
-                disabled={saving || !writesAllowed}
+                disabled={saving || !editorWritesAllowed}
                 onChange={(event) => {
                   const status = event.target.value;
                   if (isActionStatus(status)) changeForm("status", status);
@@ -1466,7 +1491,7 @@ export function ActionsTakenPanel({
               className="form-check-input"
               checked={formValues.followUpRequired}
               disabled={
-                saving || !writesAllowed || pendingCreateRequest !== null
+                saving || !editorWritesAllowed || pendingCreateRequest !== null
               }
               onChange={(event) =>
                 changeForm("followUpRequired", event.target.checked)
@@ -1496,7 +1521,9 @@ export function ActionsTakenPanel({
                 maxLength={2000}
                 value={formValues.followUpNote}
                 disabled={
-                  saving || !writesAllowed || pendingCreateRequest !== null
+                  saving ||
+                  !editorWritesAllowed ||
+                  pendingCreateRequest !== null
                 }
                 aria-required={formValues.followUpRequired}
                 aria-invalid={Boolean(fieldErrors.followUpNote)}
@@ -1543,7 +1570,7 @@ export function ActionsTakenPanel({
               maxLength={2000}
               value={formValues.attachmentNotes}
               disabled={
-                saving || !writesAllowed || pendingCreateRequest !== null
+                saving || !editorWritesAllowed || pendingCreateRequest !== null
               }
               aria-invalid={Boolean(fieldErrors.attachmentNotes)}
               aria-describedby={
@@ -1579,7 +1606,7 @@ export function ActionsTakenPanel({
               }}
               disabled={
                 saving ||
-                !writesAllowed ||
+                !editorWritesAllowed ||
                 (conflictMessage !== null &&
                   editingActionId !== null &&
                   conflictAction === null)
