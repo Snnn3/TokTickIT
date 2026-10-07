@@ -13,6 +13,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/64 | feature/lab4-2-actions-foundation | Approved - merged into `lab4-staging` on 2026-10-01 |
 | https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested, then approved - merged into `lab4-staging` on 2026-10-05 |
 | https://github.com/Snnn3/TokTickIT/pull/66 | feature/lab4-4-ticket-workflow | Approved - merged into `lab4-staging` on 2026-10-07 |
+| https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Open; peer review pending; targets `lab4-staging` |
 
 ### Reviewer comments I received and how I responded
 
@@ -34,6 +35,11 @@
 - **Reviewer review (YummieGG, APPROVED, 2026-10-07):** Approved the Issue #57 workflow and resolution gate. The review verified the complete transition matrix and terminal protection, resolution prerequisites, requester advisory/reopen behavior, optimistic concurrency and conflict recovery, and the related API/client/E2E tests.
 - **My comment (2026-10-07):** Thanked the reviewer for the detailed review and help getting PR #66 merged.
 - **Merge:** Merged into `lab4-staging` at `2026-10-07 09:15 UTC`.
+
+**PR #67 - feature/lab4-5-actions-ui** (OPEN)
+- **Implementation:** Adds the Issue #58 Actions Taken panel to requester and staff Ticket details, with read-only requester history, role-aware writes, validation, and conflict recovery. No server or schema changes.
+- **Peer review:** Pending; PR #67 targets `lab4-staging`.
+- **Verification:** Results for the implementation head are recorded below. The PR description also discloses the repository-wide `npm run check` failure.
 
 ## Verification for Issue #58
 
