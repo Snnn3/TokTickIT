@@ -134,7 +134,14 @@ function mockApi(
         }),
       } as Response;
     }
-    if (url.includes("/api/tickets/42")) {
+    if (url === "/api/tickets/42/actions") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ actions: [], ticketVersion: ticket.version }),
+      } as Response;
+    }
+    if (url === "/api/tickets/42") {
       detailReads += 1;
       const currentTicket =
         detailReads > 1 ? { ...ticket, version: ticket.version + 1 } : ticket;
@@ -170,6 +177,19 @@ describe("RequesterTicketDetail additions (C-07, AC-22, FR-21)", () => {
     vi.restoreAllMocks();
     await renderDetail({ ...BASE_TICKET, status: "OPEN" });
     expect(screen.queryByTestId("reopen-btn")).not.toBeInTheDocument();
+  });
+
+  it("includes the requester's own Actions Taken history without write controls", async () => {
+    const calls = mockApi(BASE_TICKET);
+    render(<RequesterTicketDetail ticketId={42} onBack={vi.fn()} />);
+
+    expect(await screen.findByTestId("actions-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("actions-taken-panel")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add action/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /edit action/i })).toBeNull();
+    expect(calls.some((call) => call.url === "/api/tickets/42/actions")).toBe(
+      true
+    );
   });
 
   it("runs reopen through a confirmation and reports the REOPENED state", async () => {
