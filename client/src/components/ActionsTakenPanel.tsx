@@ -11,6 +11,7 @@ import {
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import {
   ACTION_STATUS_LABELS,
+  isRecord,
   isActionStatus,
   parseActionAssignees,
   parseActionEvents,
@@ -32,7 +33,7 @@ interface ActionsTakenPanelProps {
   performerName?: string;
   disabledReason?: string;
   onTicketVersionChange?: (version: number, updatedAt?: string) => void;
-  onRefreshTicket?: () => void;
+  onRefreshTicket?: () => void | Promise<void>;
 }
 
 interface ActionFormValues {
@@ -222,10 +223,6 @@ function apiErrorDetails(data: unknown) {
     code: typeof error?.code === "string" ? error.code : "",
     fields,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function safeActionError(code: string): string {
@@ -515,7 +512,10 @@ export function ActionsTakenPanel({
     setConflictMessage(
       "This Ticket or action changed elsewhere. Review the latest saved values and explicitly save again; nothing was resubmitted."
     );
-    const latestActions = await loadActions();
+    const [latestActions] = await Promise.all([
+      loadActions(),
+      onRefreshTicket?.(),
+    ]);
     if (editingActionId !== null) {
       setConflictAction(
         latestActions?.find((action) => action.id === editingActionId) ?? null
@@ -523,13 +523,13 @@ export function ActionsTakenPanel({
     }
   }
 
-  async function saveEditor(confirmedCancellation = false) {
-    if (!editorOpen || saving) return;
+  function validateBeforeSave(confirmedCancellation: boolean): boolean {
+    if (!editorOpen || saving || !writesAllowed) return false;
     const errors = validateForm(formValues, !creating);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setFormError(null);
-      return;
+      return false;
     }
 
     if (
@@ -540,16 +540,148 @@ export function ActionsTakenPanel({
       !confirmedCancellation
     ) {
       setConfirmation("cancel-action");
-      return;
+      return false;
     }
     if (!creating && !editingAction) {
       setFormError(
         "This action is no longer available. Reload the action list."
       );
       if (confirmedCancellation) setConfirmation(null);
+      return false;
+    }
+    return true;
+  }
+
+  function buildCreateRequest(): PendingCreateRequest {
+    const payload: CreateActionPayload = {
+      title: formValues.title.trim(),
+      details: formValues.details.trim(),
+      assigneeId: formValues.assigneeId ? Number(formValues.assigneeId) : null,
+      followUpRequired: formValues.followUpRequired,
+      followUpNote: formValues.followUpNote.trim() || null,
+      attachmentNotes: formValues.attachmentNotes.trim() || null,
+      expectedTicketVersion: currentTicketVersion,
+    };
+    return (
+      pendingCreateRequest ?? {
+        idempotencyKey: makeIdempotencyKey(),
+        payload,
+      }
+    );
+  }
+
+  function buildUpdatePayload(action: ActionTaken): UpdateActionPayload {
+    return {
+      expectedVersion: action.version,
+      expectedTicketVersion: currentTicketVersion,
+      title: formValues.title.trim(),
+      details: formValues.details.trim(),
+      result: formValues.result.trim() || null,
+      assigneeId: formValues.assigneeId ? Number(formValues.assigneeId) : null,
+      followUpRequired: formValues.followUpRequired,
+      followUpNote: formValues.followUpNote.trim() || null,
+      attachmentNotes: formValues.attachmentNotes.trim() || null,
+      status: formValues.status,
+    };
+  }
+
+  async function handleFailedWrite(
+    response: Response,
+    data: unknown,
+    creating: boolean,
+    createRequest: PendingCreateRequest | null
+  ) {
+    if (creating && response.status >= 500 && createRequest) {
+      setPendingCreateRequest(createRequest);
+      setFormError(
+        "The server could not confirm the save. Retry sends the exact same request; your entries are locked until the result is confirmed."
+      );
+      return;
+    }
+    if (creating) setPendingCreateRequest(null);
+    const details = apiErrorDetails(data);
+    if (response.status === 409 && details.code === "STALE_WRITE") {
+      await refreshForConflict();
+      return;
+    }
+    if (details.code === "TICKET_NOT_ACTIVE") {
+      await onRefreshTicket?.();
+    }
+    const serverFieldErrors = { ...details.fields };
+    if (details.code === "FOLLOW_UP_NOTE_REQUIRED") {
+      serverFieldErrors.followUpNote = FOLLOW_UP_NOTE_REQUIRED_MESSAGE;
+    }
+    if (details.code === "ACTION_RESULT_REQUIRED") {
+      serverFieldErrors.result = ACTION_RESULT_REQUIRED_MESSAGE;
+    }
+    if (details.code === "ASSIGNEE_NOT_ELIGIBLE") {
+      serverFieldErrors.assigneeId =
+        "That assignee is no longer active IT Staff. Choose another assignee or Unassigned.";
+      void loadAssignees(true);
+    }
+    setFieldErrors(serverFieldErrors);
+    setFormError(safeActionError(details.code));
+  }
+
+  async function handleSuccessfulWrite(
+    data: unknown,
+    creating: boolean,
+    createRequest: PendingCreateRequest | null,
+    isCreateRetry: boolean
+  ) {
+    const writeResult = parseActionWriteResponse(data);
+    if (!writeResult) {
+      if (creating && createRequest) {
+        setPendingCreateRequest(createRequest);
+        setFormError(
+          "The save response could not be confirmed. Retry uses the exact same request; your entries are locked until the result is confirmed."
+        );
+      } else {
+        setFormError(
+          "The server returned an unexpected response. Review the refreshed action before trying again."
+        );
+        await refreshForConflict();
+      }
       return;
     }
 
+    const savedAction = writeResult.action;
+    setPendingCreateRequest(null);
+    setActions((previous) =>
+      sortActions(
+        creating
+          ? [...previous, savedAction]
+          : previous.map((action) =>
+              action.id === savedAction.id ? savedAction : action
+            )
+      )
+    );
+    setCurrentTicketVersion(writeResult.ticketVersion);
+    onTicketVersionChange?.(writeResult.ticketVersion, savedAction.updatedAt);
+    if (isCreateRetry) {
+      await loadActions();
+      await onRefreshTicket?.();
+    }
+    setHistoryByAction((previous) => {
+      const next = { ...previous };
+      delete next[savedAction.id];
+      return next;
+    });
+    setExpandedHistoryId(null);
+    setSuccess(
+      creating
+        ? "Action added."
+        : savedAction.status === "COMPLETED"
+          ? "Action completed."
+          : savedAction.status === "CANCELLED"
+            ? "Action cancelled."
+            : "Action updated."
+    );
+    closeEditor();
+  }
+
+  async function saveEditor(confirmedCancellation = false) {
+    if (!validateBeforeSave(confirmedCancellation)) return;
     setSaving(true);
     setFieldErrors({});
     setFormError(null);
@@ -559,125 +691,33 @@ export function ActionsTakenPanel({
     try {
       let response: Response;
       if (creating) {
-        const payload: CreateActionPayload = {
-          title: formValues.title.trim(),
-          details: formValues.details.trim(),
-          assigneeId: formValues.assigneeId
-            ? Number(formValues.assigneeId)
-            : null,
-          followUpRequired: formValues.followUpRequired,
-          followUpNote: formValues.followUpNote.trim() || null,
-          attachmentNotes: formValues.attachmentNotes.trim() || null,
-          expectedTicketVersion: currentTicketVersion,
-        };
-        createRequest = pendingCreateRequest ?? {
-          idempotencyKey: makeIdempotencyKey(),
-          payload,
-        };
+        createRequest = buildCreateRequest();
         response = await createTicketAction(
           ticketId,
           createRequest.idempotencyKey,
           createRequest.payload
         );
       } else {
-        const action = editingAction!;
-        const payload: UpdateActionPayload = {
-          expectedVersion: action.version,
-          expectedTicketVersion: currentTicketVersion,
-          title: formValues.title.trim(),
-          details: formValues.details.trim(),
-          result: formValues.result.trim() || null,
-          assigneeId: formValues.assigneeId
-            ? Number(formValues.assigneeId)
-            : null,
-          followUpRequired: formValues.followUpRequired,
-          followUpNote: formValues.followUpNote.trim() || null,
-          attachmentNotes: formValues.attachmentNotes.trim() || null,
-          status: formValues.status,
-        };
-        response = await updateTicketAction(ticketId, action.id, payload);
+        const action = editingAction;
+        if (!action) {
+          setFormError(
+            "This action is no longer available. Reload the action list."
+          );
+          return;
+        }
+        response = await updateTicketAction(
+          ticketId,
+          action.id,
+          buildUpdatePayload(action)
+        );
       }
 
       const data: unknown = await response.json().catch((): unknown => ({}));
       if (!response.ok) {
-        if (creating && response.status >= 500 && createRequest) {
-          setPendingCreateRequest(createRequest);
-          setFormError(
-            "The server could not confirm the save. Retry sends the exact same request; your entries are locked until the result is confirmed."
-          );
-          return;
-        }
-        if (creating) setPendingCreateRequest(null);
-        const details = apiErrorDetails(data);
-        if (response.status === 409 && details.code === "STALE_WRITE") {
-          await refreshForConflict();
-          return;
-        }
-        const serverFieldErrors = { ...details.fields };
-        if (details.code === "FOLLOW_UP_NOTE_REQUIRED") {
-          serverFieldErrors.followUpNote = FOLLOW_UP_NOTE_REQUIRED_MESSAGE;
-        }
-        if (details.code === "ACTION_RESULT_REQUIRED") {
-          serverFieldErrors.result = ACTION_RESULT_REQUIRED_MESSAGE;
-        }
-        if (details.code === "ASSIGNEE_NOT_ELIGIBLE") {
-          serverFieldErrors.assigneeId =
-            "That assignee is no longer active IT Staff. Choose another assignee or Unassigned.";
-          void loadAssignees(true);
-        }
-        setFieldErrors(serverFieldErrors);
-        setFormError(safeActionError(details.code));
+        await handleFailedWrite(response, data, creating, createRequest);
         return;
       }
-
-      const writeResult = parseActionWriteResponse(data);
-      if (!writeResult) {
-        if (creating && createRequest) {
-          setPendingCreateRequest(createRequest);
-          setFormError(
-            "The save response could not be confirmed. Retry uses the exact same request; your entries are locked until the result is confirmed."
-          );
-        } else {
-          setFormError(
-            "The server returned an unexpected response. Review the refreshed action before trying again."
-          );
-          await refreshForConflict();
-        }
-        return;
-      }
-      const savedAction = writeResult.action;
-      setPendingCreateRequest(null);
-      setActions((previous) =>
-        sortActions(
-          creating
-            ? [...previous, savedAction]
-            : previous.map((action) =>
-                action.id === savedAction.id ? savedAction : action
-              )
-        )
-      );
-      setCurrentTicketVersion(writeResult.ticketVersion);
-      onTicketVersionChange?.(writeResult.ticketVersion, savedAction.updatedAt);
-      if (isCreateRetry) {
-        await loadActions();
-        onRefreshTicket?.();
-      }
-      setHistoryByAction((previous) => {
-        const next = { ...previous };
-        delete next[savedAction.id];
-        return next;
-      });
-      setExpandedHistoryId(null);
-      setSuccess(
-        creating
-          ? "Action added."
-          : savedAction.status === "COMPLETED"
-            ? "Action completed."
-            : savedAction.status === "CANCELLED"
-              ? "Action cancelled."
-              : "Action updated."
-      );
-      closeEditor();
+      await handleSuccessfulWrite(data, creating, createRequest, isCreateRetry);
     } catch {
       if (creating && createRequest) {
         setPendingCreateRequest(createRequest);
@@ -1231,7 +1271,9 @@ export function ActionsTakenPanel({
               className="form-control"
               maxLength={120}
               value={formValues.title}
-              disabled={saving || pendingCreateRequest !== null}
+              disabled={
+                saving || !writesAllowed || pendingCreateRequest !== null
+              }
               aria-invalid={Boolean(fieldErrors.title)}
               aria-describedby={
                 fieldErrors.title ? "action-title-error" : undefined
@@ -1261,7 +1303,9 @@ export function ActionsTakenPanel({
               rows={3}
               maxLength={2000}
               value={formValues.details}
-              disabled={saving || pendingCreateRequest !== null}
+              disabled={
+                saving || !writesAllowed || pendingCreateRequest !== null
+              }
               aria-invalid={Boolean(fieldErrors.details)}
               aria-describedby={
                 fieldErrors.details ? "action-description-error" : undefined
@@ -1295,7 +1339,7 @@ export function ActionsTakenPanel({
                 rows={3}
                 maxLength={2000}
                 value={formValues.result}
-                disabled={saving}
+                disabled={saving || !writesAllowed}
                 aria-invalid={Boolean(fieldErrors.result)}
                 aria-describedby={
                   fieldErrors.result ? "action-result-error" : undefined
@@ -1329,7 +1373,10 @@ export function ActionsTakenPanel({
               className="form-select"
               value={formValues.assigneeId}
               disabled={
-                saving || pendingCreateRequest !== null || assigneesLoading
+                saving ||
+                !writesAllowed ||
+                pendingCreateRequest !== null ||
+                assigneesLoading
               }
               aria-invalid={Boolean(fieldErrors.assigneeId)}
               aria-describedby={
@@ -1395,7 +1442,7 @@ export function ActionsTakenPanel({
                 id="action-status"
                 className="form-select"
                 value={formValues.status}
-                disabled={saving}
+                disabled={saving || !writesAllowed}
                 onChange={(event) => {
                   const status = event.target.value;
                   if (isActionStatus(status)) changeForm("status", status);
@@ -1418,7 +1465,9 @@ export function ActionsTakenPanel({
               type="checkbox"
               className="form-check-input"
               checked={formValues.followUpRequired}
-              disabled={saving || pendingCreateRequest !== null}
+              disabled={
+                saving || !writesAllowed || pendingCreateRequest !== null
+              }
               onChange={(event) =>
                 changeForm("followUpRequired", event.target.checked)
               }
@@ -1446,7 +1495,9 @@ export function ActionsTakenPanel({
                 rows={2}
                 maxLength={2000}
                 value={formValues.followUpNote}
-                disabled={saving || pendingCreateRequest !== null}
+                disabled={
+                  saving || !writesAllowed || pendingCreateRequest !== null
+                }
                 aria-required={formValues.followUpRequired}
                 aria-invalid={Boolean(fieldErrors.followUpNote)}
                 aria-describedby={
@@ -1491,7 +1542,9 @@ export function ActionsTakenPanel({
               rows={2}
               maxLength={2000}
               value={formValues.attachmentNotes}
-              disabled={saving || pendingCreateRequest !== null}
+              disabled={
+                saving || !writesAllowed || pendingCreateRequest !== null
+              }
               aria-invalid={Boolean(fieldErrors.attachmentNotes)}
               aria-describedby={
                 fieldErrors.attachmentNotes

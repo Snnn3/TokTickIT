@@ -204,10 +204,6 @@ export function StaffTicketDetail({
     []
   );
 
-  const refreshTicketAfterActionReplay = useCallback(() => {
-    void fetchDetail();
-  }, [fetchDetail]);
-
   const handleAttachmentAdded = (newAttachment: AttachmentMetadata) => {
     setTicket((prev) => {
       if (!prev) return prev;
@@ -1027,7 +1023,7 @@ export function StaffTicketDetail({
             : undefined
         }
         onTicketVersionChange={handleActionTicketVersionChange}
-        onRefreshTicket={refreshTicketAfterActionReplay}
+        onRefreshTicket={fetchDetailPreservingSummaryDraft}
       />
 
       <div className="zg-card p-4 mb-4" data-testid="comments-section">

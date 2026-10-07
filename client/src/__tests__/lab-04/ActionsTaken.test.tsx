@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import {
   fireEvent,
   render,
@@ -439,6 +440,75 @@ describe("ActionsTakenPanel", () => {
     expect(onTicketVersionChange).toHaveBeenLastCalledWith(
       9,
       BASE_ACTION.updatedAt
+    );
+  });
+
+  it("disables action writes when stale-conflict refresh finds a resolved Ticket", async () => {
+    let actionReads = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "/api/tickets/42/actions") {
+        actionReads += 1;
+        return response({
+          actions: [
+            {
+              ...BASE_ACTION,
+              status: "PLANNED",
+              completedAt: null,
+              title: "Review access logs",
+              version: actionReads === 1 ? 2 : 3,
+            },
+          ],
+          ticketVersion: actionReads === 1 ? 7 : 8,
+        });
+      }
+      if (url === "/api/staff/action-assignees") {
+        return response({ assignees: [] });
+      }
+      if (
+        url === "/api/staff/tickets/42/actions/31" &&
+        init?.method === "PATCH"
+      ) {
+        return response({ error: { code: "STALE_WRITE" } }, 409);
+      }
+      return response({ error: { code: "NOT_FOUND" } }, 404);
+    });
+
+    function TicketActionsHarness() {
+      const [ticketStatus, setTicketStatus] = useState<"OPEN" | "RESOLVED">(
+        "OPEN"
+      );
+      return (
+        <ActionsTakenPanel
+          ticketId={42}
+          ticketVersion={7}
+          ticketStatus={ticketStatus}
+          canManage
+          onRefreshTicket={async () => setTicketStatus("RESOLVED")}
+        />
+      );
+    }
+
+    render(<TicketActionsHarness />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Edit Review access logs" })
+    );
+    fireEvent.change(screen.getByLabelText("Action title"), {
+      target: { value: "Review the updated access logs" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
+
+    expect(await screen.findByTestId("action-conflict")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Actions are read-only while this Ticket is RESOLVED. Reopen it before making action changes."
+      )
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add Action" })).toBeNull();
+    expect(screen.getByLabelText("Action title")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save Action" })).toBeDisabled();
+    expect(screen.getByLabelText("Action title")).toHaveValue(
+      "Review the updated access logs"
     );
   });
 
