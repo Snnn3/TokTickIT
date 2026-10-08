@@ -31,6 +31,10 @@ export function getActionAssignees(): Promise<Response> {
   return fetch("/api/staff/action-assignees");
 }
 
+export function getStaffActions(params: URLSearchParams): Promise<Response> {
+  return fetch(`/api/staff/actions?${params.toString()}`);
+}
+
 export function createTicketAction(
   ticketId: number,
   idempotencyKey: string,

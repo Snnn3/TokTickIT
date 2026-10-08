@@ -12,6 +12,7 @@ import {
 } from "../middleware/auth";
 import { prisma } from "../prisma";
 import { parsePositiveIntParam } from "../utils/attachment";
+import { parseUtcIsoTimestamp } from "../utils/query-validation";
 
 const STAFF_ROLES = [Role.IT_STAFF, Role.ADMINISTRATOR] as const;
 const ACTION_STATUSES = Object.values(ActionStatus);
@@ -39,6 +40,11 @@ const USER_REF_SELECT = {
 } as const;
 
 const ACTION_INCLUDE = {
+  performedBy: { select: USER_REF_SELECT },
+  assignee: { select: USER_REF_SELECT },
+} as const;
+const STAFF_ACTION_LIST_INCLUDE = {
+  ticket: { select: { number: true } },
   performedBy: { select: USER_REF_SELECT },
   assignee: { select: USER_REF_SELECT },
 } as const;
@@ -425,6 +431,11 @@ function noQuery(req: AuthenticatedRequest): void {
 }
 
 function noReadInput(req: AuthenticatedRequest): void {
+  noReadBody(req);
+  noQuery(req);
+}
+
+function noReadBody(req: AuthenticatedRequest): void {
   const contentLength = Number(req.get("content-length") ?? 0);
   const hasFramedBody =
     contentLength > 0 || req.get("transfer-encoding") !== undefined;
@@ -433,7 +444,81 @@ function noReadInput(req: AuthenticatedRequest): void {
       { field: "body", issue: "This endpoint does not accept a request body" },
     ]);
   }
-  noQuery(req);
+}
+
+interface StaffActionListQuery {
+  from?: Date;
+  to?: Date;
+  statusGroup?: "active";
+  page: number;
+  pageSize: 5 | 10 | 20;
+}
+
+function invalidActionListQuery(): ActionApiError {
+  return new ActionApiError(400, "INVALID_QUERY", "Invalid query parameters");
+}
+
+function parseUtcTimestamp(value: unknown): Date | undefined {
+  return parseUtcIsoTimestamp(value) ?? undefined;
+}
+
+function parseStaffActionListQuery(
+  query: AuthenticatedRequest["query"]
+): StaffActionListQuery {
+  const allowed = new Set([
+    "performedBy",
+    "statusGroup",
+    "from",
+    "to",
+    "page",
+    "pageSize",
+  ]);
+  if (
+    Object.keys(query).some((key) => !allowed.has(key)) ||
+    query.performedBy !== "me" ||
+    (query.statusGroup !== undefined && query.statusGroup !== "active")
+  ) {
+    throw invalidActionListQuery();
+  }
+
+  const hasFrom = query.from !== undefined;
+  const hasTo = query.to !== undefined;
+  if (hasFrom !== hasTo) throw invalidActionListQuery();
+  const from = hasFrom ? parseUtcTimestamp(query.from) : undefined;
+  const to = hasTo ? parseUtcTimestamp(query.to) : undefined;
+  if (
+    (hasFrom && !from) ||
+    (hasTo && !to) ||
+    (from && to && from.getTime() > to.getTime())
+  ) {
+    throw invalidActionListQuery();
+  }
+
+  const parsePositiveInteger = (value: unknown, fallback: number) => {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string" || !/^\d+$/.test(value)) {
+      throw invalidActionListQuery();
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      throw invalidActionListQuery();
+    }
+    return parsed;
+  };
+
+  const page = parsePositiveInteger(query.page, 1);
+  const pageSize = parsePositiveInteger(query.pageSize, 10);
+  if (pageSize !== 5 && pageSize !== 10 && pageSize !== 20) {
+    throw invalidActionListQuery();
+  }
+
+  return {
+    from,
+    to,
+    statusGroup: query.statusGroup as "active" | undefined,
+    page,
+    pageSize,
+  };
 }
 
 async function loadActionTicket(id: number) {
@@ -941,6 +1026,63 @@ actionRequesterRouter.get(
   ...requireAuth,
   (req: AuthenticatedRequest, res: Response) =>
     void handleRequesterActionRead(req, res, "history")
+);
+
+actionStaffRouter.get(
+  "/actions",
+  ...requireAuth,
+  requireRole(...STAFF_ROLES),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      noReadBody(req);
+      const query = parseStaffActionListQuery(req.query);
+      const where: Prisma.ActionTakenWhereInput = {
+        performedById: req.authUser!.id,
+        ...(query.statusGroup === "active"
+          ? {
+              status: {
+                in: [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS],
+              },
+            }
+          : {}),
+        ...(query.from && query.to
+          ? { createdAt: { gte: query.from, lte: query.to } }
+          : {}),
+      };
+      const skip = (query.page - 1) * query.pageSize;
+      const [total, actions] = await Promise.all([
+        prisma.actionTaken.count({ where }),
+        prisma.actionTaken.findMany({
+          where,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip,
+          take: query.pageSize,
+          include: STAFF_ACTION_LIST_INCLUDE,
+        }),
+      ]);
+
+      return res.status(200).json({
+        actions: actions.map((action) => ({
+          id: action.id,
+          ticketId: action.ticketId,
+          ticketNumber: action.ticket.number,
+          title: action.title,
+          status: action.status,
+          performedBy: userRef(action.performedBy),
+          assignee: action.assignee ? userRef(action.assignee) : null,
+          createdAt: action.createdAt,
+          updatedAt: action.updatedAt,
+          version: action.version,
+        })),
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / query.pageSize),
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  }
 );
 
 actionStaffRouter.get(

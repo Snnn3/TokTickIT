@@ -35,19 +35,19 @@ export const ACCOUNTS = {
     name: "Kittipong Saelim",
     email: "kittipong.saelim@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   secondStaff: {
     name: "Manasporn Thongdee",
     email: "manasporn.thongdee@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   thirdStaff: {
     name: "Pornchai Rakdee",
     email: "pornchai.rakdee@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   admin: {
     name: "Apinya Ratchada",

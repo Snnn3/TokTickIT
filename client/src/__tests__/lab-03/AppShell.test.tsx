@@ -32,16 +32,36 @@ const navLabels = () =>
 describe("C-08 shell navigation and route guards", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        categories: [],
-        systems: [],
-        tickets: [],
-        total: 0,
-        totalPages: 0,
-      }),
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/api/dashboard/staff")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            asOf: "2026-10-08T00:00:00.000Z",
+            windowDays: 7,
+            metrics: {
+              openTickets: 0,
+              unassignedTickets: 0,
+              myOwnedTickets: 0,
+              myActiveActions: 0,
+            },
+            lists: { recentTickets: [], myRecentActions: [] },
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          categories: [],
+          systems: [],
+          tickets: [],
+          total: 0,
+          totalPages: 0,
+        }),
+      } as Response;
+    });
   });
 
   it("shows a Requester only the requester destinations", async () => {
@@ -64,6 +84,7 @@ describe("C-08 shell navigation and route guards", () => {
     expect(navLabels()).toEqual([
       "My Tickets",
       "Create Ticket",
+      "Staff Dashboard",
       "Ticket Queue",
     ]);
     expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
@@ -78,6 +99,7 @@ describe("C-08 shell navigation and route guards", () => {
     expect(navLabels()).toEqual([
       "My Tickets",
       "Create Ticket",
+      "Staff Dashboard",
       "Ticket Queue",
       "Users",
     ]);
@@ -150,9 +172,8 @@ describe("C-08 shell navigation and route guards", () => {
   it("lands each role on its own destination from the root address", async () => {
     const cases: [Role, string][] = [
       ["REQUESTER", "identity-chip"],
-      // IT Staff land on the queue, which shipped in the queue slice (#39);
-      // Administrators land on the User Management screen (#41).
-      ["IT_STAFF", "staff-queue-view"],
+      // IT Staff land on the Staff Dashboard; Administrators retain Users.
+      ["IT_STAFF", "staff-dashboard-view"],
       ["ADMINISTRATOR", "user-management-view"],
     ];
 
@@ -167,7 +188,7 @@ describe("C-08 shell navigation and route guards", () => {
     // The landing table itself is the contract the routes above implement.
     expect(ROLE_LANDING).toEqual({
       REQUESTER: "/tickets",
-      IT_STAFF: "/staff/queue",
+      IT_STAFF: "/dashboard/staff",
       ADMINISTRATOR: "/admin/users",
     });
   });

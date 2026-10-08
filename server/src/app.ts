@@ -9,18 +9,23 @@ import { attachmentsRouter } from "./routes/attachments";
 import { actionRequesterRouter, actionStaffRouter } from "./routes/actions";
 import { adminRouter } from "./routes/admin";
 import { authRouter } from "./routes/auth";
+import { dashboardRouter } from "./routes/dashboard";
 import { staffRouter } from "./routes/staff";
 import { ticketsRouter } from "./routes/tickets";
 
 export const app = express();
 
-function shouldDeferActionBodyParsing(req: Request): boolean {
+function shouldDeferBodyParsing(req: Request): boolean {
   const isWrite =
     (req.method === "POST" &&
       /^\/api\/staff\/tickets\/[^/]+\/actions\/?$/i.test(req.path)) ||
     (req.method === "PATCH" &&
       /^\/api\/staff\/tickets\/[^/]+\/actions\/[^/]+\/?$/i.test(req.path));
   const isRead =
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/dashboard\/staff\/?$/i.test(req.path)) ||
+    ((req.method === "GET" || req.method === "HEAD") &&
+      /^\/api\/staff\/actions\/?$/i.test(req.path)) ||
     ((req.method === "GET" || req.method === "HEAD") &&
       /^\/api\/tickets\/[^/]+\/actions(?:\/[^/]+(?:\/history)?)?\/?$/i.test(
         req.path
@@ -38,11 +43,11 @@ const parseJsonBody = express.json();
 // BR-22 relies on instead of a CSRF token [D14].
 app.use(cors({ credentials: false }));
 app.use((req, res, next) =>
-  shouldDeferActionBodyParsing(req) ? next() : parseJsonBody(req, res, next)
+  shouldDeferBodyParsing(req) ? next() : parseJsonBody(req, res, next)
 );
 app.use(cookieParser());
 app.use((req, res, next) =>
-  shouldDeferActionBodyParsing(req) ? next() : requireJsonBody(req, res, next)
+  shouldDeferBodyParsing(req) ? next() : requireJsonBody(req, res, next)
 );
 
 app.get("/", (_req, res) => {
@@ -126,6 +131,7 @@ app.get("/api/reference/systems", ...requireAuth, async (_req, res) => {
 // Administrator user management [FR-26]. The router applies the
 // Administrator-only role guard to every endpoint, including direct URLs.
 app.use("/api/admin", adminRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Requester ticket and attachment routes, carried over from Lab 2 with the
 // identity mechanism replaced: the owner is the authenticated user, never a

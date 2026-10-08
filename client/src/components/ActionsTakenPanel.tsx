@@ -9,6 +9,7 @@ import {
   updateTicketAction,
 } from "../api/actions";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
+import { formatBangkokDateTime } from "../utils/format";
 import {
   ACTION_STATUS_LABELS,
   isRecord,
@@ -106,16 +107,6 @@ const FOLLOW_UP_NOTE_REQUIRED_MESSAGE =
 const ACTION_RESULT_REQUIRED_MESSAGE =
   "Enter a result before completing this action.";
 const EMPTY_API_FIELDS: Record<string, string> = {};
-
-function formatBangkokDateTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Bangkok",
-  }).format(date);
-}
 
 function sortActions(actions: ActionTaken[]): ActionTaken[] {
   return [...actions].sort((left, right) => {
@@ -419,6 +410,16 @@ export function ActionsTakenPanel({
   useEffect(() => {
     void loadActions();
   }, [loadActions]);
+
+  useEffect(() => {
+    if (loading) return;
+    const match = window.location.hash.match(/^#action-(\d+)$/);
+    if (!match) return;
+    const target = document.getElementById(`action-${match[1]}`);
+    if (!target) return;
+    target.scrollIntoView({ block: "center" });
+    target.focus({ preventScroll: true });
+  }, [actions, loading]);
 
   async function loadAssignees(force = false) {
     if ((!force && assigneesLoaded) || assigneesLoading) return;
@@ -940,7 +941,7 @@ export function ActionsTakenPanel({
               const canEditAction =
                 writesAllowed && !TERMINAL_ACTION_STATUSES.has(action.status);
               return (
-                <li key={action.id}>
+                <li id={`action-${action.id}`} key={action.id} tabIndex={-1}>
                   <article
                     className="zg-readonly-panel p-3"
                     data-testid="action-item"

@@ -1,0 +1,162 @@
+import { ActionStatus, Prisma, Role, TicketStatus } from "@prisma/client";
+import { Router, type Response } from "express";
+import {
+  AuthenticatedRequest,
+  requireAuth,
+  requireRole,
+} from "../middleware/auth";
+import { prisma } from "../prisma";
+import { sendUnexpectedError } from "../utils/unexpected-response";
+
+const STAFF_ROLES = [Role.IT_STAFF, Role.ADMINISTRATOR] as const;
+const OPEN_TICKET_STATUSES: TicketStatus[] = [
+  TicketStatus.NEW,
+  TicketStatus.OPEN,
+  TicketStatus.IN_PROGRESS,
+  TicketStatus.WAITING_FOR_REQUESTER,
+  TicketStatus.REOPENED,
+];
+
+const USER_REF_SELECT = {
+  id: true,
+  name: true,
+  role: true,
+  isActive: true,
+} as const;
+
+const STAFF_TICKET_SELECT = {
+  id: true,
+  number: true,
+  summary: true,
+  status: true,
+  requestedPriority: true,
+  itPriority: true,
+  owner: { select: USER_REF_SELECT },
+  version: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
+} satisfies Prisma.TicketSelect;
+
+const STAFF_ACTION_INCLUDE = {
+  ticket: { select: { number: true } },
+  performedBy: { select: USER_REF_SELECT },
+  assignee: { select: USER_REF_SELECT },
+} satisfies Prisma.ActionTakenInclude;
+
+export const dashboardRouter = Router();
+
+function rejectReadInput(req: AuthenticatedRequest, res: Response): boolean {
+  if (Object.keys(req.query).length > 0) {
+    res.status(400).json({
+      error: {
+        code: "INVALID_QUERY",
+        message: "This endpoint does not accept query parameters",
+      },
+    });
+    return true;
+  }
+
+  const contentLength = Number(req.get("content-length") ?? 0);
+  const hasFramedBody =
+    contentLength > 0 || req.get("transfer-encoding") !== undefined;
+  if (req.body !== undefined || hasFramedBody) {
+    res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "This endpoint does not accept a request body",
+      },
+    });
+    return true;
+  }
+
+  return false;
+}
+
+// GET /api/dashboard/staff [AC-12, AC-13, AC-16]
+dashboardRouter.get(
+  "/staff",
+  ...requireAuth,
+  requireRole(...STAFF_ROLES),
+  async (req: AuthenticatedRequest, res: Response) => {
+    if (rejectReadInput(req, res)) return;
+
+    const actorId = req.authUser!.id;
+    const asOf = new Date();
+    const from = new Date(asOf.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    try {
+      const snapshot = await prisma.$transaction(
+        async (tx) => {
+          const openWhere: Prisma.TicketWhereInput = {
+            status: { in: OPEN_TICKET_STATUSES },
+          };
+          const [
+            openTickets,
+            unassignedTickets,
+            myOwnedTickets,
+            myActiveActions,
+            recentTickets,
+            myRecentActions,
+          ] = await Promise.all([
+            tx.ticket.count({ where: openWhere }),
+            tx.ticket.count({ where: { ...openWhere, ownerId: null } }),
+            tx.ticket.count({ where: { ...openWhere, ownerId: actorId } }),
+            tx.actionTaken.count({
+              where: {
+                performedById: actorId,
+                status: {
+                  in: [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS],
+                },
+              },
+            }),
+            tx.ticket.findMany({
+              where: { updatedAt: { gte: from, lte: asOf } },
+              orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: STAFF_TICKET_SELECT,
+            }),
+            tx.actionTaken.findMany({
+              where: {
+                performedById: actorId,
+                createdAt: { gte: from, lte: asOf },
+              },
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 5,
+              include: STAFF_ACTION_INCLUDE,
+            }),
+          ]);
+
+          return {
+            metrics: {
+              openTickets,
+              unassignedTickets,
+              myOwnedTickets,
+              myActiveActions,
+            },
+            lists: {
+              recentTickets,
+              myRecentActions: myRecentActions.map((action) => ({
+                id: action.id,
+                ticketId: action.ticketId,
+                ticketNumber: action.ticket.number,
+                title: action.title,
+                status: action.status,
+                performedBy: action.performedBy,
+                assignee: action.assignee,
+                createdAt: action.createdAt,
+                updatedAt: action.updatedAt,
+                version: action.version,
+              })),
+            },
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+      );
+
+      return res.status(200).json({ asOf, windowDays: 7, ...snapshot });
+    } catch {
+      return sendUnexpectedError(res, "Failed to load the staff dashboard");
+    }
+  }
+);

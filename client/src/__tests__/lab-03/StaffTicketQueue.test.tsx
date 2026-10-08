@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { StaffTicketQueue } from "../../components/StaffTicketQueue";
 import { AuthHarnessProvider, testUser } from "../../test/authHarness";
@@ -107,19 +108,30 @@ function mockQueueApi(
   });
 }
 
-function StaffWrapper({ children }: { children: ReactNode }) {
+function StaffWrapper({
+  children,
+  initialEntry = "/staff/queue",
+}: {
+  children: ReactNode;
+  initialEntry?: string;
+}) {
   return (
-    <AuthHarnessProvider
-      harness={{ user: testUser({ id: 9, role: "IT_STAFF" }) }}
-    >
-      {children}
-    </AuthHarnessProvider>
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <AuthHarnessProvider
+        harness={{ user: testUser({ id: 9, role: "IT_STAFF" }) }}
+      >
+        {children}
+      </AuthHarnessProvider>
+    </MemoryRouter>
   );
 }
 
-async function renderQueue(onSelectTicket = vi.fn()) {
+async function renderQueue(
+  onSelectTicket = vi.fn(),
+  initialEntry = "/staff/queue"
+) {
   render(
-    <StaffWrapper>
+    <StaffWrapper initialEntry={initialEntry}>
       <StaffTicketQueue onSelectTicket={onSelectTicket} />
     </StaffWrapper>
   );
@@ -312,6 +324,42 @@ describe("StaffTicketQueue wiring (C-03, AC-08)", () => {
       const last = queueCalls[queueCalls.length - 1];
       expect(last).not.toContain("search=");
       expect(last).not.toContain("owner=");
+    });
+  });
+
+  it("restores dashboard drill-down filters from the URL and lets the user clear them", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?statusGroup=open&owner=unassigned&dateField=updatedAt&from=2026-10-01T00%3A00%3A00.000Z&to=2026-10-08T00%3A00%3A00.000Z"
+    );
+
+    await waitFor(() => {
+      const queueCalls = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes("/api/staff/tickets"));
+      expect(queueCalls.at(-1)).toContain("statusGroup=open");
+      expect(queueCalls.at(-1)).toContain("dateField=updatedAt");
+      expect(queueCalls.at(-1)).toContain("owner=unassigned");
+      expect(queueCalls.at(-1)).not.toContain("sort=");
+      expect(queueCalls.at(-1)).not.toContain("order=");
+    });
+    expect(screen.getByTestId("queue-dashboard-filters")).toHaveTextContent(
+      "Open tickets"
+    );
+    expect(screen.getByTestId("queue-dashboard-filters")).toHaveTextContent(
+      "Owner: unassigned"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("queue-dashboard-filters")).toBeNull();
+      const queueCalls = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes("/api/staff/tickets"));
+      expect(queueCalls.at(-1)).not.toContain("statusGroup=");
+      expect(queueCalls.at(-1)).not.toContain("dateField=");
+      expect(queueCalls.at(-1)).not.toContain("owner=");
     });
   });
 });

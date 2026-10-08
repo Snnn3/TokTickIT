@@ -60,6 +60,6 @@ export const ROLE_LABELS: Record<Role, string> = {
  */
 export const ROLE_LANDING: Record<Role, string> = {
   REQUESTER: "/tickets",
-  IT_STAFF: "/staff/queue",
+  IT_STAFF: "/dashboard/staff",
   ADMINISTRATOR: "/admin/users",
 };

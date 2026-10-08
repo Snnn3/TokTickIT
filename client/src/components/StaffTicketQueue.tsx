@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   StaffQueueTicket,
   TicketPriority,
@@ -10,7 +11,11 @@ import {
   ZenPriorityBadge,
   ZenStatusBadge,
 } from "./ZenBadge";
-import { formatDateOnly, formatDateTime } from "../utils/format";
+import {
+  formatBangkokDateTime,
+  formatDateOnly,
+  formatDateTime,
+} from "../utils/format";
 
 interface StaffTicketQueueProps {
   onSelectTicket?: (ticketId: number) => void;
@@ -19,6 +24,10 @@ interface StaffTicketQueueProps {
 interface QueueQueryState {
   search: string;
   status: TicketStatus | "";
+  statusGroup: "" | "open" | "resolved";
+  dateField: "" | "updatedAt" | "resolvedAt";
+  from: string;
+  to: string;
   categoryId: string;
   requestedPriority: TicketPriority | "";
   itPriority: TicketPriority | "";
@@ -32,6 +41,10 @@ interface QueueQueryState {
 const initialQueryState: QueueQueryState = {
   search: "",
   status: "",
+  statusGroup: "",
+  dateField: "",
+  from: "",
+  to: "",
   categoryId: "",
   requestedPriority: "",
   itPriority: "",
@@ -53,14 +66,25 @@ const initialQueryState: QueueQueryState = {
  * tappable cards. Any row opens for action through onSelectTicket.
  */
 export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tickets, setTickets] = useState<StaffQueueTicket[]>([]);
   const { categories } = useCategories();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
 
-  const [queryState, setQueryState] =
-    useState<QueueQueryState>(initialQueryState);
+  const [queryState, setQueryState] = useState<QueueQueryState>(() => ({
+    ...initialQueryState,
+    status: (searchParams.get("status") as TicketStatus | null) ?? "",
+    statusGroup:
+      (searchParams.get("statusGroup") as "open" | "resolved" | null) ?? "",
+    dateField:
+      (searchParams.get("dateField") as "updatedAt" | "resolvedAt" | null) ??
+      "",
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+    owner: (searchParams.get("owner") as QueueQueryState["owner"] | null) ?? "",
+  }));
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Debounce search input by 300ms, matching the requester list convention.
@@ -79,6 +103,8 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   const hasActiveFilters = Boolean(
     queryState.search.trim() ||
       queryState.status ||
+      queryState.statusGroup ||
+      queryState.dateField ||
       queryState.categoryId ||
       queryState.requestedPriority ||
       queryState.itPriority ||
@@ -95,13 +121,22 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
     const params = new URLSearchParams();
     if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
     if (queryState.status) params.set("status", queryState.status);
+    if (queryState.statusGroup)
+      params.set("statusGroup", queryState.statusGroup);
+    if (queryState.dateField) {
+      params.set("dateField", queryState.dateField);
+      params.set("from", queryState.from);
+      params.set("to", queryState.to);
+    }
     if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
     if (queryState.requestedPriority)
       params.set("requestedPriority", queryState.requestedPriority);
     if (queryState.itPriority) params.set("itPriority", queryState.itPriority);
     if (queryState.owner) params.set("owner", queryState.owner);
-    if (queryState.sort) params.set("sort", queryState.sort);
-    if (queryState.order) params.set("order", queryState.order);
+    if (!queryState.dateField) {
+      if (queryState.sort) params.set("sort", queryState.sort);
+      if (queryState.order) params.set("order", queryState.order);
+    }
     params.set("page", String(queryState.page));
     params.set("pageSize", String(queryState.pageSize));
 
@@ -140,6 +175,10 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   }, [
     debouncedSearch,
     queryState.status,
+    queryState.statusGroup,
+    queryState.dateField,
+    queryState.from,
+    queryState.to,
     queryState.categoryId,
     queryState.requestedPriority,
     queryState.itPriority,
@@ -155,10 +194,15 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   }, [fetchQueue]);
 
   const handleResetFilters = () => {
+    setSearchParams(new URLSearchParams());
     setQueryState((prev) => ({
       ...prev,
       search: "",
       status: "",
+      statusGroup: "",
+      dateField: "",
+      from: "",
+      to: "",
       categoryId: "",
       requestedPriority: "",
       itPriority: "",
@@ -166,6 +210,49 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
       page: 1,
     }));
   };
+
+  const updateLocationFilter = (
+    key: "status" | "owner",
+    value: string,
+    clearStatusGroup = false
+  ) => {
+    const next = new URLSearchParams(searchParams);
+    if (clearStatusGroup) next.delete("statusGroup");
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
+
+  useEffect(() => {
+    const status = searchParams.get("status") ?? "";
+    const statusGroup = searchParams.get("statusGroup") ?? "";
+    const dateField = searchParams.get("dateField") ?? "";
+    const from = searchParams.get("from") ?? "";
+    const to = searchParams.get("to") ?? "";
+    const owner = searchParams.get("owner") ?? "";
+    setQueryState((previous) => {
+      if (
+        previous.status === status &&
+        previous.statusGroup === statusGroup &&
+        previous.dateField === dateField &&
+        previous.from === from &&
+        previous.to === to &&
+        previous.owner === owner
+      ) {
+        return previous;
+      }
+      return {
+        ...previous,
+        status: status as TicketStatus | "",
+        statusGroup: statusGroup as QueueQueryState["statusGroup"],
+        dateField: dateField as QueueQueryState["dateField"],
+        from,
+        to,
+        owner: owner as QueueQueryState["owner"],
+        page: 1,
+      };
+    });
+  }, [searchParams]);
 
   const handleSelectTicket = (ticketId: number) => {
     if (onSelectTicket) onSelectTicket(ticketId);
@@ -218,9 +305,11 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 className="form-select form-select-sm"
                 value={queryState.status}
                 onChange={(e) => {
+                  updateLocationFilter("status", e.target.value, true);
                   setQueryState((prev) => ({
                     ...prev,
                     status: e.target.value as TicketStatus | "",
+                    statusGroup: "",
                     page: 1,
                   }));
                 }}
@@ -328,6 +417,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 className="form-select form-select-sm"
                 value={queryState.owner}
                 onChange={(e) => {
+                  updateLocationFilter("owner", e.target.value);
                   setQueryState((prev) => ({
                     ...prev,
                     owner: e.target.value as QueueQueryState["owner"],
@@ -353,6 +443,45 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
               </button>
             </div>
           </div>
+
+          {(queryState.statusGroup ||
+            queryState.dateField ||
+            queryState.owner ||
+            queryState.status) && (
+            <div
+              className="small text-muted mt-3"
+              data-testid="queue-dashboard-filters"
+              aria-live="polite"
+            >
+              Dashboard filters:{" "}
+              {queryState.statusGroup && (
+                <span className="badge bg-light text-dark border me-2">
+                  {queryState.statusGroup === "open"
+                    ? "Open tickets"
+                    : "Resolved tickets"}
+                </span>
+              )}
+              {queryState.status && (
+                <span className="badge bg-light text-dark border me-2">
+                  Status: {queryState.status.replaceAll("_", " ")}
+                </span>
+              )}
+              {queryState.owner && (
+                <span className="badge bg-light text-dark border me-2">
+                  Owner: {queryState.owner === "mine" ? "Me" : queryState.owner}
+                </span>
+              )}
+              {queryState.dateField && (
+                <span className="badge bg-light text-dark border">
+                  {queryState.dateField === "updatedAt"
+                    ? "Updated"
+                    : "Resolved"}
+                  : {formatBangkokDateTime(queryState.from)} –{" "}
+                  {formatBangkokDateTime(queryState.to)} (Bangkok)
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Sort Options Strip */}
           <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
