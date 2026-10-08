@@ -42,7 +42,22 @@ function RoleLanding() {
 
 function LoginRoute() {
   const navigate = useNavigate();
-  return <Login onSignedIn={(destination) => navigate(destination)} />;
+  const location = useLocation();
+  const routeState = location.state as { from?: unknown } | null;
+  const requestedDestination = routeState?.from;
+  const continuation =
+    typeof requestedDestination === "string" &&
+    requestedDestination.startsWith("/") &&
+    !requestedDestination.startsWith("//")
+      ? requestedDestination
+      : null;
+  return (
+    <Login
+      onSignedIn={(destination) =>
+        navigate(continuation ?? destination, { replace: true })
+      }
+    />
+  );
 }
 
 function ChangePasswordRoute() {

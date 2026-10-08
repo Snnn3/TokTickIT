@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { StaffDashboard } from "../../components/StaffDashboard";
+import { AuthHarnessProvider, testUser } from "../../test/authHarness";
 
 const snapshot = {
   asOf: "2026-10-08T01:00:00.000Z",
@@ -65,7 +66,9 @@ const snapshot = {
 function renderDashboard() {
   return render(
     <MemoryRouter>
-      <StaffDashboard />
+      <AuthHarnessProvider harness={{ user: testUser({ role: "IT_STAFF" }) }}>
+        <StaffDashboard />
+      </AuthHarnessProvider>
     </MemoryRouter>
   );
 }

@@ -26,6 +26,8 @@ export interface AuthContextType {
    * signed out and strand the retry. Callers stay put on `{ok:false}`.
    */
   signOut: () => Promise<SignOutResult>;
+  /** Clears local identity after the server rejects an expired session. */
+  expireSession: () => void;
   /** Applied after a successful password change, which clears the gate. */
   applyUser: (user: AuthUser) => void;
 }

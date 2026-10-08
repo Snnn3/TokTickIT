@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getStaffDashboard } from "../api/dashboard";
+import { useAuth } from "../context/AuthContext";
 import type { StaffDashboardResponse } from "../types/dashboard";
+import { isAuthRequired } from "../utils/authRequired";
 import { formatBangkokDateTime } from "../utils/format";
 
 function recentBounds(asOf: string) {
@@ -55,6 +57,7 @@ const METRICS = [
 ] as const;
 
 export function StaffDashboard() {
+  const { expireSession } = useAuth();
   const [data, setData] = useState<StaffDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +73,10 @@ export function StaffDashboard() {
 
     try {
       const result = await getStaffDashboard();
+      if (await isAuthRequired(result.response)) {
+        expireSession();
+        return;
+      }
       if (result.response.status === 403) {
         setData(null);
         hasSnapshotRef.current = false;
@@ -89,7 +96,7 @@ export function StaffDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [expireSession]);
 
   useEffect(() => {
     void loadDashboard();
@@ -324,7 +331,7 @@ export function StaffDashboard() {
                 {data.lists.myRecentActions.map((action) => (
                   <li className="border-top pt-3" key={action.id}>
                     <Link
-                      className="fw-semibold text-zen-primary"
+                      className="fw-semibold text-zen-primary zg-breakable-action-title"
                       state={{ from: "/dashboard/staff" }}
                       to={`/staff/tickets/${action.ticketId}#action-${action.id}`}
                     >

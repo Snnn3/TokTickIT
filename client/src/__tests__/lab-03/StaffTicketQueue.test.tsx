@@ -410,6 +410,37 @@ describe("StaffTicketQueue wiring (C-03, AC-08)", () => {
       expect(queueCalls.at(-1)).not.toContain("owner=");
     });
   });
+
+  it("locks sorting to newest-first while a recent-date filter is active", async () => {
+    const fetchSpy = mockQueueApi();
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?dateField=updatedAt&from=2026-10-02T00%3A00%3A00.000Z&to=2026-10-09T00%3A00%3A00.000Z&sort=number&order=asc"
+    );
+
+    expect(screen.queryByLabelText("Sort by:")).toBeNull();
+    expect(screen.queryByLabelText("Sort order")).toBeNull();
+    expect(screen.getByTestId("queue-date-sort-note")).toHaveTextContent(
+      "Recent updated tickets are always sorted newest first. Clear date filters to choose another sort order."
+    );
+
+    await waitFor(() => {
+      const request = fetchSpy.mock.calls
+        .map(([input]) => new URL(String(input), "http://localhost"))
+        .find((url) => url.pathname === "/api/staff/tickets");
+      expect(request?.searchParams.get("dateField")).toBe("updatedAt");
+      expect(request?.searchParams.has("sort")).toBe(false);
+      expect(request?.searchParams.has("order")).toBe(false);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Sort by:")).toBeEnabled();
+      expect(screen.getByLabelText("Sort order")).toBeEnabled();
+    });
+    expect(screen.getByLabelText("Sort by:")).toHaveValue("number");
+    expect(screen.getByLabelText("Sort order")).toHaveValue("asc");
+  });
 });
 
 describe("StaffTicketQueue states (S-02, AC-18)", () => {

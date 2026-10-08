@@ -450,3 +450,78 @@ test("loading, stale refresh and safe failure retry are visible without replacin
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
+
+test("unbroken action titles wrap and action-list controls meet mobile targets", async ({
+  page,
+}) => {
+  const longTitle = "L".repeat(120);
+  const action = await db.actionTaken.findFirstOrThrow({
+    where: { title: "Alice action 7" },
+  });
+  await db.actionTaken.update({
+    where: { id: action.id },
+    data: { title: longTitle },
+  });
+
+  await signIn(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  const dashboardTitle = page
+    .getByTestId("staff-dashboard-view")
+    .getByRole("link", { name: longTitle, exact: true });
+  await expect(dashboardTitle).toBeVisible();
+  const dashboardLayout = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    offenders: Array.from(document.querySelectorAll("*"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          className:
+            typeof element.className === "string" ? element.className : "",
+          text: element.textContent?.slice(0, 140),
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          scrollWidth: element.scrollWidth,
+          clientWidth: element.clientWidth,
+        };
+      })
+      .filter((element) => element.right > window.innerWidth + 1)
+      .slice(0, 12),
+  }));
+  expect(
+    dashboardLayout.documentWidth,
+    JSON.stringify(dashboardLayout)
+  ).toBeLessThanOrEqual(376);
+
+  await page.goto("/staff/actions?performedBy=me&page=1&pageSize=5");
+  const actionList = page.getByTestId("staff-actions-list-view");
+  await expect(actionList.getByRole("link", { name: longTitle })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1
+    )
+  ).toBe(true);
+
+  const controls = await actionList
+    .locator("a, button, select")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          name:
+            element.getAttribute("aria-label") ??
+            element.textContent?.trim() ??
+            element.tagName,
+          width: rect.width,
+          height: rect.height,
+        };
+      })
+    );
+  expect(controls.length).toBeGreaterThan(0);
+  for (const control of controls) {
+    expect(control.width, `${control.name} width`).toBeGreaterThanOrEqual(44);
+    expect(control.height, `${control.name} height`).toBeGreaterThanOrEqual(44);
+  }
+});

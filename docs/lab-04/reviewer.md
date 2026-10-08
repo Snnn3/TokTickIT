@@ -99,6 +99,37 @@ part of this dashboard-specific verification.
 No Issue #59 PR or peer approval is claimed. Requester dashboard tests remain
 Issue #60 work; the combined E4-03/P4-01 rows stay partially complete.
 
+### Subsequent Issue #59 review — 2026-10-09
+
+A later Spec pass reported five remaining P2 gaps after the earlier follow-up
+verification. The branch now invalidates local auth on `AUTH_REQUIRED` and
+returns through login to the full requested URL; ignores obsolete action-list
+success/error/loading responses; explains and locks date-filtered queue ordering;
+wraps long unbroken action titles; and provides 44px mobile targets on the action
+list. Tests cover each behavior, including a real-browser 120-character title at
+375px and an expired-session destination with query and fragment.
+
+The independent Standards review found no actionable issues. The Spec re-review
+confirmed the five P2 fixes and identified one P3 test gap around fragment
+preservation; that case was added and verified. My final diff review checked the
+auth continuation, request-generation guards across all response branches,
+date-sort request parameters and mobile sizing rules. No remaining actionable
+finding was identified in this scope.
+
+Final verification after the test-harness typing fix:
+
+- Client: 22 files, 182/182 tests passed.
+- Staff/Admin dashboard Playwright: 9/9 passed; the E2E TypeScript check passed.
+- Client production build passed.
+- `npm run lint --prefix client -- src` passed, as did changed-path formatting
+  and `git diff --check`.
+- The unscoped `npm run lint --prefix client` exited nonzero after reporting
+  third-party diagnostics from `client/node_modules`; source-scoped lint is
+  clean. No dependency or lint-configuration changes were made.
+
+No server code changed, and no Issue #59 PR, peer approval or merge is claimed.
+Requester Dashboard coverage remains Issue #60 work.
+
 ---
 
 ## Pull Requests I reviewed for my partner

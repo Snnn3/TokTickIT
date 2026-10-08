@@ -45,7 +45,15 @@ export function RequireAuth() {
   if (!user) {
     // `state` carries where they were headed, so signing in returns them there
     // rather than dumping them on a landing screen they did not ask for.
-    return <Navigate replace state={{ from: location.pathname }} to="/login" />;
+    return (
+      <Navigate
+        replace
+        state={{
+          from: `${location.pathname}${location.search}${location.hash}`,
+        }}
+        to="/login"
+      />
+    );
   }
   if (user.mustChangePassword) {
     return <Navigate replace to="/change-password" />;

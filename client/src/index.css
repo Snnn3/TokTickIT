@@ -542,6 +542,13 @@ body {
   border-color: rgba(183, 121, 31, 0.45);
 }
 
+.zg-breakable-action-title {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 /* 44px touch targets below the tablet breakpoint (ui-spec 10) */
 @media (max-width: 767.98px) {
   [data-testid="staff-dashboard-view"] :is(a, button),
@@ -551,6 +558,21 @@ body {
     align-items: center;
     min-height: 44px;
     min-width: 44px;
+  }
+
+  [data-testid="staff-actions-list-view"] .form-select {
+    min-height: 44px;
+  }
+
+  [data-testid="staff-actions-list-view"] :is(a, button) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  [data-testid="staff-actions-list-view"] .zg-breakable-action-title {
+    display: block;
   }
 
   .zg-auth-card .btn,

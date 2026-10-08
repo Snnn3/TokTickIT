@@ -28,12 +28,12 @@ api-spec.md. Implementation replaces Planned with measured results and links.
 | V4-01 | Style/responsive/a11y | AC-17, AC-18, AC-23 | `client/src/__tests__/lab-04/Accessibility.test.tsx`; `e2e/lab-04/visual-accessibility.spec.ts` | Zen Green, labels, keyboard/dialog focus, status cues, 3 viewports, console/links | No unexpected errors, clipping/overlap/overflow; readable screenshots | Planned |
 | E4-01 | E2E | AC-03, AC-04, AC-05, AC-06, AC-10, AC-17, AC-22 | `e2e/lab-04/actions-taken-flow.spec.ts` | Staff and Admin record different actions under one Ticket; assign/edit/complete/cancel/history | End-to-end fields, performer, follow-up, terminal and authorization evidence | Planned |
 | E4-02 | E2E | AC-07, AC-08, AC-09, AC-10, AC-19 | `e2e/lab-04/ticket-resolution.spec.ts` | Real requester/staff resolution gate, reopen and advisory, comments/notes/attachments | Correct lifecycle; requester sees public history only | Planned |
-| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Both role dashboards, empty/populated, drill-down/browser-back and isolation | Metrics match database queries and detail lists; Bangkok times | Partial — Staff/Admin coverage 8/8 passed, 2026-10-08; Requester dashboard pending Issue #60 |
+| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Both role dashboards, empty/populated, drill-down/browser-back and isolation | Metrics match database queries and detail lists; Bangkok times | Partial — Staff/Admin coverage 9/9 passed, 2026-10-09; Requester dashboard pending Issue #60 |
 | E4-04 | E2E | AC-14, AC-15, AC-17 | `e2e/lab-04/concurrent-edit.spec.ts` | Two sessions stale parent/action and lost create response | 409 with drafts preserved and explicit reload/review; one created record | Planned |
 | M4-01 | Migration real DB | AC-02, AC-13, AC-21 | `server/prisma/migration-evidence/lab4-actions.md` | Legacy backup/apply/compare/restore in isolated databases | All prior data/hash values preserved; versions1; zero actions; recovery readable | Passed — disposable PostgreSQL run |
 | M4-02 | Seed real DB | AC-02, AC-05, AC-11, AC-12, AC-21, AC-22 | `server/prisma/migration-evidence/lab4-actions.md`; `server/tests/lab-04/seed-fixtures.test.ts` | Run seed twice; zero/one/many action/status/priority/ownership/time fixtures | Stable counts and events; no unrelated user/data overwrite | Passed — repeat seed and fixture assertions |
 | P4-01 | Performance smoke | AC-12, AC-18 | `server/tests/lab-04/dashboard-performance.integration.test.ts`; `artifacts/lab-04/staff-dashboard-performance.json` | 10k Tickets/30k actions; both endpoints and query plans on documented local fixture | 20 warm requests each p95 <=1000ms; <=64KiB responses; no N+1/unbounded collections | Partial — Staff endpoint passed, 2026-10-08; Requester endpoint pending Issue #60 |
-| R4-01 | Regression | AC-19 | `server/tests/`; `client/src/__tests__/`; `e2e/lab-02/`; `e2e/lab-03/`; `server/prisma/migration-evidence/lab4-actions.md` | Auth, requester, attachments, comments, private notes, queue/detail, Admin guards and authenticated browser journeys | All existing behavioral assertions pass after documented additive fixture adaptations | Passed - server 190/190; client 135/135; Lab 2/3 Playwright 13/13 across 5 specs |
+| R4-01 | Regression | AC-19 | `server/tests/`; `client/src/__tests__/`; `e2e/lab-02/`; `e2e/lab-03/`; `server/prisma/migration-evidence/lab4-actions.md` | Auth, requester, attachments, comments, private notes, queue/detail, Admin guards and authenticated browser journeys | All existing behavioral assertions pass after documented additive fixture adaptations | Passed — server isolated 348/348 (2026-10-08); client 182/182 (2026-10-09); Lab 2/3 Playwright 13/13 (prior regression run) |
 | D4-01 | Contract audit | AC-01, AC-20 | `docs/lab-04/reviewer.md` | PDF/Issue54 six-doc alignment, exact inverse mappings, approval/merge evidence | Draft gaps resolved; peer approval and contract merge recorded before implementation PR completion | Planned |
 | REL4-01 | Release/manual | AC-18, AC-19, AC-23 | `docs/lab-04/reviewer.md`; `README.md` | Product DoD, actual main test results, setup/demo/recovery, visual checklist and final report | All evidence linked; no invented approvals/results; report Parts1-9 | Planned |
 
@@ -175,6 +175,27 @@ The review-fix run includes the working-tree changes after `6374ea1`.
 The Staff part of E4-03/P4-01 is evidenced; neither row claims Requester
 Dashboard completion. Issue #60 must supply that endpoint's remaining checks.
 These are branch results, not final main/release evidence or peer approval.
+
+### Issue #59 follow-up review fixes — 2026-10-09
+
+The follow-up Spec review reproduced five P2 gaps. Client changes now:
+
+- Invalidate local authentication on dashboard/action-list `AUTH_REQUIRED`
+  responses and return to the originally requested route after login, including
+  query and fragment.
+- Guard every action-list response state (success, forbidden, error and loading)
+  against obsolete requests after browser Back or query changes.
+- Hide incompatible queue sort controls while date filtering enforces newest-first
+  order, and explain the fixed sort until the date filters are cleared.
+- Wrap valid 120-character unbroken action titles without mobile page overflow.
+- Give action-list links, buttons and selects mobile touch targets of at least
+  44 by 44 pixels.
+
+Verification on the client changes: 22 test files / 182 tests passed;
+Staff/Admin dashboard Playwright 9/9 passed; client build and source-scoped lint
+passed. The focused auth-continuation test also covers the fragment-preservation
+case raised during self-review. This does not complete the Requester Dashboard
+portion of E4-03 or P4-01; that remains Issue #60 work.
 
 Repository-root commands (existing scripts):
 ~~~text

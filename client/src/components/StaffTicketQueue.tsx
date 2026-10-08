@@ -477,52 +477,64 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
           )}
 
           {/* Sort Options Strip */}
-          <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
-            <div className="col-12 d-flex align-items-center gap-2">
-              <label htmlFor="queue-sort-select" className="mb-0">
-                Sort by:
-              </label>
-              <select
-                id="queue-sort-select"
-                className="form-select form-select-sm"
-                style={{ width: "auto" }}
-                value={queryState.sort}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    sort: e.target.value as
-                      | "updatedAt"
-                      | "createdAt"
-                      | "number",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="updatedAt">Last Updated</option>
-                <option value="createdAt">Created</option>
-                <option value="number">Number</option>
-              </select>
-              <label htmlFor="queue-order-select" className="visually-hidden">
-                Sort order
-              </label>
-              <select
-                id="queue-order-select"
-                className="form-select form-select-sm"
-                style={{ width: "auto" }}
-                value={queryState.order}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    order: e.target.value as "asc" | "desc",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
+          {queryState.dateField ? (
+            <p
+              className="small text-muted mt-2 pt-2 border-top mb-0"
+              data-testid="queue-date-sort-note"
+            >
+              Recent{" "}
+              {queryState.dateField === "updatedAt" ? "updated" : "resolved"}{" "}
+              tickets are always sorted newest first. Clear date filters to
+              choose another sort order.
+            </p>
+          ) : (
+            <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
+              <div className="col-12 d-flex align-items-center gap-2">
+                <label htmlFor="queue-sort-select" className="mb-0">
+                  Sort by:
+                </label>
+                <select
+                  id="queue-sort-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.sort}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      sort: e.target.value as
+                        | "updatedAt"
+                        | "createdAt"
+                        | "number",
+                      page: 1,
+                    }));
+                  }}
+                >
+                  <option value="updatedAt">Last Updated</option>
+                  <option value="createdAt">Created</option>
+                  <option value="number">Number</option>
+                </select>
+                <label htmlFor="queue-order-select" className="visually-hidden">
+                  Sort order
+                </label>
+                <select
+                  id="queue-order-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.order}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      order: e.target.value as "asc" | "desc",
+                      page: 1,
+                    }));
+                  }}
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Forbidden State: a Requester-role caller refused without content */}

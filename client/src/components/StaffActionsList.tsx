@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { getStaffActions } from "../api/actions";
+import { useAuth } from "../context/AuthContext";
 import { Forbidden } from "./ScreenPanel";
 import type { StaffActionListResponse } from "../types/action";
 import { formatBangkokDateTime } from "../utils/format";
+import { isAuthRequired } from "../utils/authRequired";
 
 const ALLOWED_QUERY_KEYS = [
   "statusGroup",
@@ -25,6 +27,7 @@ function makeRequestParams(source: URLSearchParams): URLSearchParams {
 }
 
 export function StaffActionsList() {
+  const { expireSession } = useAuth();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryString = makeRequestParams(searchParams).toString();
@@ -32,13 +35,21 @@ export function StaffActionsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const requestIdRef = useRef(0);
 
   const loadActions = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+    const isCurrentRequest = () => requestId === requestIdRef.current;
     setLoading(true);
     setError(null);
     setForbidden(false);
     try {
       const response = await getStaffActions(new URLSearchParams(queryString));
+      if (!isCurrentRequest()) return;
+      if (await isAuthRequired(response)) {
+        if (isCurrentRequest()) expireSession();
+        return;
+      }
       if (response.status === 403) {
         setData(null);
         setForbidden(true);
@@ -49,17 +60,23 @@ export function StaffActionsList() {
         setError("Your actions could not be loaded. Please try again.");
         return;
       }
-      setData((await response.json()) as StaffActionListResponse);
+      const result = (await response.json()) as StaffActionListResponse;
+      if (!isCurrentRequest()) return;
+      setData(result);
     } catch {
+      if (!isCurrentRequest()) return;
       setData(null);
       setError("Your actions could not be loaded. Please try again.");
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
-  }, [queryString]);
+  }, [expireSession, queryString]);
 
   useEffect(() => {
     void loadActions();
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, [loadActions]);
 
   const updatePagination = (key: "page" | "pageSize", value: string) => {
@@ -119,7 +136,7 @@ export function StaffActionsList() {
                 {data.actions.map((action) => (
                   <li className="zg-readonly-panel p-3" key={action.id}>
                     <Link
-                      className="fw-semibold text-zen-primary"
+                      className="fw-semibold text-zen-primary zg-breakable-action-title"
                       state={{ from: `${location.pathname}${location.search}` }}
                       to={`/staff/tickets/${action.ticketId}#action-${action.id}`}
                     >
