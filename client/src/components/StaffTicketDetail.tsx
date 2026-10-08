@@ -12,6 +12,7 @@ import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import { legalStatusTargets, needsStatusConfirm } from "../utils/transitions";
 import { formatDateTime, formatDateOnly } from "../utils/format";
 import { refetchAfterStaleWrite } from "../utils/staleWrite";
+import { ActionsTakenPanel } from "./ActionsTakenPanel";
 import {
   ZenItPriorityBadge,
   ZenPriorityBadge,
@@ -188,6 +189,20 @@ export function StaffTicketDetail({
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  const handleActionTicketVersionChange = useCallback(
+    (version: number, updatedAt?: string) => {
+      setTicket((previous) => {
+        if (!previous || version < previous.version) return previous;
+        return {
+          ...previous,
+          version,
+          ...(updatedAt ? { updatedAt } : {}),
+        };
+      });
+    },
+    []
+  );
 
   const handleAttachmentAdded = (newAttachment: AttachmentMetadata) => {
     setTicket((prev) => {
@@ -992,6 +1007,24 @@ export function StaffTicketDetail({
           )}
         </div>
       )}
+
+      <ActionsTakenPanel
+        ticketId={ticket.id}
+        ticketVersion={ticket.version}
+        ticketStatus={ticket.status}
+        canManage={
+          !selfService &&
+          (user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR")
+        }
+        performerName={user?.name}
+        disabledReason={
+          selfService
+            ? "Actions are read-only on a Ticket you requested."
+            : undefined
+        }
+        onTicketVersionChange={handleActionTicketVersionChange}
+        onRefreshTicket={fetchDetailPreservingSummaryDraft}
+      />
 
       <div className="zg-card p-4 mb-4" data-testid="comments-section">
         <h2 className="h5 fw-bold text-zen-primary mb-3">Public Comments</h2>

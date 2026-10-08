@@ -165,6 +165,9 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
 
     await staffPage.reload();
     await expect(staffPage.getByTestId("staff-detail-view")).toBeVisible();
+    await expect(staffPage.getByTestId("actions-taken-panel")).toContainText(
+      "Reconfigure campus Wi-Fi access point"
+    );
     await staffPage.getByTestId("status-select").selectOption("RESOLVED");
     await staffPage
       .getByTestId("resolution-summary-input")
@@ -187,6 +190,9 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
     await expect(
       requesterPage.getByTestId("resolution-summary-panel")
     ).toBeVisible();
+    await expect(
+      requesterPage.getByTestId("actions-taken-panel")
+    ).toContainText("Reconfigure campus Wi-Fi access point");
     await requesterPage.getByTestId("reopen-btn").click();
     await requesterPage.getByTestId("reopen-confirm-btn").click();
     await expect(requesterPage.getByTestId("reopen-success")).toBeVisible();

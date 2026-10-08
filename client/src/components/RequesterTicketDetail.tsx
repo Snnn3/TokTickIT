@@ -11,6 +11,7 @@ import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
 import { refetchAfterStaleWrite } from "../utils/staleWrite";
+import { ActionsTakenPanel } from "./ActionsTakenPanel";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
@@ -123,6 +124,14 @@ export function RequesterTicketDetail({
   useEffect(() => {
     fetchTicketDetail();
   }, [fetchTicketDetail]);
+
+  const handleActionTicketVersionChange = useCallback((version: number) => {
+    setTicket((previous) =>
+      previous && version > previous.version
+        ? { ...previous, version }
+        : previous
+    );
+  }, []);
 
   const handleAttachmentAdded = (newAttachment: AttachmentMetadata) => {
     setTicket((prev) => {
@@ -697,6 +706,14 @@ export function RequesterTicketDetail({
           <span>Last Updated: {formatDateTime(ticket.updatedAt)}</span>
         </div>
       </div>
+
+      <ActionsTakenPanel
+        ticketId={ticket.id}
+        ticketVersion={ticket.version}
+        ticketStatus={ticket.status}
+        canManage={false}
+        onTicketVersionChange={handleActionTicketVersionChange}
+      />
 
       {/* Public Comments [FR-25, ui-spec section 5]. Rendered safely: React
           escapes the body and whitespace is preserved, never raw HTML

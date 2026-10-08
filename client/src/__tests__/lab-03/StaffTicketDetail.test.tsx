@@ -95,6 +95,20 @@ function mockStaffDetailApi(options: MockOptions = {}) {
         json: async () => ({ assignees: options.assignees ?? ASSIGNEES }),
       } as Response;
     }
+    if (url === `/api/tickets/${ticket.id}/actions`) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ actions: [], ticketVersion: currentVersion }),
+      } as Response;
+    }
+    if (url === "/api/staff/action-assignees") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ assignees: [ASSIGNEES[0]] }),
+      } as Response;
+    }
     if (
       url.match(/\/api\/staff\/tickets\/\d+\/owner/) &&
       init?.method === "PATCH"
@@ -267,7 +281,7 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders grouped info with the operational card and no service-actions surface", async () => {
+  it("renders grouped info with the operational card and the Actions Taken panel", async () => {
     await renderLoaded();
 
     expect(screen.getByTestId("staff-detail-number")).toHaveTextContent(
@@ -284,9 +298,11 @@ describe("StaffTicketDetail operations (C-04, AC-09..AC-11, AC-23)", () => {
       screen.getByRole("combobox", { name: /new status/i })
     ).toBeInTheDocument();
     expect(screen.getByTestId("resolution-summary-input")).toBeInTheDocument();
-    // Out of scope this sprint: no service-actions surface anywhere.
-    expect(screen.queryByText(/service actions?/i)).toBeNull();
-    expect(screen.queryByText(/actions taken/i)).toBeNull();
+    expect(screen.getByTestId("actions-taken-panel")).toBeInTheDocument();
+    expect(await screen.findByTestId("actions-empty")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Add Action" })
+    ).toBeInTheDocument();
   });
 
   it("lists active staff and admins plus Unassigned in the owner select, with a Claim shortcut", async () => {
