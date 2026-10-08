@@ -12,6 +12,18 @@ const snapshot = {
     myOwnedTickets: 4,
     myActiveActions: 2,
   },
+  groupings: {
+    ticketsByStatus: [
+      { status: "NEW", count: 0 },
+      { status: "OPEN", count: 1 },
+      { status: "IN_PROGRESS", count: 11 },
+      { status: "WAITING_FOR_REQUESTER", count: 0 },
+      { status: "RESOLVED", count: 7 },
+      { status: "CLOSED", count: 8 },
+      { status: "REOPENED", count: 0 },
+      { status: "CANCELLED", count: 0 },
+    ],
+  },
   lists: {
     recentTickets: [
       {
@@ -102,6 +114,18 @@ describe("StaffDashboard (C4-03, AC-12, AC-13, AC-18)", () => {
     expect(fetchSpy).toHaveBeenCalledWith("/api/dashboard/staff");
   });
 
+  it("shows all server status groups, including zero and terminal counts, with matching queue links", async () => {
+    renderDashboardWithResponse(snapshot);
+    await screen.findByTestId("staff-dashboard-view");
+    for (const group of snapshot.groupings.ticketsByStatus) {
+      expect(
+        screen.getByRole("link", {
+          name: `${group.status.replaceAll("_", " ")} tickets: ${group.count}`,
+        })
+      ).toHaveAttribute("href", `/staff/queue?status=${group.status}`);
+    }
+  });
+
   it("keeps zero cards visible and gives each empty list its own useful message", async () => {
     renderDashboardWithResponse({
       ...snapshot,
@@ -112,6 +136,12 @@ describe("StaffDashboard (C4-03, AC-12, AC-13, AC-18)", () => {
         myActiveActions: 0,
       },
       lists: { recentTickets: [], myRecentActions: [] },
+      groupings: {
+        ticketsByStatus: snapshot.groupings.ticketsByStatus.map((group) => ({
+          ...group,
+          count: 0,
+        })),
+      },
     });
 
     await screen.findByTestId("staff-dashboard-view");

@@ -29,6 +29,9 @@ export interface StaffDashboardResponse {
     myOwnedTickets: number;
     myActiveActions: number;
   };
+  groupings: {
+    ticketsByStatus: { status: TicketStatus; count: number }[];
+  };
   lists: {
     recentTickets: StaffDashboardTicket[];
     myRecentActions: ActionSummary[];

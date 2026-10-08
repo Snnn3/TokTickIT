@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Lab 4 dashboards require their disposable-database runner/config.
+  testIgnore: "**/lab-04/dashboards.spec.ts",
   timeout: 60000,
   expect: {
     timeout: 10000,

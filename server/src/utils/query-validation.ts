@@ -21,3 +21,31 @@ export function parseUtcIsoTimestamp(value: unknown): Date | null {
     ? parsed
     : null;
 }
+
+/** Shared optional, paired, inclusive UTC range validation for read endpoints. */
+export function parseUtcDateRange(fromInput: unknown, toInput: unknown) {
+  const issues: { field: "from" | "to"; issue: string }[] = [];
+  const hasFrom = fromInput !== undefined;
+  const hasTo = toInput !== undefined;
+  const from = hasFrom
+    ? (parseUtcIsoTimestamp(fromInput) ?? undefined)
+    : undefined;
+  const to = hasTo ? (parseUtcIsoTimestamp(toInput) ?? undefined) : undefined;
+  if (hasFrom !== hasTo) {
+    issues.push({
+      field: hasFrom ? "to" : "from",
+      issue: "From and to must be supplied together",
+    });
+  }
+  if (hasFrom && !from)
+    issues.push({
+      field: "from",
+      issue: "from must be a valid UTC ISO timestamp",
+    });
+  if (hasTo && !to)
+    issues.push({ field: "to", issue: "to must be a valid UTC ISO timestamp" });
+  if (from && to && from.getTime() > to.getTime()) {
+    issues.push({ field: "from", issue: "From must not be after to" });
+  }
+  return { from, to, issues };
+}

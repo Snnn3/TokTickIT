@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "populated Staff dashboard has authoritative counts, latest-five ties, Bangkok time and responsive layout",
+  "screenshot": "populated-mobile.png",
+  "role": "IT_STAFF",
+  "route": "/dashboard/staff",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-08T14:12:37.329Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

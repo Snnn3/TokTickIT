@@ -43,6 +43,10 @@ function mockDashboardTransaction() {
 
   const transactionClient = {
     ticket: {
+      groupBy: vi.fn().mockResolvedValue([
+        { status: TicketStatus.CLOSED, _count: { _all: 8 } },
+        { status: TicketStatus.IN_PROGRESS, _count: { _all: 12 } },
+      ]),
       count: vi.fn(async ({ where }: { where: Record<string, unknown> }) => {
         seen.ticketCountWhere.push(where);
         return [12, 3, 4][seen.ticketCountWhere.length - 1];
@@ -148,6 +152,18 @@ describe("GET /api/dashboard/staff (API4-04, AC-12, AC-13, AC-16)", () => {
           unassignedTickets: 3,
           myOwnedTickets: 4,
           myActiveActions: 2,
+        },
+        groupings: {
+          ticketsByStatus: [
+            { status: "NEW", count: 0 },
+            { status: "OPEN", count: 0 },
+            { status: "IN_PROGRESS", count: 12 },
+            { status: "WAITING_FOR_REQUESTER", count: 0 },
+            { status: "RESOLVED", count: 0 },
+            { status: "CLOSED", count: 8 },
+            { status: "REOPENED", count: 0 },
+            { status: "CANCELLED", count: 0 },
+          ],
         },
         lists: {
           recentTickets: [
@@ -271,6 +287,7 @@ describe("GET /api/dashboard/staff (API4-04, AC-12, AC-13, AC-16)", () => {
     const cookie = authAs();
     const tx = {
       ticket: {
+        groupBy: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(0),
         findMany: vi.fn().mockResolvedValue([]),
       },
@@ -298,5 +315,15 @@ describe("GET /api/dashboard/staff (API4-04, AC-12, AC-13, AC-16)", () => {
       recentTickets: [],
       myRecentActions: [],
     });
+    expect(response.body.groupings.ticketsByStatus).toEqual([
+      { status: "NEW", count: 0 },
+      { status: "OPEN", count: 0 },
+      { status: "IN_PROGRESS", count: 0 },
+      { status: "WAITING_FOR_REQUESTER", count: 0 },
+      { status: "RESOLVED", count: 0 },
+      { status: "CLOSED", count: 0 },
+      { status: "REOPENED", count: 0 },
+      { status: "CANCELLED", count: 0 },
+    ]);
   });
 });

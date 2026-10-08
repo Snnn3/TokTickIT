@@ -13,7 +13,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/64 | feature/lab4-2-actions-foundation | Approved - merged into `lab4-staging` on 2026-10-01 |
 | https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested, then approved - merged into `lab4-staging` on 2026-10-05 |
 | https://github.com/Snnn3/TokTickIT/pull/66 | feature/lab4-4-ticket-workflow | Approved - merged into `lab4-staging` on 2026-10-07 |
-| https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Open; peer review pending; targets `lab4-staging` |
+| https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
 
 ### Reviewer comments I received and how I responded
 
@@ -36,9 +36,10 @@
 - **My comment (2026-10-07):** Thanked the reviewer for the detailed review and help getting PR #66 merged.
 - **Merge:** Merged into `lab4-staging` at `2026-10-07 09:15 UTC`.
 
-**PR #67 - feature/lab4-5-actions-ui** (OPEN)
+**PR #67 - feature/lab4-5-actions-ui** (MERGED)
 - **Implementation:** Adds the Issue #58 Actions Taken panel to requester and staff Ticket details, with read-only requester history, role-aware writes, validation, and conflict recovery. No server or schema changes.
-- **Peer review:** Pending; PR #67 targets `lab4-staging`.
+- **Peer review (YummieGG, APPROVED, 2026-10-08):** Accepted action cardinality, transitions, immutable performer identity, follow-up validation, requester read-only behavior, conflict recovery and idempotency. The peer verified 17 Actions Taken component tests and 158 client tests at that implementation head, and requested the C4-01 test-plan status update.
+- **Merge:** Merged into `lab4-staging` at `2026-10-08 04:10 UTC`.
 - **Verification:** Results for the implementation head are recorded below. The PR description also discloses the repository-wide `npm run check` failure.
 
 ## Verification for Issue #58
@@ -50,6 +51,53 @@ The following results were run on implementation head `fea80f0` on 2026-10-08, b
 - Playwright: `npm run test:e2e` - 13 tests passed.
 - Client lint, server build, client build, and Prisma Client generation passed.
 - `npm run check` failed with 74 repository-wide formatter diagnostics across 121 checked files. The output includes line-ending normalization differences; the check did not modify files, and this repo-wide formatting issue is not resolved by the Issue #58 change.
+
+---
+
+## Verification for Issue #59 review fixes
+
+On 2026-10-08, the Staff Dashboard branch addressed the local review
+`review-feature-lab4-6-staff-dashboard.md`:
+
+- Added authoritative all-Ticket status grouping in the dashboard snapshot,
+  zero-filled all eight statuses, rendered status links to the filtered queue,
+  and aligned the API/UI specification and focused tests.
+- Added eight isolated browser journeys for Staff/Admin authorization,
+  Requester denial, populated/empty states, performer isolation, drill-downs,
+  reload/browser-back, detail/action focus, loading/stale/retry, Bangkok time
+  and desktop/tablet/mobile evidence.
+- Added the real PostgreSQL 10,000-Ticket/30,000-action performance smoke,
+  independent SQL count comparisons, constant query-count/response-size checks,
+  and recorded EXPLAIN plans. The measured Staff p95 was 90.48 ms,
+  with 15 queries at both fixture sizes and 3,840-byte responses.
+- Added fixed-clock real-database coverage of both inclusive seven-day
+  boundaries, one-millisecond exclusions and matching drill-down totals.
+- Extracted the four reported duplications: open-status predicates, public
+  user projection, paired UTC date-range validation, and recent-link bounds.
+- Self-review found and fixed four further acceptance gaps: deep-link focus
+  stealing editor focus on reload, incomplete queue URL persistence, undersized
+  mobile controls, and missing exact-window real-database coverage. Focused
+  regressions were reproduced before the fixes. A follow-up Standards/Spec
+  review found no remaining actionable findings in this scope. Shared action
+  summary selection/serialization and active-action predicates were also
+  extracted following the Standards suggestions.
+- A final URL-state review identified a response-order race after clearing
+  search on a later page. Request-generation guards now ignore stale success,
+  forbidden, failure and loading updates; four reproduced regressions pass.
+  The follow-up Standards check confirmed the race fix.
+
+Verification: server 348/348, client 174/174, dashboard Playwright 8/8,
+real-database integration 2/2 (boundary and performance); both builds and client lint passed. Test commands
+and limitations are recorded in `tests.md`; measured SQL/runtime evidence is
+in `artifacts/lab-04/staff-dashboard-performance.json`.
+
+Changed-branch formatting and whitespace checks pass. Repository-wide
+`npm run check` still reports 60 existing formatter diagnostics outside the
+changed files. Existing Lab 2/3 browser tests were retained but not rerun as
+part of this dashboard-specific verification.
+
+No Issue #59 PR or peer approval is claimed. Requester dashboard tests remain
+Issue #60 work; the combined E4-03/P4-01 rows stay partially complete.
 
 ---
 

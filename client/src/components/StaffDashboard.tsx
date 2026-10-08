@@ -4,26 +4,25 @@ import { getStaffDashboard } from "../api/dashboard";
 import type { StaffDashboardResponse } from "../types/dashboard";
 import { formatBangkokDateTime } from "../utils/format";
 
-function recentQueueHref(asOf: string): string {
+function recentBounds(asOf: string) {
   const from = new Date(
     new Date(asOf).getTime() - 7 * 24 * 60 * 60 * 1000
   ).toISOString();
+  return { from, to: asOf };
+}
+
+function recentQueueHref(asOf: string): string {
   const params = new URLSearchParams({
     dateField: "updatedAt",
-    from,
-    to: asOf,
+    ...recentBounds(asOf),
   });
   return `/staff/queue?${params.toString()}`;
 }
 
 function recentActionsHref(asOf: string): string {
-  const from = new Date(
-    new Date(asOf).getTime() - 7 * 24 * 60 * 60 * 1000
-  ).toISOString();
   const params = new URLSearchParams({
     performedBy: "me",
-    from,
-    to: asOf,
+    ...recentBounds(asOf),
   });
   return `/staff/actions?${params.toString()}`;
 }
@@ -228,6 +227,34 @@ export function StaffDashboard() {
             </Link>
           </div>
         ))}
+      </section>
+
+      <section
+        aria-labelledby="ticket-status-heading"
+        className="zg-card p-4 mb-4"
+      >
+        <h2 className="h5 fw-semibold" id="ticket-status-heading">
+          Tickets by Status
+        </h2>
+        <p className="small text-muted">
+          All tickets, including resolved, closed and cancelled tickets.
+        </p>
+        <div className="row g-3">
+          {data?.groupings.ticketsByStatus.map((group) => (
+            <div className="col-12 col-sm-6 col-xl-3" key={group.status}>
+              <Link
+                aria-label={`${group.status.replaceAll("_", " ")} tickets: ${group.count}`}
+                className="border rounded p-3 h-100 d-flex justify-content-between gap-2 text-decoration-none text-zen-primary"
+                to={`/staff/queue?status=${group.status}`}
+              >
+                <span>{group.status.replaceAll("_", " ")}</span>
+                <span className="fw-bold" aria-live="polite">
+                  {group.count}
+                </span>
+              </Link>
+            </div>
+          ))}
+        </div>
       </section>
 
       <div className="row g-3">

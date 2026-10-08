@@ -47,6 +47,18 @@ describe("C-08 shell navigation and route guards", () => {
               myActiveActions: 0,
             },
             lists: { recentTickets: [], myRecentActions: [] },
+            groupings: {
+              ticketsByStatus: [
+                { status: "NEW", count: 0 },
+                { status: "OPEN", count: 0 },
+                { status: "IN_PROGRESS", count: 0 },
+                { status: "WAITING_FOR_REQUESTER", count: 0 },
+                { status: "RESOLVED", count: 0 },
+                { status: "CLOSED", count: 0 },
+                { status: "REOPENED", count: 0 },
+                { status: "CANCELLED", count: 0 },
+              ],
+            },
           }),
         } as Response;
       }

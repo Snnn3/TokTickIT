@@ -25,6 +25,7 @@ import type { AttachmentMetadata } from "../types/ticket";
 interface StaffTicketDetailProps {
   ticketId: number;
   onBack: () => void;
+  navigationKey?: string;
 }
 
 const COMMENT_MAX_LENGTH = 2000;
@@ -50,6 +51,7 @@ const NOTE_MAX_LENGTH = 2000;
 export function StaffTicketDetail({
   ticketId,
   onBack,
+  navigationKey,
 }: StaffTicketDetailProps) {
   const { user } = useAuth();
   const { categories, systems } = useReferenceData();
@@ -1012,6 +1014,7 @@ export function StaffTicketDetail({
         ticketId={ticket.id}
         ticketVersion={ticket.version}
         ticketStatus={ticket.status}
+        focusNavigationKey={navigationKey}
         canManage={
           !selfService &&
           (user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR")

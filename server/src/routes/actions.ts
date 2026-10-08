@@ -12,7 +12,13 @@ import {
 } from "../middleware/auth";
 import { prisma } from "../prisma";
 import { parsePositiveIntParam } from "../utils/attachment";
-import { parseUtcIsoTimestamp } from "../utils/query-validation";
+import { parseUtcDateRange } from "../utils/query-validation";
+import { USER_REF_SELECT } from "../utils/user-ref";
+import {
+  ACTIVE_ACTION_STATUSES,
+  ACTION_SUMMARY_INCLUDE,
+  serializeActionSummary,
+} from "../utils/action-summary";
 
 const STAFF_ROLES = [Role.IT_STAFF, Role.ADMINISTRATOR] as const;
 const ACTION_STATUSES = Object.values(ActionStatus);
@@ -32,23 +38,10 @@ const ACTION_TRANSITIONS: Record<ActionStatus, readonly ActionStatus[]> = {
   [ActionStatus.CANCELLED]: [],
 };
 
-const USER_REF_SELECT = {
-  id: true,
-  name: true,
-  role: true,
-  isActive: true,
-} as const;
-
 const ACTION_INCLUDE = {
   performedBy: { select: USER_REF_SELECT },
   assignee: { select: USER_REF_SELECT },
 } as const;
-const STAFF_ACTION_LIST_INCLUDE = {
-  ticket: { select: { number: true } },
-  performedBy: { select: USER_REF_SELECT },
-  assignee: { select: USER_REF_SELECT },
-} as const;
-
 const EVENT_INCLUDE = {
   actor: { select: USER_REF_SELECT },
 } as const;
@@ -458,10 +451,6 @@ function invalidActionListQuery(): ActionApiError {
   return new ActionApiError(400, "INVALID_QUERY", "Invalid query parameters");
 }
 
-function parseUtcTimestamp(value: unknown): Date | undefined {
-  return parseUtcIsoTimestamp(value) ?? undefined;
-}
-
 function parseStaffActionListQuery(
   query: AuthenticatedRequest["query"]
 ): StaffActionListQuery {
@@ -481,18 +470,8 @@ function parseStaffActionListQuery(
     throw invalidActionListQuery();
   }
 
-  const hasFrom = query.from !== undefined;
-  const hasTo = query.to !== undefined;
-  if (hasFrom !== hasTo) throw invalidActionListQuery();
-  const from = hasFrom ? parseUtcTimestamp(query.from) : undefined;
-  const to = hasTo ? parseUtcTimestamp(query.to) : undefined;
-  if (
-    (hasFrom && !from) ||
-    (hasTo && !to) ||
-    (from && to && from.getTime() > to.getTime())
-  ) {
-    throw invalidActionListQuery();
-  }
+  const { from, to, issues } = parseUtcDateRange(query.from, query.to);
+  if (issues.length > 0) throw invalidActionListQuery();
 
   const parsePositiveInteger = (value: unknown, fallback: number) => {
     if (value === undefined) return fallback;
@@ -1041,7 +1020,7 @@ actionStaffRouter.get(
         ...(query.statusGroup === "active"
           ? {
               status: {
-                in: [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS],
+                in: ACTIVE_ACTION_STATUSES,
               },
             }
           : {}),
@@ -1057,23 +1036,12 @@ actionStaffRouter.get(
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           skip,
           take: query.pageSize,
-          include: STAFF_ACTION_LIST_INCLUDE,
+          include: ACTION_SUMMARY_INCLUDE,
         }),
       ]);
 
       return res.status(200).json({
-        actions: actions.map((action) => ({
-          id: action.id,
-          ticketId: action.ticketId,
-          ticketNumber: action.ticket.number,
-          title: action.title,
-          status: action.status,
-          performedBy: userRef(action.performedBy),
-          assignee: action.assignee ? userRef(action.assignee) : null,
-          createdAt: action.createdAt,
-          updatedAt: action.updatedAt,
-          version: action.version,
-        })),
+        actions: actions.map(serializeActionSummary),
         page: query.page,
         pageSize: query.pageSize,
         total,

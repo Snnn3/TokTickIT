@@ -6,7 +6,11 @@ import {
   requireAuth,
   requireRole,
 } from "../middleware/auth";
-import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
+import {
+  isTicketStatus,
+  OPEN_TICKET_STATUSES,
+  TICKET_STATUSES,
+} from "../utils/ticketStatus";
 import { getLegalTargets } from "../utils/transitions";
 import { sendUnexpectedError } from "../utils/unexpected-response";
 import {
@@ -19,7 +23,7 @@ import {
   parsePositiveIntParam,
   serializeAttachment,
 } from "../utils/attachment";
-import { parseUtcIsoTimestamp } from "../utils/query-validation";
+import { parseUtcDateRange } from "../utils/query-validation";
 
 /**
  * Staff queue and assignee reads [FR-22, FR-24, BR-10, BR-16, D2, D12].
@@ -84,24 +88,6 @@ interface QueueValidation {
   page: number;
   pageSize: number;
   details: QueueDetails;
-}
-
-function parseQueueTimestamp(
-  value: unknown,
-  parameter: string,
-  details: QueueDetails
-): Date | undefined {
-  if (value === undefined) return undefined;
-  const parsed = parseUtcIsoTimestamp(value);
-  if (!parsed) {
-    details.push({
-      field: parameter,
-      parameter,
-      issue: `${parameter} must be a valid UTC ISO timestamp`,
-    });
-    return undefined;
-  }
-  return parsed;
 }
 
 /**
@@ -182,8 +168,10 @@ function validateQueueQuery(query: Record<string, unknown>): QueueValidation {
       });
     }
   }
-  const from = parseQueueTimestamp(query.from, "from", details);
-  const to = parseQueueTimestamp(query.to, "to", details);
+  const { from, to, issues } = parseUtcDateRange(query.from, query.to);
+  details.push(
+    ...issues.map((issue) => ({ ...issue, parameter: issue.field }))
+  );
   const hasFrom = query.from !== undefined;
   const hasTo = query.to !== undefined;
   if (hasFrom !== hasTo || Boolean(dateField) !== (hasFrom && hasTo)) {
@@ -191,13 +179,6 @@ function validateQueueQuery(query: Record<string, unknown>): QueueValidation {
       field: "dateField",
       parameter: "dateField",
       issue: "Date field, from and to must be supplied together",
-    });
-  }
-  if (from && to && from.getTime() > to.getTime()) {
-    details.push({
-      field: "from",
-      parameter: "from",
-      issue: "From must not be after to",
     });
   }
   if (dateField && query.sort !== undefined && query.sort !== dateField) {
@@ -420,13 +401,7 @@ staffRouter.get(
 
       if (statusGroup === "open") {
         where.status = {
-          in: [
-            TicketStatus.NEW,
-            TicketStatus.OPEN,
-            TicketStatus.IN_PROGRESS,
-            TicketStatus.WAITING_FOR_REQUESTER,
-            TicketStatus.REOPENED,
-          ],
+          in: OPEN_TICKET_STATUSES,
         };
       } else if (statusGroup === "resolved") {
         where.status = { in: [TicketStatus.RESOLVED, TicketStatus.CLOSED] };

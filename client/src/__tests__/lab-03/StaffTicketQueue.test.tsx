@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { StaffTicketQueue } from "../../components/StaffTicketQueue";
@@ -171,6 +177,48 @@ describe("StaffTicketQueue wiring (C-03, AC-08)", () => {
     expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
       "Page 1 of 1 (2 tickets)"
     );
+  });
+
+  it("restores all queue choices and a filtered second page from its URL", async () => {
+    const fetchSpy = mockQueueApi(undefined, { total: 12, totalPages: 3 });
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?statusGroup=open&owner=mine&search=wifi&categoryId=1&requestedPriority=MEDIUM&itPriority=HIGH&sort=number&order=asc&page=2&pageSize=5"
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toHaveValue("wifi")
+    );
+    expect(screen.getByLabelText("Filter by category")).toHaveValue("1");
+    expect(screen.getByLabelText("Filter by requested priority")).toHaveValue(
+      "MEDIUM"
+    );
+    expect(screen.getByLabelText("Filter by IT priority")).toHaveValue("HIGH");
+    expect(screen.getByLabelText("Sort by:")).toHaveValue("number");
+    expect(screen.getByLabelText("Sort order")).toHaveValue("asc");
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "Page 2 of 3"
+    );
+    await waitFor(() => {
+      const lastQueue = fetchSpy.mock.calls
+        .map(([url]) => String(url))
+        .filter((url) => url.includes("/api/staff/tickets"))
+        .at(-1)!;
+      const params = new URL(lastQueue, "http://localhost").searchParams;
+      expect(Object.fromEntries(params)).toMatchObject({
+        search: "wifi",
+        categoryId: "1",
+        requestedPriority: "MEDIUM",
+        itPriority: "HIGH",
+        sort: "number",
+        order: "asc",
+        page: "2",
+        pageSize: "5",
+        owner: "mine",
+        statusGroup: "open",
+      });
+    });
   });
 
   it("defaults the owner filter to All owners so unassigned work stays visible (D12)", async () => {
@@ -476,5 +524,121 @@ describe("StaffTicketQueue states (S-02, AC-18)", () => {
       );
       expect(last).toContain("search=wifi");
     });
+  });
+});
+
+describe("StaffTicketQueue response ordering", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  function deferredResponse() {
+    let resolve!: (response: Response) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<Response>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  }
+
+  function queueResponse(tickets: typeof mockQueueTickets, totalPages = 1) {
+    return Response.json({ tickets, total: tickets.length, totalPages });
+  }
+
+  async function startFilterReset() {
+    const previous = deferredResponse();
+    const current = deferredResponse();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((input) => {
+        const url = new URL(String(input), "http://localhost");
+        if (url.pathname.startsWith("/api/reference/")) {
+          return Promise.resolve(
+            Response.json({ categories: mockCategories, systems: [] })
+          );
+        }
+        if (url.searchParams.get("page") === "2") {
+          return Promise.resolve(queueResponse([mockQueueTickets[0]], 2));
+        }
+        return url.searchParams.has("search")
+          ? previous.promise
+          : current.promise;
+      });
+    await renderQueue(vi.fn(), "/staff/queue?search=certificate&page=2");
+    await waitFor(() =>
+      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+        "Page 2 of 2"
+      )
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      const queries = fetchSpy.mock.calls
+        .map(([input]) => new URL(String(input), "http://localhost"))
+        .filter((url) => url.pathname === "/api/staff/tickets");
+      expect(
+        queries.some(
+          (url) =>
+            url.searchParams.get("search") === "certificate" &&
+            url.searchParams.get("page") === "1"
+        )
+      ).toBe(true);
+      expect(queries.some((url) => !url.searchParams.has("search"))).toBe(true);
+    });
+    return { previous, current };
+  }
+
+  it.each(["success", "forbidden", "network failure"] as const)(
+    "ignores a late %s from the cleared search",
+    async (outcome) => {
+      const { previous, current } = await startFilterReset();
+      await act(async () =>
+        current.resolve(queueResponse([mockQueueTickets[1]]))
+      );
+      await waitFor(() =>
+        expect(
+          screen.getAllByText(mockQueueTickets[1].summary).length
+        ).toBeGreaterThan(0)
+      );
+
+      await act(async () => {
+        if (outcome === "network failure")
+          previous.reject(new Error("Old request failed"));
+        else
+          previous.resolve(
+            outcome === "forbidden"
+              ? Response.json({}, { status: 403 })
+              : queueResponse([mockQueueTickets[0]])
+          );
+      });
+
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toHaveValue("");
+      expect(
+        screen.getAllByText(mockQueueTickets[1].summary).length
+      ).toBeGreaterThan(0);
+      expect(screen.queryByText(mockQueueTickets[0].summary)).toBeNull();
+      expect(screen.getByTestId("queue-result-count")).toHaveTextContent(
+        "1 ticket"
+      );
+      expect(screen.queryByTestId("queue-forbidden")).toBeNull();
+      expect(screen.queryByTestId("queue-failure")).toBeNull();
+    }
+  );
+
+  it("keeps the current loading state when an older request finishes", async () => {
+    const { previous, current } = await startFilterReset();
+    await act(async () =>
+      previous.resolve(queueResponse([mockQueueTickets[0]]))
+    );
+    expect(screen.getByTestId("queue-loading")).toBeInTheDocument();
+    await act(async () =>
+      current.resolve(queueResponse([mockQueueTickets[1]]))
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("queue-loading")).toBeNull()
+    );
+    expect(
+      screen.getAllByText(mockQueueTickets[1].summary).length
+    ).toBeGreaterThan(0);
   });
 });

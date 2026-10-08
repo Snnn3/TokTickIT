@@ -33,6 +33,7 @@ interface ActionsTakenPanelProps {
   canManage: boolean;
   performerName?: string;
   disabledReason?: string;
+  focusNavigationKey?: string;
   onTicketVersionChange?: (version: number, updatedAt?: string) => void;
   onRefreshTicket?: () => void | Promise<void>;
 }
@@ -244,6 +245,7 @@ export function ActionsTakenPanel({
   canManage,
   performerName,
   disabledReason,
+  focusNavigationKey,
   onTicketVersionChange,
   onRefreshTicket,
 }: ActionsTakenPanelProps) {
@@ -284,12 +286,14 @@ export function ActionsTakenPanel({
   const titleRef = useRef<HTMLInputElement>(null);
   const saveButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const consumedActionFocusRef = useRef<string | null>(null);
   const confirmationTriggerRef = useRef<HTMLElement | null>(null);
   const confirmationWasOpenRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogConfirmRef = useRef<HTMLButtonElement>(null);
 
   const editorOpen = creating || editingActionId !== null;
+  const actionFocusNavigation = focusNavigationKey ?? window.location.href;
   const editingAction =
     editingActionId === null
       ? null
@@ -412,14 +416,17 @@ export function ActionsTakenPanel({
   }, [loadActions]);
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || editorOpen) return;
     const match = window.location.hash.match(/^#action-(\d+)$/);
     if (!match) return;
+    const focusRequest = `${ticketId}:${actionFocusNavigation}:${match[1]}`;
+    if (consumedActionFocusRef.current === focusRequest) return;
     const target = document.getElementById(`action-${match[1]}`);
     if (!target) return;
+    consumedActionFocusRef.current = focusRequest;
     target.scrollIntoView({ block: "center" });
     target.focus({ preventScroll: true });
-  }, [actions, loading]);
+  }, [actions, loading, editorOpen, ticketId, actionFocusNavigation]);
 
   async function loadAssignees(force = false) {
     if ((!force && assigneesLoaded) || assigneesLoading) return;

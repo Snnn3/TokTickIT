@@ -137,7 +137,11 @@ function StaffTicketDetailRoute() {
   }
 
   return (
-    <StaffTicketDetail onBack={() => navigate(backTo)} ticketId={parsed} />
+    <StaffTicketDetail
+      onBack={() => navigate(backTo)}
+      ticketId={parsed}
+      navigationKey={location.key}
+    />
   );
 }
 export function AppRoutes() {

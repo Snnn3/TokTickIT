@@ -38,6 +38,9 @@ Recently Resolved Tickets.
 
 Staff/Admin cards: Open Tickets, Unassigned Tickets, My Owned Tickets,
 My Active Actions. Lists: Recently Updated Tickets and My Recent Actions.
+The Tickets by Status section shows eight backend-supplied counts, including
+zero and terminal statuses. Each labelled count links to
+/staff/queue?status={status}; it counts all Tickets, not just recent work.
 "My Actions" means recorded by the current user, not assigned to them; show
 this helper text so Admin performers and staff understand the count.
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import type {
   StaffQueueTicket,
@@ -55,6 +55,41 @@ const initialQueryState: QueueQueryState = {
   pageSize: 10,
 };
 
+function readQueueQuery(params: URLSearchParams): QueueQueryState {
+  return {
+    ...initialQueryState,
+    search: params.get("search") ?? "",
+    status: (params.get("status") as QueueQueryState["status"] | null) ?? "",
+    statusGroup:
+      (params.get("statusGroup") as QueueQueryState["statusGroup"] | null) ??
+      "",
+    dateField:
+      (params.get("dateField") as QueueQueryState["dateField"] | null) ?? "",
+    from: params.get("from") ?? "",
+    to: params.get("to") ?? "",
+    owner: (params.get("owner") as QueueQueryState["owner"] | null) ?? "",
+    categoryId: params.get("categoryId") ?? "",
+    requestedPriority:
+      (params.get("requestedPriority") as TicketPriority | null) ?? "",
+    itPriority: (params.get("itPriority") as TicketPriority | null) ?? "",
+    sort: (params.get("sort") as QueueQueryState["sort"] | null) ?? "updatedAt",
+    order: (params.get("order") as QueueQueryState["order"] | null) ?? "desc",
+    page: Number(params.get("page") ?? 1),
+    pageSize: Number(params.get("pageSize") ?? 10),
+  };
+}
+
+function queueQueryParams(query: QueueQueryState): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of Object.keys(
+    initialQueryState
+  ) as (keyof QueueQueryState)[]) {
+    if (query[key] !== initialQueryState[key])
+      params.set(key, String(query[key]));
+  }
+  return params;
+}
+
 /**
  * Staff Ticket Queue [FR-22, ui-spec section 6].
  *
@@ -72,20 +107,14 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const queueRequestRef = useRef(0);
 
-  const [queryState, setQueryState] = useState<QueueQueryState>(() => ({
-    ...initialQueryState,
-    status: (searchParams.get("status") as TicketStatus | null) ?? "",
-    statusGroup:
-      (searchParams.get("statusGroup") as "open" | "resolved" | null) ?? "",
-    dateField:
-      (searchParams.get("dateField") as "updatedAt" | "resolvedAt" | null) ??
-      "",
-    from: searchParams.get("from") ?? "",
-    to: searchParams.get("to") ?? "",
-    owner: (searchParams.get("owner") as QueueQueryState["owner"] | null) ?? "",
-  }));
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // The URL is the single query state, so reload and detail/back restore every choice.
+  const queryState = readQueueQuery(searchParams);
+  const setQueryState = (
+    update: (previous: QueueQueryState) => QueueQueryState
+  ) => setSearchParams(queueQueryParams(update(queryState)), { replace: true });
+  const [debouncedSearch, setDebouncedSearch] = useState(queryState.search);
 
   // Debounce search input by 300ms, matching the requester list convention.
   useEffect(() => {
@@ -114,6 +143,8 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   // The queue is scoped by the session cookie, so there is no identity to
   // wait for before fetching and nothing for this component to carry.
   const fetchQueue = useCallback(async () => {
+    const requestId = ++queueRequestRef.current;
+    const isCurrentRequest = () => requestId === queueRequestRef.current;
     setLoading(true);
     setError(null);
     setForbidden(false);
@@ -142,6 +173,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
     try {
       const res = await fetch(`/api/staff/tickets?${params.toString()}`);
+      if (!isCurrentRequest()) return;
 
       if (res.status === 403) {
         setTickets([]);
@@ -153,6 +185,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (!isCurrentRequest()) return;
         setError(data?.error?.message || "Failed to load the ticket queue.");
         setTickets([]);
         setTotal(0);
@@ -161,16 +194,18 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
       }
 
       const data = await res.json();
+      if (!isCurrentRequest()) return;
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 0);
     } catch {
+      if (!isCurrentRequest()) return;
       setError("Network error. Unable to connect to the server.");
       setTickets([]);
       setTotal(0);
       setTotalPages(0);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }, [
     debouncedSearch,
@@ -191,10 +226,13 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
   useEffect(() => {
     fetchQueue();
+    return () => {
+      // Invalidate in-flight work on a new query or unmount, including JSON parsing.
+      queueRequestRef.current += 1;
+    };
   }, [fetchQueue]);
 
   const handleResetFilters = () => {
-    setSearchParams(new URLSearchParams());
     setQueryState((prev) => ({
       ...prev,
       search: "",
@@ -210,49 +248,6 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
       page: 1,
     }));
   };
-
-  const updateLocationFilter = (
-    key: "status" | "owner",
-    value: string,
-    clearStatusGroup = false
-  ) => {
-    const next = new URLSearchParams(searchParams);
-    if (clearStatusGroup) next.delete("statusGroup");
-    if (value) next.set(key, value);
-    else next.delete(key);
-    setSearchParams(next, { replace: true });
-  };
-
-  useEffect(() => {
-    const status = searchParams.get("status") ?? "";
-    const statusGroup = searchParams.get("statusGroup") ?? "";
-    const dateField = searchParams.get("dateField") ?? "";
-    const from = searchParams.get("from") ?? "";
-    const to = searchParams.get("to") ?? "";
-    const owner = searchParams.get("owner") ?? "";
-    setQueryState((previous) => {
-      if (
-        previous.status === status &&
-        previous.statusGroup === statusGroup &&
-        previous.dateField === dateField &&
-        previous.from === from &&
-        previous.to === to &&
-        previous.owner === owner
-      ) {
-        return previous;
-      }
-      return {
-        ...previous,
-        status: status as TicketStatus | "",
-        statusGroup: statusGroup as QueueQueryState["statusGroup"],
-        dateField: dateField as QueueQueryState["dateField"],
-        from,
-        to,
-        owner: owner as QueueQueryState["owner"],
-        page: 1,
-      };
-    });
-  }, [searchParams]);
 
   const handleSelectTicket = (ticketId: number) => {
     if (onSelectTicket) onSelectTicket(ticketId);
@@ -305,7 +300,6 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 className="form-select form-select-sm"
                 value={queryState.status}
                 onChange={(e) => {
-                  updateLocationFilter("status", e.target.value, true);
                   setQueryState((prev) => ({
                     ...prev,
                     status: e.target.value as TicketStatus | "",
@@ -417,7 +411,6 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                 className="form-select form-select-sm"
                 value={queryState.owner}
                 onChange={(e) => {
-                  updateLocationFilter("owner", e.target.value);
                   setQueryState((prev) => ({
                     ...prev,
                     owner: e.target.value as QueueQueryState["owner"],

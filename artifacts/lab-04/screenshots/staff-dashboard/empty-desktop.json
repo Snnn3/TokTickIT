@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "empty workspace shows zero status groups and helpful empty drill-downs",
+  "screenshot": "empty-desktop.png",
+  "role": "IT_STAFF",
+  "route": "/dashboard/staff",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-08T14:12:33.684Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

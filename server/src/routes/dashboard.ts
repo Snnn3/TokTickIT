@@ -1,4 +1,4 @@
-import { ActionStatus, Prisma, Role, TicketStatus } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { Router, type Response } from "express";
 import {
   AuthenticatedRequest,
@@ -7,23 +7,15 @@ import {
 } from "../middleware/auth";
 import { prisma } from "../prisma";
 import { sendUnexpectedError } from "../utils/unexpected-response";
+import { OPEN_TICKET_STATUSES, TICKET_STATUSES } from "../utils/ticketStatus";
+import { USER_REF_SELECT } from "../utils/user-ref";
+import {
+  ACTIVE_ACTION_STATUSES,
+  ACTION_SUMMARY_INCLUDE,
+  serializeActionSummary,
+} from "../utils/action-summary";
 
 const STAFF_ROLES = [Role.IT_STAFF, Role.ADMINISTRATOR] as const;
-const OPEN_TICKET_STATUSES: TicketStatus[] = [
-  TicketStatus.NEW,
-  TicketStatus.OPEN,
-  TicketStatus.IN_PROGRESS,
-  TicketStatus.WAITING_FOR_REQUESTER,
-  TicketStatus.REOPENED,
-];
-
-const USER_REF_SELECT = {
-  id: true,
-  name: true,
-  role: true,
-  isActive: true,
-} as const;
-
 const STAFF_TICKET_SELECT = {
   id: true,
   number: true,
@@ -37,12 +29,6 @@ const STAFF_TICKET_SELECT = {
   updatedAt: true,
   resolvedAt: true,
 } satisfies Prisma.TicketSelect;
-
-const STAFF_ACTION_INCLUDE = {
-  ticket: { select: { number: true } },
-  performedBy: { select: USER_REF_SELECT },
-  assignee: { select: USER_REF_SELECT },
-} satisfies Prisma.ActionTakenInclude;
 
 export const dashboardRouter = Router();
 
@@ -98,6 +84,7 @@ dashboardRouter.get(
             myActiveActions,
             recentTickets,
             myRecentActions,
+            statusCounts,
           ] = await Promise.all([
             tx.ticket.count({ where: openWhere }),
             tx.ticket.count({ where: { ...openWhere, ownerId: null } }),
@@ -106,7 +93,7 @@ dashboardRouter.get(
               where: {
                 performedById: actorId,
                 status: {
-                  in: [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS],
+                  in: ACTIVE_ACTION_STATUSES,
                 },
               },
             }),
@@ -123,8 +110,9 @@ dashboardRouter.get(
               },
               orderBy: [{ createdAt: "desc" }, { id: "desc" }],
               take: 5,
-              include: STAFF_ACTION_INCLUDE,
+              include: ACTION_SUMMARY_INCLUDE,
             }),
+            tx.ticket.groupBy({ by: ["status"], _count: { _all: true } }),
           ]);
 
           return {
@@ -134,20 +122,17 @@ dashboardRouter.get(
               myOwnedTickets,
               myActiveActions,
             },
+            groupings: {
+              ticketsByStatus: TICKET_STATUSES.map((status) => ({
+                status,
+                count:
+                  statusCounts.find((group) => group.status === status)?._count
+                    ._all ?? 0,
+              })),
+            },
             lists: {
               recentTickets,
-              myRecentActions: myRecentActions.map((action) => ({
-                id: action.id,
-                ticketId: action.ticketId,
-                ticketNumber: action.ticket.number,
-                title: action.title,
-                status: action.status,
-                performedBy: action.performedBy,
-                assignee: action.assignee,
-                createdAt: action.createdAt,
-                updatedAt: action.updatedAt,
-                version: action.version,
-              })),
+              myRecentActions: myRecentActions.map(serializeActionSummary),
             },
           };
         },
