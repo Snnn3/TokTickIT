@@ -46,8 +46,10 @@ export function StaffActionsList() {
     try {
       const response = await getStaffActions(new URLSearchParams(queryString));
       if (!isCurrentRequest()) return;
-      if (await isAuthRequired(response)) {
-        if (isCurrentRequest()) expireSession();
+      const authRequired = await isAuthRequired(response);
+      if (!isCurrentRequest()) return;
+      if (authRequired) {
+        expireSession();
         return;
       }
       if (response.status === 403) {

@@ -213,6 +213,35 @@ Verification on this working tree:
 The P3 duplication observations are now addressed. Requester Dashboard work
 remains Issue #60 scope; no PR, peer approval or merge is claimed.
 
+### Subsequent Issue #59 review — stale authentication-body parsing (2026-10-09)
+
+The updated review superseded the prior approval with one reproduced P2 race.
+When a current 401 response's cloned body is still being parsed, browser Back
+can start and complete a newer request. If parsing the old body then fails,
+`isAuthRequired` returns false; without a post-await generation check, that
+obsolete response could clear the newer results and show a failure alert.
+
+`StaffActionsList` now stores the authentication-probe result and immediately
+checks whether its request is still current before processing authentication,
+forbidden, failure or success states. A component regression uses a real
+`Response` backed by a controlled `ReadableStream`: it holds the 401 body parse,
+restores the prior page size through browser Back, renders the newer success,
+then errors the obsolete body. The test failed before the guard and passes with
+it; the current result remains visible without a stale alert.
+
+Verification on this working tree:
+
+- `StaffActionsList.test.tsx`: 9/9 passed; complete client suite: 22 files,
+  183/183 passed.
+- Client production build and source lint passed; changed-file formatting and
+  `git diff --check` passed.
+- Focused Chromium navigation/drill-down journeys: 2/2 passed against the
+  disposable PostgreSQL test database.
+
+The remaining P2 race is fixed. Server code and screenshot evidence were not
+changed. Requester Dashboard work remains Issue #60 scope; no PR, peer approval
+or merge is claimed.
+
 ---
 
 ## Pull Requests I reviewed for my partner

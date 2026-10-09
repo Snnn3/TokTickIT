@@ -261,4 +261,73 @@ describe("StaffActionsList request ordering", () => {
       );
     }
   );
+
+  it("keeps the newer result when an obsolete 401 body fails to parse", async () => {
+    const current = deferredResponse();
+    let failAuthBody: ((reason: Error) => void) | undefined;
+    let resolveAuthBodyRead!: () => void;
+    const authBodyRead = new Promise<void>((resolve) => {
+      resolveAuthBodyRead = resolve;
+    });
+    const staleAuth = new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          failAuthBody = (reason) => controller.error(reason);
+        },
+        pull() {
+          resolveAuthBodyRead();
+        },
+      }),
+      { status: 401, headers: { "content-type": "application/json" } }
+    );
+    let tenPageRequests = 0;
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((input) => {
+        const url = new URL(String(input), "http://localhost");
+        if (url.searchParams.get("pageSize") === "5")
+          return Promise.resolve(staleAuth);
+        tenPageRequests += 1;
+        if (tenPageRequests === 1)
+          return Promise.resolve(
+            actionPage("Initial ten-page-size result", 10)
+          );
+        return current.promise;
+      });
+
+    renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
+      withHistoryNavigation: true,
+    });
+    expect(
+      await screen.findByText("Initial ten-page-size result")
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Per page:"), {
+      target: { value: "5" },
+    });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    await authBodyRead;
+
+    fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(3));
+    await act(async () =>
+      current.resolve(actionPage("Returned ten-page-size result", 10))
+    );
+    expect(
+      await screen.findByText("Returned ten-page-size result")
+    ).toBeInTheDocument();
+
+    const failBody = failAuthBody;
+    if (!failBody) throw new Error("401 body reader was not initialized");
+    await act(async () => {
+      failBody(new Error("interrupted authentication response body"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(
+      screen.getByText("Returned ten-page-size result")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("10");
+  });
 });
