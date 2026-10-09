@@ -181,10 +181,37 @@ Verification on this working tree:
   benchmark JSON; those test-output-only changes were restored. No screenshot
   evidence was added.
 
-The two P3 Standards suggestions in the review are optional shared-helper
-refactors and are not part of this P2 fix. No server files changed. Requester
-Dashboard work remains Issue #60 scope; no PR, peer approval or merge is
-claimed.
+At that point, the two P3 Standards suggestions in the review remained optional
+shared-helper refactors and were not part of the mobile-overflow fix. They are
+addressed in the follow-up recorded below. Requester Dashboard work remains
+Issue #60 scope; no PR, peer approval or merge is claimed.
+
+### Subsequent Issue #59 review — shared-helper follow-up (2026-10-09)
+
+Following the approved review at `99d6c0e`, both optional P3 duplication
+observations were addressed without changing endpoint or UI behavior:
+
+- Dashboard and Actions routes now share `hasRequestBody` for detecting
+  request bodies on read endpoints, while retaining their existing validation
+  order and route-specific error responses.
+- The Staff Actions list and Staff Ticket queue now share the
+  `useRequestGeneration` hook for rejecting stale responses and invalidating
+  in-flight requests on effect cleanup/unmount.
+
+Verification on this working tree:
+
+- Focused dashboard/Actions API tests: 60/60; focused Staff Actions/queue
+  component tests: 26/26.
+- Isolated server regression suite: 20 files, 348/348 tests passed.
+- Client suite: 22 files, 182/182 tests passed.
+- Server and client production builds, client source lint, changed-file
+  formatting, and `git diff --check` passed.
+- Playwright was not rerun because this follow-up only extracts existing
+  request-validation and stale-response guards; no browser flow or UI behavior
+  was changed.
+
+The P3 duplication observations are now addressed. Requester Dashboard work
+remains Issue #60 scope; no PR, peer approval or merge is claimed.
 
 ---
 

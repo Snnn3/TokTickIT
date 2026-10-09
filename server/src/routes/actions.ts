@@ -13,6 +13,7 @@ import {
 import { prisma } from "../prisma";
 import { parsePositiveIntParam } from "../utils/attachment";
 import { parseUtcDateRange } from "../utils/query-validation";
+import { hasRequestBody } from "../utils/request-body";
 import { USER_REF_SELECT } from "../utils/user-ref";
 import {
   ACTIVE_ACTION_STATUSES,
@@ -429,10 +430,7 @@ function noReadInput(req: AuthenticatedRequest): void {
 }
 
 function noReadBody(req: AuthenticatedRequest): void {
-  const contentLength = Number(req.get("content-length") ?? 0);
-  const hasFramedBody =
-    contentLength > 0 || req.get("transfer-encoding") !== undefined;
-  if (req.body !== undefined || hasFramedBody) {
+  if (hasRequestBody(req)) {
     throw validationError([
       { field: "body", issue: "This endpoint does not accept a request body" },
     ]);

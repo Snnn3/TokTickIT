@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import type {
   StaffQueueTicket,
@@ -6,6 +6,7 @@ import type {
   TicketStatus,
 } from "../types/ticket";
 import { useCategories } from "../hooks/useReferenceData";
+import { useRequestGeneration } from "../hooks/useRequestGeneration";
 import {
   ZenItPriorityBadge,
   ZenPriorityBadge,
@@ -107,7 +108,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const queueRequestRef = useRef(0);
+  const { beginRequest, invalidateRequests } = useRequestGeneration();
 
   // The URL is the single query state, so reload and detail/back restore every choice.
   const queryState = readQueueQuery(searchParams);
@@ -143,8 +144,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   // The queue is scoped by the session cookie, so there is no identity to
   // wait for before fetching and nothing for this component to carry.
   const fetchQueue = useCallback(async () => {
-    const requestId = ++queueRequestRef.current;
-    const isCurrentRequest = () => requestId === queueRequestRef.current;
+    const isCurrentRequest = beginRequest();
     setLoading(true);
     setError(null);
     setForbidden(false);
@@ -208,6 +208,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
       if (isCurrentRequest()) setLoading(false);
     }
   }, [
+    beginRequest,
     debouncedSearch,
     queryState.status,
     queryState.statusGroup,
@@ -226,11 +227,8 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
   useEffect(() => {
     fetchQueue();
-    return () => {
-      // Invalidate in-flight work on a new query or unmount, including JSON parsing.
-      queueRequestRef.current += 1;
-    };
-  }, [fetchQueue]);
+    return invalidateRequests;
+  }, [fetchQueue, invalidateRequests]);
 
   const handleResetFilters = () => {
     setQueryState((prev) => ({

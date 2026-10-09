@@ -6,6 +6,7 @@ import {
   requireRole,
 } from "../middleware/auth";
 import { prisma } from "../prisma";
+import { hasRequestBody } from "../utils/request-body";
 import { sendUnexpectedError } from "../utils/unexpected-response";
 import { OPEN_TICKET_STATUSES, TICKET_STATUSES } from "../utils/ticketStatus";
 import { USER_REF_SELECT } from "../utils/user-ref";
@@ -43,10 +44,7 @@ function rejectReadInput(req: AuthenticatedRequest, res: Response): boolean {
     return true;
   }
 
-  const contentLength = Number(req.get("content-length") ?? 0);
-  const hasFramedBody =
-    contentLength > 0 || req.get("transfer-encoding") !== undefined;
-  if (req.body !== undefined || hasFramedBody) {
+  if (hasRequestBody(req)) {
     res.status(400).json({
       error: {
         code: "VALIDATION_ERROR",
