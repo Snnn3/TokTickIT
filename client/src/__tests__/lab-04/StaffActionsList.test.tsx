@@ -178,7 +178,7 @@ function mockPageSizeBackRequests(
   currentResponse: Promise<Response>
 ) {
   let tenPageRequests = 0;
-  return vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+  vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     const url = new URL(String(input), "http://localhost");
     if (url.searchParams.get("pageSize") === "5") return staleResponse;
     tenPageRequests += 1;
@@ -186,6 +186,18 @@ function mockPageSizeBackRequests(
       return Promise.resolve(actionPage("Initial ten-page-size result", 10));
     return currentResponse;
   });
+}
+
+async function chooseFivePerPage() {
+  fireEvent.change(screen.getByLabelText("Per page:"), {
+    target: { value: "5" },
+  });
+  await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+}
+
+async function returnWithBrowserBack() {
+  fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+  await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(3));
 }
 
 describe("StaffActionsList request ordering", () => {
@@ -203,7 +215,7 @@ describe("StaffActionsList request ordering", () => {
       const stale = deferredResponse();
       const current = deferredResponse();
       const expireSession = vi.fn();
-      const fetchSpy = mockPageSizeBackRequests(stale.promise, current.promise);
+      mockPageSizeBackRequests(stale.promise, current.promise);
 
       renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
         withHistoryNavigation: true,
@@ -212,22 +224,18 @@ describe("StaffActionsList request ordering", () => {
       expect(
         await screen.findByText("Initial ten-page-size result")
       ).toBeInTheDocument();
-      fireEvent.change(screen.getByLabelText("Per page:"), {
-        target: { value: "5" },
-      });
+      await chooseFivePerPage();
       await waitFor(() =>
         expect(screen.getByTestId("current-search")).toHaveTextContent(
           "pageSize=5"
         )
       );
-      await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
-      fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
+      await returnWithBrowserBack();
       await waitFor(() =>
         expect(screen.getByTestId("current-search")).toHaveTextContent(
           "pageSize=10"
         )
       );
-      await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(3));
       expect(screen.getByTestId("actions-loading")).toBeInTheDocument();
 
       await act(async () => {
@@ -283,10 +291,7 @@ describe("StaffActionsList request ordering", () => {
       }),
       { status: 401, headers: { "content-type": "application/json" } }
     );
-    const fetchSpy = mockPageSizeBackRequests(
-      Promise.resolve(staleAuth),
-      current.promise
-    );
+    mockPageSizeBackRequests(Promise.resolve(staleAuth), current.promise);
 
     renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
       withHistoryNavigation: true,
@@ -295,14 +300,10 @@ describe("StaffActionsList request ordering", () => {
       await screen.findByText("Initial ten-page-size result")
     ).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Per page:"), {
-      target: { value: "5" },
-    });
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    await chooseFivePerPage();
     await authBodyRead;
 
-    fireEvent.click(screen.getByRole("button", { name: "Browser back" }));
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(3));
+    await returnWithBrowserBack();
     await act(async () =>
       current.resolve(actionPage("Returned ten-page-size result", 10))
     );
