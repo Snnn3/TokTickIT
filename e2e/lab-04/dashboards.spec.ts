@@ -123,11 +123,11 @@ test("populated Staff dashboard has authoritative counts, latest-five ties, Bang
     { status: "CANCELLED", count: 1 },
   ]);
   expect(data.lists.recentTickets.map((ticket) => ticket.number)).toEqual([
-    "TKT-TEST-00008",
     "TKT-TEST-00007",
-    "TKT-TEST-00006",
-    "TKT-TEST-00005",
     "TKT-TEST-00004",
+    "TKT-TEST-00003",
+    "TKT-TEST-00002",
+    "TKT-TEST-00001",
   ]);
   expect(data.lists.myRecentActions.map((action) => action.title)).toEqual([
     "Alice action 7",
@@ -257,7 +257,7 @@ test("recent links carry fixed bounds, paginate current-user actions and focus a
   });
   const recentActions = page.getByRole("region", { name: "My Recent Actions" });
   for (const [region, path, total] of [
-    [recentTickets, "/api/staff/tickets", 8],
+    [recentTickets, "/api/staff/tickets", 5],
     [recentActions, "/api/staff/actions", 7],
   ] as const) {
     const href = await region

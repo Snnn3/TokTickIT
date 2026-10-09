@@ -111,9 +111,17 @@ describe("StaffDashboard (C4-03, AC-12, AC-13, AC-18)", () => {
     expect(
       screen.getByRole("link", { name: "Inspect network logs" })
     ).toHaveAttribute("href", "/staff/tickets/31#action-401");
-    expect(
-      screen.getAllByRole("link", { name: "View all" })[0]
-    ).toHaveAttribute("href", expect.stringContaining("dateField=updatedAt"));
+    const recentTicketsLink = screen.getAllByRole("link", {
+      name: "View all",
+    })[0];
+    expect(recentTicketsLink).toHaveAttribute(
+      "href",
+      expect.stringContaining("statusGroup=open")
+    );
+    expect(recentTicketsLink).toHaveAttribute(
+      "href",
+      expect.stringContaining("dateField=updatedAt")
+    );
     expect(fetchSpy).toHaveBeenCalledWith("/api/dashboard/staff");
   });
 

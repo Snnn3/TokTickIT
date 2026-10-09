@@ -15,6 +15,7 @@ function recentBounds(asOf: string) {
 
 function recentQueueHref(asOf: string): string {
   const params = new URLSearchParams({
+    statusGroup: "open",
     dateField: "updatedAt",
     ...recentBounds(asOf),
   });

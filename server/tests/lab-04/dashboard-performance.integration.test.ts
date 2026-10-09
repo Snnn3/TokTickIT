@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { cpus, totalmem } from "node:os";
 import { resolve } from "node:path";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient, TicketStatus } from "@prisma/client";
 import type { Express } from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -93,6 +93,114 @@ async function fetchSnapshot(cookie: string) {
 }
 
 describe("P4-01 Staff Dashboard (Issue #59 only; Requester endpoint remains Issue #60)", () => {
+  it("keeps older actionable tickets visible when newer terminal tickets exist", async () => {
+    await db.actionTaken.deleteMany();
+    await db.ticket.deleteMany();
+    const category = await db.category.findFirstOrThrow();
+    const base = new Date(Date.now() - 60000);
+    const fixtures = [
+      {
+        number: "ACTIONABLE-OLDER",
+        summary: "Older actionable ticket",
+        status: TicketStatus.OPEN,
+        updatedAt: new Date(base.getTime() - 60000),
+      },
+      {
+        number: "ACTIONABLE-NEWER",
+        summary: "Newer actionable ticket",
+        status: TicketStatus.REOPENED,
+        updatedAt: new Date(base.getTime() - 30000),
+      },
+      ...[
+        TicketStatus.RESOLVED,
+        TicketStatus.CLOSED,
+        TicketStatus.CANCELLED,
+        TicketStatus.RESOLVED,
+        TicketStatus.CLOSED,
+      ].map((status, index) => ({
+        number: `TERMINAL-${index + 1}`,
+        summary: `Newer terminal ticket ${index + 1}`,
+        status,
+        updatedAt: new Date(base.getTime() - index * 1000),
+      })),
+    ];
+
+    for (const fixture of fixtures) {
+      await db.ticket.create({
+        data: {
+          number: fixture.number,
+          summary: fixture.summary,
+          description: "Actionable recent-ticket regression fixture",
+          requesterId: accounts.requester.id,
+          ownerId: accounts.staff.id,
+          categoryId: category.id,
+          systemId: accounts.system.id,
+          requestedPriority: "MEDIUM",
+          itPriority: "HIGH",
+          status: fixture.status,
+          createdAt: new Date(fixture.updatedAt.getTime() - 86400000),
+          updatedAt: fixture.updatedAt,
+        },
+      });
+    }
+
+    const cookie = sessionCookie({
+      id: accounts.staff.id,
+      role: accounts.staff.role,
+    });
+    const dashboard = await request(app)
+      .get("/api/dashboard/staff")
+      .set("Cookie", cookie);
+
+    expect(dashboard.status).toBe(200);
+    expect(
+      dashboard.body.lists.recentTickets.map(
+        (ticket: { summary: string }) => ticket.summary
+      )
+    ).toEqual(["Newer actionable ticket", "Older actionable ticket"]);
+    const actionableStatuses: TicketStatus[] = [
+      TicketStatus.NEW,
+      TicketStatus.OPEN,
+      TicketStatus.IN_PROGRESS,
+      TicketStatus.WAITING_FOR_REQUESTER,
+      TicketStatus.REOPENED,
+    ];
+    expect(
+      dashboard.body.lists.recentTickets.every(
+        (ticket: { status: TicketStatus }) =>
+          actionableStatuses.includes(ticket.status)
+      )
+    ).toBe(true);
+
+    const bounds = {
+      from: new Date(
+        new Date(dashboard.body.asOf).getTime() - 7 * 24 * 60 * 60 * 1000
+      ).toISOString(),
+      to: dashboard.body.asOf,
+    };
+    const drilldown = await request(app)
+      .get(
+        `/api/staff/tickets?${new URLSearchParams({
+          statusGroup: "open",
+          dateField: "updatedAt",
+          ...bounds,
+        })}`
+      )
+      .set("Cookie", cookie);
+
+    expect(drilldown.status).toBe(200);
+    expect(drilldown.body.total).toBe(2);
+    expect(
+      drilldown.body.tickets.map(
+        (ticket: { summary: string }) => ticket.summary
+      )
+    ).toEqual(
+      dashboard.body.lists.recentTickets.map(
+        (ticket: { summary: string }) => ticket.summary
+      )
+    );
+  }, 30000);
+
   it("includes exact seven-day endpoints, excludes one millisecond outside them, and agrees with both drill-downs", async () => {
     await db.actionTaken.deleteMany();
     await db.ticket.deleteMany();
@@ -167,7 +275,7 @@ describe("P4-01 Staff Dashboard (Issue #59 only; Requester endpoint remains Issu
       };
       const tickets = await request(app)
         .get(
-          `/api/staff/tickets?${new URLSearchParams({ dateField: "updatedAt", ...bounds })}`
+          `/api/staff/tickets?${new URLSearchParams({ statusGroup: "open", dateField: "updatedAt", ...bounds })}`
         )
         .set("Cookie", cookie);
       const actions = await request(app)

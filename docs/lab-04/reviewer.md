@@ -130,6 +130,34 @@ Final verification after the test-harness typing fix:
 No server code changed, and no Issue #59 PR, peer approval or merge is claimed.
 Requester Dashboard coverage remains Issue #60 work.
 
+### Subsequent Issue #59 review — actionable recent Tickets (2026-10-09)
+
+The remaining P2 Spec finding is fixed: the dashboard's recent-ticket query now
+uses the same actionable/open Ticket statuses as the queue's `statusGroup=open`
+filter. The recent-list "View all" link carries that status group together with
+the original updated-date snapshot bounds. The Staff/Admin dashboard API test
+asserts the status predicate, and the component test verifies the matching
+drill-down URL. A disposable-PostgreSQL regression test also creates older
+actionable Tickets behind five newer terminal Tickets and compares the dashboard
+list with its queue drill-down.
+
+Verification on this working tree:
+
+- Staff dashboard API tests: 7/7 passed; dashboard component tests: 6/6 passed.
+- Client suite: 22 files, 182/182 passed; server and client builds passed.
+- The full server Vitest run completed 19/20 files and 347/348 tests. Its only
+  failure was the existing Lab 1 categories test, which returned 500 because
+  the local database was not provisioned with the seeded categories.
+- Client source lint and changed-path formatting/whitespace checks passed.
+- Docker Desktop's engine did not respond (`docker info` could not connect to
+  `dockerDesktopLinuxEngine`). Therefore the disposable-PostgreSQL regression,
+  isolated server suite, and updated dashboard Playwright suite were not run;
+  the database/E2E verification remains pending.
+
+The Standards review still has no actionable findings. This resolves the
+actionable-recent-Ticket Spec finding; Requester Dashboard work remains Issue
+#60 scope. No PR, peer approval, or merge is claimed.
+
 ---
 
 ## Pull Requests I reviewed for my partner

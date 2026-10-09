@@ -229,7 +229,18 @@ describe("GET /api/dashboard/staff (API4-04, AC-12, AC-13, AC-16)", () => {
         status: { in: [ActionStatus.PLANNED, ActionStatus.IN_PROGRESS] },
       });
       expect(seen.ticketListArgs).toMatchObject({
-        where: { updatedAt: { gte: new Date(from), lte: new Date(asOf) } },
+        where: {
+          status: {
+            in: [
+              TicketStatus.NEW,
+              TicketStatus.OPEN,
+              TicketStatus.IN_PROGRESS,
+              TicketStatus.WAITING_FOR_REQUESTER,
+              TicketStatus.REOPENED,
+            ],
+          },
+          updatedAt: { gte: new Date(from), lte: new Date(asOf) },
+        },
         orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
         take: 5,
       });

@@ -98,7 +98,10 @@ dashboardRouter.get(
               },
             }),
             tx.ticket.findMany({
-              where: { updatedAt: { gte: from, lte: asOf } },
+              where: {
+                ...openWhere,
+                updatedAt: { gte: from, lte: asOf },
+              },
               orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
               take: 5,
               select: STAFF_TICKET_SELECT,
