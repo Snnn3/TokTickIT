@@ -173,18 +173,20 @@ function actionPage(title: string, pageSize: number) {
   });
 }
 
-function mockPageSizeBackRequests(
-  staleResponse: Promise<Response>,
-  currentResponse: Promise<Response>
-) {
+type PageSizeBackResponses = {
+  stale: Promise<Response>;
+  current: Promise<Response>;
+};
+
+function mockPageSizeBackRequests({ stale, current }: PageSizeBackResponses) {
   let tenPageRequests = 0;
   vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     const url = new URL(String(input), "http://localhost");
-    if (url.searchParams.get("pageSize") === "5") return staleResponse;
+    if (url.searchParams.get("pageSize") === "5") return stale;
     tenPageRequests += 1;
     if (tenPageRequests === 1)
       return Promise.resolve(actionPage("Initial ten-page-size result", 10));
-    return currentResponse;
+    return current;
   });
 }
 
@@ -215,7 +217,10 @@ describe("StaffActionsList request ordering", () => {
       const stale = deferredResponse();
       const current = deferredResponse();
       const expireSession = vi.fn();
-      mockPageSizeBackRequests(stale.promise, current.promise);
+      mockPageSizeBackRequests({
+        stale: stale.promise,
+        current: current.promise,
+      });
 
       renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
         withHistoryNavigation: true,
@@ -291,7 +296,10 @@ describe("StaffActionsList request ordering", () => {
       }),
       { status: 401, headers: { "content-type": "application/json" } }
     );
-    mockPageSizeBackRequests(Promise.resolve(staleAuth), current.promise);
+    mockPageSizeBackRequests({
+      stale: Promise.resolve(staleAuth),
+      current: current.promise,
+    });
 
     renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
       withHistoryNavigation: true,
