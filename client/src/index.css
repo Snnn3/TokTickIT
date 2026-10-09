@@ -542,7 +542,8 @@ body {
   border-color: rgba(183, 121, 31, 0.45);
 }
 
-.zg-breakable-action-title {
+.zg-breakable-action-title,
+.zg-breakable-text {
   display: block;
   min-width: 0;
   max-width: 100%;

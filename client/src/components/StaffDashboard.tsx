@@ -287,7 +287,7 @@ export function StaffDashboard() {
                 {data.lists.recentTickets.map((ticket) => (
                   <li className="border-top pt-3" key={ticket.id}>
                     <Link
-                      className="fw-semibold text-zen-primary"
+                      className="fw-semibold text-zen-primary zg-breakable-text"
                       state={{ from: "/dashboard/staff" }}
                       to={`/staff/tickets/${ticket.id}`}
                     >

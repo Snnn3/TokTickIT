@@ -164,11 +164,13 @@ export function StaffActionsList() {
                       </div>
                       <div className="col-12 col-md-6">
                         <dt className="text-muted">Performed by</dt>
-                        <dd className="mb-0">{action.performedBy.name}</dd>
+                        <dd className="mb-0 zg-breakable-text">
+                          {action.performedBy.name}
+                        </dd>
                       </div>
                       <div className="col-12 col-md-6">
                         <dt className="text-muted">Assignee</dt>
-                        <dd className="mb-0">
+                        <dd className="mb-0 zg-breakable-text">
                           {action.assignee?.name ?? "Unassigned"}
                         </dd>
                       </div>

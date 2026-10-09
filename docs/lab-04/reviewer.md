@@ -158,6 +158,34 @@ The Standards review still has no actionable findings. This resolves the
 actionable-recent-Ticket Spec finding; Requester Dashboard work remains Issue
 #60 scope. No PR, peer approval, or merge is claimed.
 
+### Subsequent Issue #59 review — mobile long-text overflow (2026-10-09)
+
+The new P2 finding reproduced at a 375px viewport: a 150-character unbroken
+Ticket summary expanded the document to 1,344px, and a 120-character performer
+name expanded the action list to 995px. A shared scoped `zg-breakable-text`
+rule now wraps the recent Ticket link and action-list performer/assignee names;
+existing action-title wrapping is unchanged. The browser regression verifies
+the summary and each attribution name independently, including displayed text
+and document width. Before the CSS fix, the new tests failed on the corresponding
+overflow measurements.
+
+Verification on this working tree:
+
+- Staff/Admin dashboard Playwright suite: 11/11 passed with the disposable
+  PostgreSQL database, including both new mobile long-text regressions.
+- Isolated server suite: 20 files, 348/348 passed; dashboard performance and
+  real-database integration suite: 3/3 passed.
+- Client suite: 22 files, 182/182 passed; client production build passed.
+- Client source lint, changed-path formatting and `git diff --check` passed.
+- E2E/performance runs regenerated tracked baseline screenshots/metadata and
+  benchmark JSON; those test-output-only changes were restored. No screenshot
+  evidence was added.
+
+The two P3 Standards suggestions in the review are optional shared-helper
+refactors and are not part of this P2 fix. No server files changed. Requester
+Dashboard work remains Issue #60 scope; no PR, peer approval or merge is
+claimed.
+
 ---
 
 ## Pull Requests I reviewed for my partner

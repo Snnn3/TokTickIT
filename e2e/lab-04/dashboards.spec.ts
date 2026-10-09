@@ -451,6 +451,87 @@ test("loading, stale refresh and safe failure retry are visible without replacin
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
+test("long Ticket summaries do not cause horizontal overflow on mobile", async ({
+  page,
+}) => {
+  const longSummary = "S".repeat(150);
+  const ticket = await db.ticket.findUniqueOrThrow({
+    where: { number: "TKT-TEST-00002" },
+  });
+  await db.ticket.update({
+    where: { id: ticket.id },
+    data: { summary: longSummary },
+  });
+
+  await signIn(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  const summaryLink = page
+    .getByTestId("staff-dashboard-view")
+    .locator(`a[href="/staff/tickets/${ticket.id}"]`);
+  await expect(summaryLink).toBeVisible();
+  await expect(summaryLink).toContainText(longSummary);
+
+  const layout = await page.evaluate(() => ({
+    viewportWidth: window.innerWidth,
+    documentWidth: document.documentElement.scrollWidth,
+  }));
+  expect(layout.documentWidth, JSON.stringify(layout)).toBeLessThanOrEqual(376);
+});
+
+test("long performer and assignee names do not cause action-list mobile overflow", async ({
+  page,
+}) => {
+  const staff = await db.user.findUniqueOrThrow({
+    where: { email: DASHBOARD_ACCOUNTS.staff.email },
+  });
+  const secondStaff = await db.user.findUniqueOrThrow({
+    where: { email: DASHBOARD_ACCOUNTS.secondStaff.email },
+  });
+  const longPerformerName = "P".repeat(120);
+  const longAssigneeName = "A".repeat(120);
+
+  await signIn(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  const actionList = page.getByTestId("staff-actions-list-view");
+
+  try {
+    await db.user.update({
+      where: { id: staff.id },
+      data: { name: longPerformerName },
+    });
+    await page.goto("/staff/actions?performedBy=me&page=1&pageSize=5");
+    await expect(actionList).toContainText(longPerformerName);
+    let documentWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth
+    );
+    expect(documentWidth, "long performer name").toBeLessThanOrEqual(376);
+
+    await db.user.update({
+      where: { id: staff.id },
+      data: { name: staff.name },
+    });
+    await db.user.update({
+      where: { id: secondStaff.id },
+      data: { name: longAssigneeName },
+    });
+    await page.reload();
+    await expect(actionList).toContainText(longAssigneeName);
+    documentWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth
+    );
+    expect(documentWidth, "long assignee name").toBeLessThanOrEqual(376);
+  } finally {
+    await db.user.update({
+      where: { id: staff.id },
+      data: { name: staff.name },
+    });
+    await db.user.update({
+      where: { id: secondStaff.id },
+      data: { name: secondStaff.name },
+    });
+  }
+});
+
 test("unbroken action titles wrap and action-list controls meet mobile targets", async ({
   page,
 }) => {
