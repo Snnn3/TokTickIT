@@ -173,6 +173,21 @@ function actionPage(title: string, pageSize: number) {
   });
 }
 
+function mockPageSizeBackRequests(
+  staleResponse: Promise<Response>,
+  currentResponse: Promise<Response>
+) {
+  let tenPageRequests = 0;
+  return vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.searchParams.get("pageSize") === "5") return staleResponse;
+    tenPageRequests += 1;
+    if (tenPageRequests === 1)
+      return Promise.resolve(actionPage("Initial ten-page-size result", 10));
+    return currentResponse;
+  });
+}
+
 describe("StaffActionsList request ordering", () => {
   beforeEach(() => vi.restoreAllMocks());
 
@@ -188,19 +203,7 @@ describe("StaffActionsList request ordering", () => {
       const stale = deferredResponse();
       const current = deferredResponse();
       const expireSession = vi.fn();
-      let tenPageRequests = 0;
-      const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockImplementation((input) => {
-          const url = new URL(String(input), "http://localhost");
-          if (url.searchParams.get("pageSize") === "5") return stale.promise;
-          tenPageRequests += 1;
-          if (tenPageRequests === 1)
-            return Promise.resolve(
-              actionPage("Initial ten-page-size result", 10)
-            );
-          return current.promise;
-        });
+      const fetchSpy = mockPageSizeBackRequests(stale.promise, current.promise);
 
       renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
         withHistoryNavigation: true,
@@ -280,20 +283,10 @@ describe("StaffActionsList request ordering", () => {
       }),
       { status: 401, headers: { "content-type": "application/json" } }
     );
-    let tenPageRequests = 0;
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation((input) => {
-        const url = new URL(String(input), "http://localhost");
-        if (url.searchParams.get("pageSize") === "5")
-          return Promise.resolve(staleAuth);
-        tenPageRequests += 1;
-        if (tenPageRequests === 1)
-          return Promise.resolve(
-            actionPage("Initial ten-page-size result", 10)
-          );
-        return current.promise;
-      });
+    const fetchSpy = mockPageSizeBackRequests(
+      Promise.resolve(staleAuth),
+      current.promise
+    );
 
     renderList("/staff/actions?performedBy=me&page=1&pageSize=10", {
       withHistoryNavigation: true,
