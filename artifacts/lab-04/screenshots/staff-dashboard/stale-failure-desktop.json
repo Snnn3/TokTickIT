@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "loading, stale refresh and safe failure retry are visible without replacing real counts",
+  "screenshot": "stale-failure-desktop.png",
+  "role": "IT_STAFF",
+  "route": "/dashboard/staff",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-08T14:13:26.651Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

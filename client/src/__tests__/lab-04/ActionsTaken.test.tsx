@@ -66,6 +66,44 @@ function mockActionApi(
 describe("ActionsTakenPanel", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("focuses a dashboard action link once without stealing editor focus during conflict reload", async () => {
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: vi.fn(),
+    });
+    window.history.replaceState(null, "", "/staff/tickets/42#action-31");
+    const action = { ...BASE_ACTION, status: "PLANNED", completedAt: null };
+    mockActionApi({
+      "GET /api/tickets/42/actions": () =>
+        response({ actions: [action], ticketVersion: 7 }),
+      "GET /api/staff/action-assignees": () => response({ assignees: [] }),
+      "PATCH /api/staff/tickets/42/actions/31": () =>
+        response({ error: { code: "STALE_WRITE" } }, 409),
+    });
+    render(
+      <ActionsTakenPanel
+        ticketId={42}
+        ticketVersion={7}
+        ticketStatus="OPEN"
+        canManage
+      />
+    );
+    await waitFor(() =>
+      expect(document.getElementById("action-31")).toHaveFocus()
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Edit Restart VPN gateway" })
+    );
+    const title = screen.getByLabelText("Action title");
+    await waitFor(() => expect(title).toHaveFocus());
+    fireEvent.change(title, { target: { value: "My preserved draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Action" }));
+    await screen.findByTestId("action-conflict");
+    expect(title).toHaveValue("My preserved draft");
+    expect(title).toHaveFocus();
   });
 
   it("shows a Ticket's action history read-only, including inactive historical assignees", async () => {

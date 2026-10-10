@@ -1,5 +1,36 @@
 # End-to-end specs
 
+## Lab 4 Staff Dashboard (Issue #59)
+
+Run `npm run test:e2e:staff-dashboard` from the repository root with Docker
+running. This runner creates and migrates a new PostgreSQL 17 container on a
+random loopback port, seeds only its own fixtures, starts isolated API/Vite
+servers on ports 3104/5184, and removes the container afterward. It never
+resets the local demo seed. Direct use of `playwright.dashboard.config.ts`
+without the runner's disposable-database marker is refused.
+
+`e2e/lab-04/dashboards.spec.ts` covers Staff/Admin/Requester authorization,
+zero/populated status counts, latest-five ties, current-performer isolation,
+metric/status/recent drill-downs, filters through reload/back/detail,
+action focus, pagination, loading/stale/retry, Bangkok time and three viewports.
+The eight journeys include preservation of every queue choice through
+detail/back/reload and 44-by-44-pixel dashboard controls on mobile.
+Screenshots go to `artifacts/lab-04/screenshots/staff-dashboard/`.
+Requester dashboard coverage remains Issue #60; these tests do not claim it.
+
+For P4-01 Staff coverage run
+`npm run test:dashboard-performance --prefix server`. It also provisions its
+own database, loads 10,000 Tickets and 30,000 Actions Taken, compares HTTP
+counts to independent SQL, measures 20 warm requests, checks 1,000 ms p95 /
+64 KiB budgets and constant query counts, and records EXPLAIN plans in
+`artifacts/lab-04/staff-dashboard-performance.json`. The normal server suite
+does not include this opt-in Docker suite. A second real-database test freezes
+the dashboard clock and verifies inclusive seven-day bounds, adjacent
+millisecond exclusions and matching queue/action drill-down totals.
+`npm run test:isolated --prefix
+server` runs the full server regression suite with a disposable database for
+the inherited Lab 1 seeded-category test.
+
 Playwright specs live here, one directory per lab. `playwright.config.ts` points
 at this directory and starts both dev servers itself.
 

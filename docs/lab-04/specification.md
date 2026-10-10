@@ -57,7 +57,7 @@ to Lab 4.
 - **FR-35** Action lifecycle and meaningful-result validation are enforced by the backend.
 - **FR-36** Formal resolution requires permitted Staff/Admin, a completed action with a result, and a non-empty Resolution Summary; requester feedback remains advisory.
 - **FR-37** Requesters receive ownership-scoped dashboard metrics and recent/attention-required Tickets.
-- **FR-38** Staff/Admin receive operational metrics, recent Tickets and current-user Actions Taken with drill-down.
+- **FR-38** Staff/Admin receive operational metrics, Tickets grouped by status, recent Tickets and current-user Actions Taken with drill-down.
 - **FR-39** Workflow edits reject stale versions atomically with 409; repeat action creation is safely handled.
 - **FR-40** Migration preserves all legacy data and zero-action Tickets; repeatable seeds and recovery are verified.
 - **FR-41** Backend role/ownership/self-service checks protect all new operations.
@@ -219,7 +219,7 @@ to existing Ticket routes, exact validation, responses and safe conflict codes.
 | AC-09 | Requester appears-resolved remains advisory and own-only. |
 | AC-10 | Every authorization row, including own-history isolation and private notes, is enforced by the backend. |
 | AC-11 | Requester dashboard shows only authenticated ownership, including empty, recent, attention and resolved data. |
-| AC-12 | Staff/Admin metrics, current-user actions, latest-five lists and all drill-downs match database queries and the common snapshot window. |
+| AC-12 | Staff/Admin metrics, all-Ticket status grouping, current-user actions, latest-five lists and all drill-downs match database queries and the common snapshot window. |
 | AC-13 | UTC persistence, Bangkok display, seven-day edges and deterministic ties are verified. |
 | AC-14 | Every versioned Ticket workflow route rejects stale edits without partial changes and returns usable current versions. |
 | AC-15 | Action/parent versions, create replay and assignment cascades are atomic; concurrent requests cannot silently overwrite work. |

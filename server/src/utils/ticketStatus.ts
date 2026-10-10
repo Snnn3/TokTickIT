@@ -10,6 +10,15 @@ import { TicketStatus } from "@prisma/client";
  */
 export const TICKET_STATUSES = Object.values(TicketStatus);
 
+/** Active workflow statuses used by dashboards and their queue drill-downs. */
+export const OPEN_TICKET_STATUSES: TicketStatus[] = [
+  TicketStatus.NEW,
+  TicketStatus.OPEN,
+  TicketStatus.IN_PROGRESS,
+  TicketStatus.WAITING_FOR_REQUESTER,
+  TicketStatus.REOPENED,
+];
+
 /** Closed and Cancelled admit no further transition [BR-12, BR-13]. */
 export const TERMINAL_TICKET_STATUSES: TicketStatus[] = [
   TicketStatus.CLOSED,

@@ -25,6 +25,7 @@ const STAFF_ROLES: Role[] = ["IT_STAFF", "ADMINISTRATOR"];
 const DESTINATIONS: NavDestination[] = [
   { to: "/tickets", label: "My Tickets", roles: ALL_ROLES },
   { to: "/tickets/new", label: "Create Ticket", roles: ALL_ROLES },
+  { to: "/dashboard/staff", label: "Staff Dashboard", roles: STAFF_ROLES },
   { to: "/staff/queue", label: "Ticket Queue", roles: STAFF_ROLES },
   { to: "/admin/users", label: "Users", roles: ["ADMINISTRATOR"] },
 ];

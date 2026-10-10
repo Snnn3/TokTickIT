@@ -84,6 +84,28 @@ export interface ActionListResponse {
   ticketVersion: number;
 }
 
+/** Compact current-performer row used by the staff dashboard and drill-down. */
+export interface ActionSummary {
+  id: number;
+  ticketId: number;
+  ticketNumber: string;
+  title: string;
+  status: ActionStatus;
+  performedBy: ActionUserRef;
+  assignee: ActionUserRef | null;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface StaffActionListResponse {
+  actions: ActionSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ActionWriteResponse {
   action: ActionTaken;
   ticketVersion: number;

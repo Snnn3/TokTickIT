@@ -176,6 +176,8 @@ GET /dashboard/requester is available to every role in their requester capacity.
 Every count/list adds requesterId=session.id; no requesterId input is accepted.
 GET /dashboard/staff is Staff/Admin only. Both have no body or query and return:
 {asOf:Timestamp,windowDays:7,metrics:...,lists:...}.
+The Staff response additionally contains `groupings` as defined below;
+the Requester response does not contain Staff grouping data.
 Use one transaction with a consistent read snapshot, server asOf, and
 from=asOf-168h. Future timestamps are excluded from recent lists.
 
@@ -189,6 +191,12 @@ resolvedTickets:TicketSummary[]}.
 Staff metrics:
 {openTickets:number,unassignedTickets:number,myOwnedTickets:number,
 myActiveActions:number}.
+Staff groupings:
+{ticketsByStatus:{status:TicketStatus,count:number}[]} under `groupings`.
+Count all Tickets grouped by status in the same snapshot as metrics/lists;
+return all eight statuses in schema order (NEW, OPEN, IN_PROGRESS,
+WAITING_FOR_REQUESTER, RESOLVED, CLOSED, REOPENED, CANCELLED), including zero
+counts. Grouping is not restricted to the recent window or the open set.
 Staff lists:
 {recentTickets:TicketSummary[],myRecentActions:ActionSummary[]}.
 
@@ -205,7 +213,8 @@ Every list below is limited to five; ASC is never used for dashboard ranking.
 | Staff unassignedTickets | Open set; ownerId=null | n/a | /staff/queue?statusGroup=open&owner=unassigned |
 | Staff myOwnedTickets | Open set; ownerId=session.id | n/a | /staff/queue?statusGroup=open&owner=mine |
 | Staff myActiveActions | performedById=session.id; status PLANNED/IN_PROGRESS, including read-only parents | n/a | /staff/actions?performedBy=me&statusGroup=active |
-| Staff recentTickets | updatedAt in [from,asOf] | updatedAt DESC,id DESC | /staff/queue?dateField=updatedAt&from={from}&to={asOf} |
+| Staff ticketsByStatus | All; GROUP BY status, zero-fill absent statuses | Schema status order | /staff/queue?status={status} |
+| Staff recentTickets | status in open set; updatedAt in [from,asOf] | updatedAt DESC,id DESC | /staff/queue?statusGroup=open&dateField=updatedAt&from={from}&to={asOf} |
 | Staff myRecentActions | performedById=session.id; createdAt in [from,asOf] | createdAt DESC,id DESC | /staff/actions?performedBy=me&from={from}&to={asOf} |
 
 Empty -> zeros and empty arrays, never null or 404. Detail links use

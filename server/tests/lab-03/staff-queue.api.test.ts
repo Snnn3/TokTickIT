@@ -279,6 +279,32 @@ describe("API-10 queue retrieval (AC-08, FR-22, BR-16)", () => {
     );
   });
 
+  it("applies dashboard status-group and fixed date-window filters conjunctively", async () => {
+    const cookie = authAs(9);
+    const seen = stubQueueCapture([], 0);
+
+    const res = await request(app)
+      .get(
+        "/api/staff/tickets?statusGroup=open&owner=unassigned&dateField=updatedAt&from=2026-10-01T00%3A00%3A00.000Z&to=2026-10-08T00%3A00%3A00.000Z&sort=updatedAt&order=desc&page=2&pageSize=5"
+      )
+      .set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(seen.where).toEqual({
+      status: {
+        in: ["NEW", "OPEN", "IN_PROGRESS", "WAITING_FOR_REQUESTER", "REOPENED"],
+      },
+      ownerId: null,
+      updatedAt: {
+        gte: new Date("2026-10-01T00:00:00.000Z"),
+        lte: new Date("2026-10-08T00:00:00.000Z"),
+      },
+    });
+    expect(seen.orderBy).toEqual([{ updatedAt: "desc" }, { id: "desc" }]);
+    expect(seen.skip).toBe(5);
+    expect(seen.take).toBe(5);
+  });
+
   it("sorts by createdAt or number and pages with metadata", async () => {
     const cookie = authAs(9);
     vi.spyOn(prisma.ticket, "count").mockResolvedValue(23);
@@ -363,6 +389,21 @@ describe("API-11 queue invalid params (AC-08, BR-16)", () => {
       ["page=abc", "page"],
       ["pageSize=7", "pageSize"],
       ["pageSize=abc", "pageSize"],
+      ["statusGroup=urgent", "statusGroup"],
+      ["status=OPEN&statusGroup=open", "statusGroup"],
+      ["dateField=updatedAt&from=2026-10-01T00%3A00%3A00Z", "dateField"],
+      [
+        "dateField=updatedAt&from=2026-10-02T00%3A00%3A00Z&to=2026-10-01T00%3A00%3A00Z",
+        "from",
+      ],
+      [
+        "dateField=updatedAt&from=2026-10-01T00%3A00%3A00Z&to=2026-10-02T00%3A00%3A00Z&sort=createdAt",
+        "sort",
+      ],
+      [
+        "dateField=updatedAt&from=2026-10-01T00%3A00%3A00Z&to=2026-10-02T00%3A00%3A00Z&order=asc",
+        "order",
+      ],
       [`search=${"x".repeat(151)}`, "search"],
     ];
 

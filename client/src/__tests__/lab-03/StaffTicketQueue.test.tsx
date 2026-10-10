@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { StaffTicketQueue } from "../../components/StaffTicketQueue";
 import { AuthHarnessProvider, testUser } from "../../test/authHarness";
@@ -107,19 +114,30 @@ function mockQueueApi(
   });
 }
 
-function StaffWrapper({ children }: { children: ReactNode }) {
+function StaffWrapper({
+  children,
+  initialEntry = "/staff/queue",
+}: {
+  children: ReactNode;
+  initialEntry?: string;
+}) {
   return (
-    <AuthHarnessProvider
-      harness={{ user: testUser({ id: 9, role: "IT_STAFF" }) }}
-    >
-      {children}
-    </AuthHarnessProvider>
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <AuthHarnessProvider
+        harness={{ user: testUser({ id: 9, role: "IT_STAFF" }) }}
+      >
+        {children}
+      </AuthHarnessProvider>
+    </MemoryRouter>
   );
 }
 
-async function renderQueue(onSelectTicket = vi.fn()) {
+async function renderQueue(
+  onSelectTicket = vi.fn(),
+  initialEntry = "/staff/queue"
+) {
   render(
-    <StaffWrapper>
+    <StaffWrapper initialEntry={initialEntry}>
       <StaffTicketQueue onSelectTicket={onSelectTicket} />
     </StaffWrapper>
   );
@@ -159,6 +177,48 @@ describe("StaffTicketQueue wiring (C-03, AC-08)", () => {
     expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
       "Page 1 of 1 (2 tickets)"
     );
+  });
+
+  it("restores all queue choices and a filtered second page from its URL", async () => {
+    const fetchSpy = mockQueueApi(undefined, { total: 12, totalPages: 3 });
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?statusGroup=open&owner=mine&search=wifi&categoryId=1&requestedPriority=MEDIUM&itPriority=HIGH&sort=number&order=asc&page=2&pageSize=5"
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toHaveValue("wifi")
+    );
+    expect(screen.getByLabelText("Filter by category")).toHaveValue("1");
+    expect(screen.getByLabelText("Filter by requested priority")).toHaveValue(
+      "MEDIUM"
+    );
+    expect(screen.getByLabelText("Filter by IT priority")).toHaveValue("HIGH");
+    expect(screen.getByLabelText("Sort by:")).toHaveValue("number");
+    expect(screen.getByLabelText("Sort order")).toHaveValue("asc");
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "Page 2 of 3"
+    );
+    await waitFor(() => {
+      const lastQueue = fetchSpy.mock.calls
+        .map(([url]) => String(url))
+        .filter((url) => url.includes("/api/staff/tickets"))
+        .at(-1)!;
+      const params = new URL(lastQueue, "http://localhost").searchParams;
+      expect(Object.fromEntries(params)).toMatchObject({
+        search: "wifi",
+        categoryId: "1",
+        requestedPriority: "MEDIUM",
+        itPriority: "HIGH",
+        sort: "number",
+        order: "asc",
+        page: "2",
+        pageSize: "5",
+        owner: "mine",
+        statusGroup: "open",
+      });
+    });
   });
 
   it("defaults the owner filter to All owners so unassigned work stays visible (D12)", async () => {
@@ -314,6 +374,73 @@ describe("StaffTicketQueue wiring (C-03, AC-08)", () => {
       expect(last).not.toContain("owner=");
     });
   });
+
+  it("restores dashboard drill-down filters from the URL and lets the user clear them", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?statusGroup=open&owner=unassigned&dateField=updatedAt&from=2026-10-01T00%3A00%3A00.000Z&to=2026-10-08T00%3A00%3A00.000Z"
+    );
+
+    await waitFor(() => {
+      const queueCalls = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes("/api/staff/tickets"));
+      expect(queueCalls.at(-1)).toContain("statusGroup=open");
+      expect(queueCalls.at(-1)).toContain("dateField=updatedAt");
+      expect(queueCalls.at(-1)).toContain("owner=unassigned");
+      expect(queueCalls.at(-1)).not.toContain("sort=");
+      expect(queueCalls.at(-1)).not.toContain("order=");
+    });
+    expect(screen.getByTestId("queue-dashboard-filters")).toHaveTextContent(
+      "Open tickets"
+    );
+    expect(screen.getByTestId("queue-dashboard-filters")).toHaveTextContent(
+      "Owner: unassigned"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      expect(screen.queryByTestId("queue-dashboard-filters")).toBeNull();
+      const queueCalls = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.includes("/api/staff/tickets"));
+      expect(queueCalls.at(-1)).not.toContain("statusGroup=");
+      expect(queueCalls.at(-1)).not.toContain("dateField=");
+      expect(queueCalls.at(-1)).not.toContain("owner=");
+    });
+  });
+
+  it("locks sorting to newest-first while a recent-date filter is active", async () => {
+    const fetchSpy = mockQueueApi();
+    await renderQueue(
+      vi.fn(),
+      "/staff/queue?dateField=updatedAt&from=2026-10-02T00%3A00%3A00.000Z&to=2026-10-09T00%3A00%3A00.000Z&sort=number&order=asc"
+    );
+
+    expect(screen.queryByLabelText("Sort by:")).toBeNull();
+    expect(screen.queryByLabelText("Sort order")).toBeNull();
+    expect(screen.getByTestId("queue-date-sort-note")).toHaveTextContent(
+      "Recent updated tickets are always sorted newest first. Clear date filters to choose another sort order."
+    );
+
+    await waitFor(() => {
+      const request = fetchSpy.mock.calls
+        .map(([input]) => new URL(String(input), "http://localhost"))
+        .find((url) => url.pathname === "/api/staff/tickets");
+      expect(request?.searchParams.get("dateField")).toBe("updatedAt");
+      expect(request?.searchParams.has("sort")).toBe(false);
+      expect(request?.searchParams.has("order")).toBe(false);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Sort by:")).toBeEnabled();
+      expect(screen.getByLabelText("Sort order")).toBeEnabled();
+    });
+    expect(screen.getByLabelText("Sort by:")).toHaveValue("number");
+    expect(screen.getByLabelText("Sort order")).toHaveValue("asc");
+  });
 });
 
 describe("StaffTicketQueue states (S-02, AC-18)", () => {
@@ -428,5 +555,121 @@ describe("StaffTicketQueue states (S-02, AC-18)", () => {
       );
       expect(last).toContain("search=wifi");
     });
+  });
+});
+
+describe("StaffTicketQueue response ordering", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  function deferredResponse() {
+    let resolve!: (response: Response) => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<Response>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  }
+
+  function queueResponse(tickets: typeof mockQueueTickets, totalPages = 1) {
+    return Response.json({ tickets, total: tickets.length, totalPages });
+  }
+
+  async function startFilterReset() {
+    const previous = deferredResponse();
+    const current = deferredResponse();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((input) => {
+        const url = new URL(String(input), "http://localhost");
+        if (url.pathname.startsWith("/api/reference/")) {
+          return Promise.resolve(
+            Response.json({ categories: mockCategories, systems: [] })
+          );
+        }
+        if (url.searchParams.get("page") === "2") {
+          return Promise.resolve(queueResponse([mockQueueTickets[0]], 2));
+        }
+        return url.searchParams.has("search")
+          ? previous.promise
+          : current.promise;
+      });
+    await renderQueue(vi.fn(), "/staff/queue?search=certificate&page=2");
+    await waitFor(() =>
+      expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+        "Page 2 of 2"
+      )
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => {
+      const queries = fetchSpy.mock.calls
+        .map(([input]) => new URL(String(input), "http://localhost"))
+        .filter((url) => url.pathname === "/api/staff/tickets");
+      expect(
+        queries.some(
+          (url) =>
+            url.searchParams.get("search") === "certificate" &&
+            url.searchParams.get("page") === "1"
+        )
+      ).toBe(true);
+      expect(queries.some((url) => !url.searchParams.has("search"))).toBe(true);
+    });
+    return { previous, current };
+  }
+
+  it.each(["success", "forbidden", "network failure"] as const)(
+    "ignores a late %s from the cleared search",
+    async (outcome) => {
+      const { previous, current } = await startFilterReset();
+      await act(async () =>
+        current.resolve(queueResponse([mockQueueTickets[1]]))
+      );
+      await waitFor(() =>
+        expect(
+          screen.getAllByText(mockQueueTickets[1].summary).length
+        ).toBeGreaterThan(0)
+      );
+
+      await act(async () => {
+        if (outcome === "network failure")
+          previous.reject(new Error("Old request failed"));
+        else
+          previous.resolve(
+            outcome === "forbidden"
+              ? Response.json({}, { status: 403 })
+              : queueResponse([mockQueueTickets[0]])
+          );
+      });
+
+      expect(
+        screen.getByPlaceholderText(/Search number or summary/i)
+      ).toHaveValue("");
+      expect(
+        screen.getAllByText(mockQueueTickets[1].summary).length
+      ).toBeGreaterThan(0);
+      expect(screen.queryByText(mockQueueTickets[0].summary)).toBeNull();
+      expect(screen.getByTestId("queue-result-count")).toHaveTextContent(
+        "1 ticket"
+      );
+      expect(screen.queryByTestId("queue-forbidden")).toBeNull();
+      expect(screen.queryByTestId("queue-failure")).toBeNull();
+    }
+  );
+
+  it("keeps the current loading state when an older request finishes", async () => {
+    const { previous, current } = await startFilterReset();
+    await act(async () =>
+      previous.resolve(queueResponse([mockQueueTickets[0]]))
+    );
+    expect(screen.getByTestId("queue-loading")).toBeInTheDocument();
+    await act(async () =>
+      current.resolve(queueResponse([mockQueueTickets[1]]))
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("queue-loading")).toBeNull()
+    );
+    expect(
+      screen.getAllByText(mockQueueTickets[1].summary).length
+    ).toBeGreaterThan(0);
   });
 });

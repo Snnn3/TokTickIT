@@ -4,6 +4,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useLocation,
   useParams,
 } from "react-router-dom";
 import { ChangePassword } from "./components/ChangePassword";
@@ -14,6 +15,8 @@ import { NotFound } from "./components/ScreenPanel";
 import { RequesterTicketDetail } from "./components/RequesterTicketDetail";
 import { StaffTicketDetail } from "./components/StaffTicketDetail";
 import { StaffTicketQueue } from "./components/StaffTicketQueue";
+import { StaffActionsList } from "./components/StaffActionsList";
+import { StaffDashboard } from "./components/StaffDashboard";
 import { UserManagement } from "./components/UserManagement";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
@@ -39,7 +42,22 @@ function RoleLanding() {
 
 function LoginRoute() {
   const navigate = useNavigate();
-  return <Login onSignedIn={(destination) => navigate(destination)} />;
+  const location = useLocation();
+  const routeState = location.state as { from?: unknown } | null;
+  const requestedDestination = routeState?.from;
+  const continuation =
+    typeof requestedDestination === "string" &&
+    requestedDestination.startsWith("/") &&
+    !requestedDestination.startsWith("//")
+      ? requestedDestination
+      : null;
+  return (
+    <Login
+      onSignedIn={(destination) =>
+        navigate(continuation ?? destination, { replace: true })
+      }
+    />
+  );
 }
 
 function ChangePasswordRoute() {
@@ -96,9 +114,14 @@ function TicketDetailRoute() {
  */
 function StaffQueueRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   return (
     <StaffTicketQueue
-      onSelectTicket={(ticketId) => navigate(`/staff/tickets/${ticketId}`)}
+      onSelectTicket={(ticketId) =>
+        navigate(`/staff/tickets/${ticketId}`, {
+          state: { from: `${location.pathname}${location.search}` },
+        })
+      }
     />
   );
 }
@@ -110,8 +133,19 @@ function StaffQueueRoute() {
  */
 function StaffTicketDetailRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { ticketId } = useParams();
   const parsed = Number(ticketId);
+  const routeState = location.state as { from?: unknown } | null;
+  const requestedBackTo = routeState?.from;
+  const backTo =
+    typeof requestedBackTo === "string" &&
+    ["/staff/queue", "/staff/actions", "/dashboard/staff"].some(
+      (path) =>
+        requestedBackTo === path || requestedBackTo.startsWith(`${path}?`)
+    )
+      ? requestedBackTo
+      : "/staff/queue";
 
   if (!Number.isInteger(parsed) || parsed <= 0) {
     return <NotFound backTo="/staff/queue" />;
@@ -119,8 +153,9 @@ function StaffTicketDetailRoute() {
 
   return (
     <StaffTicketDetail
-      onBack={() => navigate("/staff/queue")}
+      onBack={() => navigate(backTo)}
       ticketId={parsed}
+      navigationKey={location.key}
     />
   );
 }
@@ -153,6 +188,8 @@ export function AppRoutes() {
         <Route
           element={<RequireRole allowed={["IT_STAFF", "ADMINISTRATOR"]} />}
         >
+          <Route element={<StaffDashboard />} path="/dashboard/staff" />
+          <Route element={<StaffActionsList />} path="/staff/actions" />
           <Route element={<StaffQueueRoute />} path="/staff/queue" />
           <Route
             element={<StaffTicketDetailRoute />}

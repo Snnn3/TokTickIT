@@ -15,6 +15,8 @@
     "seed": "prisma db seed",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:dashboard-performance": "vitest run --config vitest.dashboard-performance.config.ts",
+    "test:isolated": "tsx tests/run-dashboard-regression.ts",
     "test:watch": "vitest"
   },
   "dependencies": {

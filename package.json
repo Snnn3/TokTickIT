@@ -12,6 +12,7 @@
     "test": "npm test --prefix server && npm test --prefix client",
     "test:client": "npm test --prefix client",
     "test:e2e": "playwright test",
+    "test:e2e:staff-dashboard": "node server/node_modules/tsx/dist/cli.mjs e2e/lab-04/run-dashboards.ts",
     "test:server": "npm test --prefix server"
   },
   "devDependencies": {

@@ -9,6 +9,7 @@ import {
   updateTicketAction,
 } from "../api/actions";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
+import { formatBangkokDateTime } from "../utils/format";
 import {
   ACTION_STATUS_LABELS,
   isRecord,
@@ -32,6 +33,7 @@ interface ActionsTakenPanelProps {
   canManage: boolean;
   performerName?: string;
   disabledReason?: string;
+  focusNavigationKey?: string;
   onTicketVersionChange?: (version: number, updatedAt?: string) => void;
   onRefreshTicket?: () => void | Promise<void>;
 }
@@ -106,16 +108,6 @@ const FOLLOW_UP_NOTE_REQUIRED_MESSAGE =
 const ACTION_RESULT_REQUIRED_MESSAGE =
   "Enter a result before completing this action.";
 const EMPTY_API_FIELDS: Record<string, string> = {};
-
-function formatBangkokDateTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Bangkok",
-  }).format(date);
-}
 
 function sortActions(actions: ActionTaken[]): ActionTaken[] {
   return [...actions].sort((left, right) => {
@@ -253,6 +245,7 @@ export function ActionsTakenPanel({
   canManage,
   performerName,
   disabledReason,
+  focusNavigationKey,
   onTicketVersionChange,
   onRefreshTicket,
 }: ActionsTakenPanelProps) {
@@ -293,12 +286,14 @@ export function ActionsTakenPanel({
   const titleRef = useRef<HTMLInputElement>(null);
   const saveButtonRef = useRef<HTMLButtonElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const consumedActionFocusRef = useRef<string | null>(null);
   const confirmationTriggerRef = useRef<HTMLElement | null>(null);
   const confirmationWasOpenRef = useRef(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialogConfirmRef = useRef<HTMLButtonElement>(null);
 
   const editorOpen = creating || editingActionId !== null;
+  const actionFocusNavigation = focusNavigationKey ?? window.location.href;
   const editingAction =
     editingActionId === null
       ? null
@@ -419,6 +414,19 @@ export function ActionsTakenPanel({
   useEffect(() => {
     void loadActions();
   }, [loadActions]);
+
+  useEffect(() => {
+    if (loading || editorOpen) return;
+    const match = window.location.hash.match(/^#action-(\d+)$/);
+    if (!match) return;
+    const focusRequest = `${ticketId}:${actionFocusNavigation}:${match[1]}`;
+    if (consumedActionFocusRef.current === focusRequest) return;
+    const target = document.getElementById(`action-${match[1]}`);
+    if (!target) return;
+    consumedActionFocusRef.current = focusRequest;
+    target.scrollIntoView({ block: "center" });
+    target.focus({ preventScroll: true });
+  }, [actions, loading, editorOpen, ticketId, actionFocusNavigation]);
 
   async function loadAssignees(force = false) {
     if ((!force && assigneesLoaded) || assigneesLoading) return;
@@ -940,7 +948,7 @@ export function ActionsTakenPanel({
               const canEditAction =
                 writesAllowed && !TERMINAL_ACTION_STATUSES.has(action.status);
               return (
-                <li key={action.id}>
+                <li id={`action-${action.id}`} key={action.id} tabIndex={-1}>
                   <article
                     className="zg-readonly-panel p-3"
                     data-testid="action-item"

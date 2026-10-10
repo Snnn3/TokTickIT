@@ -12,6 +12,14 @@ import {
 } from "../middleware/auth";
 import { prisma } from "../prisma";
 import { parsePositiveIntParam } from "../utils/attachment";
+import { parseUtcDateRange } from "../utils/query-validation";
+import { hasRequestBody } from "../utils/request-body";
+import { USER_REF_SELECT } from "../utils/user-ref";
+import {
+  ACTIVE_ACTION_STATUSES,
+  ACTION_SUMMARY_INCLUDE,
+  serializeActionSummary,
+} from "../utils/action-summary";
 
 const STAFF_ROLES = [Role.IT_STAFF, Role.ADMINISTRATOR] as const;
 const ACTION_STATUSES = Object.values(ActionStatus);
@@ -31,18 +39,10 @@ const ACTION_TRANSITIONS: Record<ActionStatus, readonly ActionStatus[]> = {
   [ActionStatus.CANCELLED]: [],
 };
 
-const USER_REF_SELECT = {
-  id: true,
-  name: true,
-  role: true,
-  isActive: true,
-} as const;
-
 const ACTION_INCLUDE = {
   performedBy: { select: USER_REF_SELECT },
   assignee: { select: USER_REF_SELECT },
 } as const;
-
 const EVENT_INCLUDE = {
   actor: { select: USER_REF_SELECT },
 } as const;
@@ -425,15 +425,77 @@ function noQuery(req: AuthenticatedRequest): void {
 }
 
 function noReadInput(req: AuthenticatedRequest): void {
-  const contentLength = Number(req.get("content-length") ?? 0);
-  const hasFramedBody =
-    contentLength > 0 || req.get("transfer-encoding") !== undefined;
-  if (req.body !== undefined || hasFramedBody) {
+  noReadBody(req);
+  noQuery(req);
+}
+
+function noReadBody(req: AuthenticatedRequest): void {
+  if (hasRequestBody(req)) {
     throw validationError([
       { field: "body", issue: "This endpoint does not accept a request body" },
     ]);
   }
-  noQuery(req);
+}
+
+interface StaffActionListQuery {
+  from?: Date;
+  to?: Date;
+  statusGroup?: "active";
+  page: number;
+  pageSize: 5 | 10 | 20;
+}
+
+function invalidActionListQuery(): ActionApiError {
+  return new ActionApiError(400, "INVALID_QUERY", "Invalid query parameters");
+}
+
+function parseStaffActionListQuery(
+  query: AuthenticatedRequest["query"]
+): StaffActionListQuery {
+  const allowed = new Set([
+    "performedBy",
+    "statusGroup",
+    "from",
+    "to",
+    "page",
+    "pageSize",
+  ]);
+  if (
+    Object.keys(query).some((key) => !allowed.has(key)) ||
+    query.performedBy !== "me" ||
+    (query.statusGroup !== undefined && query.statusGroup !== "active")
+  ) {
+    throw invalidActionListQuery();
+  }
+
+  const { from, to, issues } = parseUtcDateRange(query.from, query.to);
+  if (issues.length > 0) throw invalidActionListQuery();
+
+  const parsePositiveInteger = (value: unknown, fallback: number) => {
+    if (value === undefined) return fallback;
+    if (typeof value !== "string" || !/^\d+$/.test(value)) {
+      throw invalidActionListQuery();
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      throw invalidActionListQuery();
+    }
+    return parsed;
+  };
+
+  const page = parsePositiveInteger(query.page, 1);
+  const pageSize = parsePositiveInteger(query.pageSize, 10);
+  if (pageSize !== 5 && pageSize !== 10 && pageSize !== 20) {
+    throw invalidActionListQuery();
+  }
+
+  return {
+    from,
+    to,
+    statusGroup: query.statusGroup as "active" | undefined,
+    page,
+    pageSize,
+  };
 }
 
 async function loadActionTicket(id: number) {
@@ -941,6 +1003,52 @@ actionRequesterRouter.get(
   ...requireAuth,
   (req: AuthenticatedRequest, res: Response) =>
     void handleRequesterActionRead(req, res, "history")
+);
+
+actionStaffRouter.get(
+  "/actions",
+  ...requireAuth,
+  requireRole(...STAFF_ROLES),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      noReadBody(req);
+      const query = parseStaffActionListQuery(req.query);
+      const where: Prisma.ActionTakenWhereInput = {
+        performedById: req.authUser!.id,
+        ...(query.statusGroup === "active"
+          ? {
+              status: {
+                in: ACTIVE_ACTION_STATUSES,
+              },
+            }
+          : {}),
+        ...(query.from && query.to
+          ? { createdAt: { gte: query.from, lte: query.to } }
+          : {}),
+      };
+      const skip = (query.page - 1) * query.pageSize;
+      const [total, actions] = await Promise.all([
+        prisma.actionTaken.count({ where }),
+        prisma.actionTaken.findMany({
+          where,
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          skip,
+          take: query.pageSize,
+          include: ACTION_SUMMARY_INCLUDE,
+        }),
+      ]);
+
+      return res.status(200).json({
+        actions: actions.map(serializeActionSummary),
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / query.pageSize),
+      });
+    } catch (error) {
+      sendError(res, error);
+    }
+  }
 );
 
 actionStaffRouter.get(
