@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { getRequesterDashboard } from "../api/dashboard";
 import { useAuth } from "../context/AuthContext";
+import { useRequestGeneration } from "../hooks/useRequestGeneration";
 import type {
   DashboardTicketSummary,
   RequesterDashboardResponse,
@@ -133,15 +134,21 @@ export function RequesterDashboard() {
   const [forbidden, setForbidden] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const hasSnapshotRef = useRef(false);
+  const { beginRequest, invalidateRequests } = useRequestGeneration();
 
   const loadDashboard = useCallback(async () => {
+    const isCurrent = beginRequest();
     if (hasSnapshotRef.current) setRefreshing(true);
     else setLoading(true);
     setError(null);
 
     try {
       const result = await getRequesterDashboard();
-      if (await isAuthRequired(result.response)) {
+      if (!isCurrent()) return;
+
+      const authRequired = await isAuthRequired(result.response);
+      if (!isCurrent()) return;
+      if (authRequired) {
         expireSession();
         return;
       }
@@ -168,16 +175,21 @@ export function RequesterDashboard() {
       hasSnapshotRef.current = true;
       setData(result.data);
     } catch {
-      setError("The dashboard could not be loaded. Please try again.");
+      if (isCurrent()) {
+        setError("The dashboard could not be loaded. Please try again.");
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (isCurrent()) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [expireSession]);
+  }, [beginRequest, expireSession]);
 
   useEffect(() => {
     void loadDashboard();
-  }, [loadDashboard]);
+    return invalidateRequests;
+  }, [invalidateRequests, loadDashboard]);
 
   if (forbidden) {
     return (

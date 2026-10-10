@@ -1,4 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { StrictMode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RequesterDashboard } from "../../components/RequesterDashboard";
@@ -70,6 +77,28 @@ function renderDashboard() {
       </AuthHarnessProvider>
     </MemoryRouter>
   );
+}
+
+function renderDashboardInStrictMode() {
+  return render(
+    <StrictMode>
+      <MemoryRouter initialEntries={["/dashboard/requester"]}>
+        <AuthHarnessProvider
+          harness={{ user: testUser({ role: "REQUESTER" }) }}
+        >
+          <RequesterDashboard />
+        </AuthHarnessProvider>
+      </MemoryRouter>
+    </StrictMode>
+  );
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
 
 function okResponse(data: unknown): Response {
@@ -210,6 +239,63 @@ describe("RequesterDashboard (C4-02, AC-11, AC-13, AC-18)", () => {
     expect(
       await screen.findByTestId("requester-dashboard-view")
     ).toBeInTheDocument();
+  });
+
+  it("ignores an obsolete StrictMode load while a newer refresh is pending", async () => {
+    const obsoleteLoad = deferred<Response>();
+    const currentInitialLoad = deferred<Response>();
+    const refreshLoad = deferred<Response>();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockReturnValueOnce(obsoleteLoad.promise)
+      .mockReturnValueOnce(currentInitialLoad.promise)
+      .mockReturnValueOnce(refreshLoad.promise);
+
+    renderDashboardInStrictMode();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      currentInitialLoad.resolve(
+        okResponse({
+          ...snapshot,
+          asOf: "2026-10-08T02:00:00.000Z",
+          metrics: { ...snapshot.metrics, openTickets: 20 },
+        })
+      );
+      await currentInitialLoad.promise;
+    });
+    expect(screen.getByLabelText("My Open Tickets: 20")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh dashboard" }));
+    expect(screen.getByRole("button", { name: "Refreshing…" })).toBeDisabled();
+
+    await act(async () => {
+      obsoleteLoad.resolve(
+        okResponse({
+          ...snapshot,
+          asOf: "2026-10-08T01:00:00.000Z",
+          metrics: { ...snapshot.metrics, openTickets: 10 },
+        })
+      );
+      await obsoleteLoad.promise;
+    });
+    expect(screen.getByLabelText("My Open Tickets: 20")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refreshing…" })).toBeDisabled();
+
+    await act(async () => {
+      refreshLoad.resolve(
+        okResponse({
+          ...snapshot,
+          asOf: "2026-10-08T03:00:00.000Z",
+          metrics: { ...snapshot.metrics, openTickets: 30 },
+        })
+      );
+      await refreshLoad.promise;
+    });
+    expect(screen.getByLabelText("My Open Tickets: 30")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Refresh dashboard" })
+    ).toBeEnabled();
   });
 });
 
