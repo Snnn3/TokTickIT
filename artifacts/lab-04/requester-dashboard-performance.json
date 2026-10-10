@@ -1,0 +1,200 @@
+{
+  "testId": "P4-01",
+  "scope": "Requester Dashboard endpoint at 10k owned Tickets",
+  "measuredAt": "2026-10-10T09:29:11.542Z",
+  "commit": "17ee0f8c405f9d89c5b22b15e2d4dd430fdae85f",
+  "workingTreeChanges": true,
+  "runtime": {
+    "node": "v24.14.1",
+    "postgres": [
+      {
+        "version": "PostgreSQL 17.9 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit"
+      }
+    ],
+    "cpu": "Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz",
+    "logicalCpus": 8,
+    "memoryBytes": 17072103424
+  },
+  "fixture": {
+    "tickets": 10000,
+    "actions": 30000
+  },
+  "endpoint": "/api/dashboard/requester",
+  "concurrency": 1,
+  "warmupRequests": 3,
+  "measuredRequests": 20,
+  "p95Milliseconds": 278.5448000000033,
+  "budgets": {
+    "p95Milliseconds": 1000,
+    "responseBytes": 65536,
+    "maxQueries": 16
+  },
+  "smallFixtureQueryCount": 14,
+  "smallFixtureQueryBreakdown": {
+    "metricQueries": 4,
+    "collectionQueries": 3,
+    "standaloneRelationQueries": 4
+  },
+  "samples": [
+    {
+      "milliseconds": 116.18829999999434,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 141.7853999999934,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 119.66840000000957,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 121.14639999999781,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 165.89689999999246,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 147.30440000000817,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 200.2439000000013,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 216.87099999999919,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 157.13339999999152,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 303.30310000000463,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 188.3189999999886,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 179.09379999998782,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 162.8249999999971,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 147.4670000000042,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 171.2387000000017,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 174.49700000000303,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 249.8295999999973,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 278.5448000000033,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 201.62309999999707,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    },
+    {
+      "milliseconds": 204.42059999999765,
+      "bytes": 4988,
+      "queryCount": 14,
+      "metricQueries": 4,
+      "collectionQueries": 3,
+      "standaloneRelationQueries": 4
+    }
+  ]
+}

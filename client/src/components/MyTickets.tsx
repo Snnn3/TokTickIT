@@ -8,7 +8,7 @@ import type {
 import { TICKET_STATUSES, TICKET_STATUS_LABELS } from "../types/ticket";
 import { useCategories } from "../hooks/useReferenceData";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
-import { formatDateTime } from "../utils/format";
+import { formatBangkokDateTime, formatDateTime } from "../utils/format";
 
 export type { TicketSummaryItem };
 
@@ -47,28 +47,73 @@ const initialQueryState: TicketQueryState = {
   pageSize: 10,
 };
 
-function dashboardQueryState(
-  search: string
-): Pick<
-  TicketQueryState,
-  "statusGroup" | "dateField" | "from" | "to" | "status"
-> {
+const TICKET_PRIORITIES: TicketPriority[] = ["LOW", "MEDIUM", "HIGH"];
+const TICKET_SORTS: TicketQueryState["sort"][] = [
+  "updatedAt",
+  "createdAt",
+  "number",
+];
+const PAGE_SIZES = [5, 10, 20] as const;
+
+function parseTicketQueryState(search: string): TicketQueryState {
   const params = new URLSearchParams(search);
   const statusGroup = params.get("statusGroup");
   const dateField = params.get("dateField");
   const rawStatus = params.get("status");
+  const rawPriority = params.get("priority");
+  const rawSort = params.get("sort");
+  const rawOrder = params.get("order");
+  const rawPage = Number(params.get("page"));
+  const rawPageSize = Number(params.get("pageSize"));
+  const from = params.get("from") ?? "";
+  const to = params.get("to") ?? "";
+  const validDateField =
+    dateField === "updatedAt" || dateField === "resolvedAt" ? dateField : "";
+  const hasFixedDateRange = Boolean(validDateField && from && to);
   const status = TICKET_STATUSES.includes(rawStatus as TicketStatus)
     ? (rawStatus as TicketStatus)
     : "";
   return {
+    search: params.get("search") ?? "",
+    categoryId: params.get("categoryId") ?? "",
+    priority: TICKET_PRIORITIES.includes(rawPriority as TicketPriority)
+      ? (rawPriority as TicketPriority)
+      : "",
+    status,
     statusGroup:
       statusGroup === "open" || statusGroup === "resolved" ? statusGroup : "",
-    dateField:
-      dateField === "updatedAt" || dateField === "resolvedAt" ? dateField : "",
-    from: params.get("from") ?? "",
-    to: params.get("to") ?? "",
-    status,
+    dateField: hasFixedDateRange ? validDateField : "",
+    from: hasFixedDateRange ? from : "",
+    to: hasFixedDateRange ? to : "",
+    sort: TICKET_SORTS.includes(rawSort as TicketQueryState["sort"])
+      ? (rawSort as TicketQueryState["sort"])
+      : initialQueryState.sort,
+    order: rawOrder === "asc" || rawOrder === "desc" ? rawOrder : "desc",
+    page: Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1,
+    pageSize: PAGE_SIZES.includes(rawPageSize as (typeof PAGE_SIZES)[number])
+      ? (rawPageSize as (typeof PAGE_SIZES)[number])
+      : initialQueryState.pageSize,
   };
+}
+
+function serializeTicketQueryState(queryState: TicketQueryState): string {
+  const params = new URLSearchParams();
+  if (queryState.search.trim()) params.set("search", queryState.search);
+  if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
+  if (queryState.priority) params.set("priority", queryState.priority);
+  if (queryState.status) params.set("status", queryState.status);
+  if (queryState.statusGroup) params.set("statusGroup", queryState.statusGroup);
+  if (queryState.dateField && queryState.from && queryState.to) {
+    params.set("dateField", queryState.dateField);
+    params.set("from", queryState.from);
+    params.set("to", queryState.to);
+  } else {
+    params.set("sort", queryState.sort);
+    params.set("order", queryState.order);
+  }
+  params.set("page", String(queryState.page));
+  params.set("pageSize", String(queryState.pageSize));
+  return params.toString();
 }
 
 export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
@@ -82,11 +127,28 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
   // Consolidated Query State
   const [queryState, setQueryState] = useState<TicketQueryState>(() => ({
-    ...initialQueryState,
-    ...dashboardQueryState(location.search),
+    ...parseTicketQueryState(location.search),
   }));
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(
+    () => parseTicketQueryState(location.search).search
+  );
   const requestGeneration = useRef(0);
+
+  const updateQueryState = (
+    update: (previous: TicketQueryState) => TicketQueryState
+  ) => {
+    const next = update(queryState);
+    setQueryState(next);
+    const serialized = serializeTicketQueryState(next);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: serialized ? `?${serialized}` : "",
+        hash: location.hash,
+      },
+      { replace: true }
+    );
+  };
 
   // Debounce search input by 300ms [ui-spec.md Section 8]
   useEffect(() => {
@@ -190,24 +252,20 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   );
 
   useEffect(() => {
-    const filters = dashboardQueryState(location.search);
-    setQueryState((prev) => ({ ...prev, ...filters, page: 1 }));
-  }, [location.search]);
+    const restored = parseTicketQueryState(location.search);
+    setQueryState(restored);
+    setDebouncedSearch((current) =>
+      restored.search === queryState.search ? current : restored.search
+    );
+  }, [location.search, queryState.search]);
 
   const handleResetFilters = () => {
-    setQueryState((prev) => ({
-      ...prev,
-      search: "",
-      categoryId: "",
-      priority: "",
-      status: "",
-      statusGroup: "",
-      dateField: "",
-      from: "",
-      to: "",
-      page: 1,
-    }));
-    navigate("/tickets", { replace: true });
+    setQueryState(initialQueryState);
+    setDebouncedSearch("");
+    navigate(
+      { pathname: location.pathname, search: "", hash: location.hash },
+      { replace: true }
+    );
   };
 
   const handleSelectTicket = (ticketId: number) => {
@@ -254,7 +312,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 placeholder="Search number or summary"
                 value={queryState.search}
                 onChange={(e) => {
-                  setQueryState((prev) => ({
+                  updateQueryState((prev) => ({
                     ...prev,
                     search: e.target.value,
                     page: 1,
@@ -273,7 +331,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 className="form-select form-select-sm"
                 value={queryState.categoryId}
                 onChange={(e) => {
-                  setQueryState((prev) => ({
+                  updateQueryState((prev) => ({
                     ...prev,
                     categoryId: e.target.value,
                     page: 1,
@@ -299,7 +357,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 className="form-select form-select-sm"
                 value={queryState.priority}
                 onChange={(e) => {
-                  setQueryState((prev) => ({
+                  updateQueryState((prev) => ({
                     ...prev,
                     priority: e.target.value as TicketPriority | "",
                     page: 1,
@@ -323,7 +381,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                 className="form-select form-select-sm"
                 value={queryState.status}
                 onChange={(e) => {
-                  setQueryState((prev) => ({
+                  updateQueryState((prev) => ({
                     ...prev,
                     status: e.target.value as TicketStatus | "",
                     statusGroup: "",
@@ -366,7 +424,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   ? TICKET_STATUS_LABELS[queryState.status]
                   : queryState.statusGroup || "all statuses"}
                 {queryState.dateField
-                  ? ` · ${queryState.dateField === "updatedAt" ? "updated" : "resolved"} from ${queryState.from} to ${queryState.to}`
+                  ? ` · ${queryState.dateField === "updatedAt" ? "Updated" : "Resolved"} from ${formatBangkokDateTime(queryState.from)} to ${formatBangkokDateTime(queryState.to)} (Bangkok)`
                   : ""}
               </span>
               <button
@@ -382,50 +440,59 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
           {/* Sort Options Strip */}
           <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
             <div className="col-12 d-flex align-items-center gap-2">
-              <label htmlFor="sort-select" className="mb-0">
-                Sort by:
-              </label>
-              <select
-                id="sort-select"
-                className="form-select form-select-sm"
-                disabled={Boolean(queryState.dateField)}
-                style={{ width: "auto" }}
-                value={queryState.sort}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    sort: e.target.value as
-                      | "updatedAt"
-                      | "createdAt"
-                      | "number",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="updatedAt">Last Updated</option>
-                <option value="createdAt">Creation Date</option>
-                <option value="number">Ticket Number</option>
-              </select>
-              <label htmlFor="order-select" className="visually-hidden">
-                Sort order
-              </label>
-              <select
-                id="order-select"
-                className="form-select form-select-sm"
-                disabled={Boolean(queryState.dateField)}
-                style={{ width: "auto" }}
-                value={queryState.order}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    order: e.target.value as "asc" | "desc",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
+              {queryState.dateField ? (
+                <span data-testid="ticket-fixed-sort">
+                  {queryState.dateField === "resolvedAt"
+                    ? "Resolution time"
+                    : "Last updated"}{" "}
+                  — newest first
+                </span>
+              ) : (
+                <>
+                  <label htmlFor="sort-select" className="mb-0">
+                    Sort by:
+                  </label>
+                  <select
+                    id="sort-select"
+                    className="form-select form-select-sm"
+                    style={{ width: "auto" }}
+                    value={queryState.sort}
+                    onChange={(e) => {
+                      updateQueryState((prev) => ({
+                        ...prev,
+                        sort: e.target.value as
+                          | "updatedAt"
+                          | "createdAt"
+                          | "number",
+                        page: 1,
+                      }));
+                    }}
+                  >
+                    <option value="updatedAt">Last Updated</option>
+                    <option value="createdAt">Creation Date</option>
+                    <option value="number">Ticket Number</option>
+                  </select>
+                  <label htmlFor="order-select" className="visually-hidden">
+                    Sort order
+                  </label>
+                  <select
+                    id="order-select"
+                    className="form-select form-select-sm"
+                    style={{ width: "auto" }}
+                    value={queryState.order}
+                    onChange={(e) => {
+                      updateQueryState((prev) => ({
+                        ...prev,
+                        order: e.target.value as "asc" | "desc",
+                        page: 1,
+                      }));
+                    }}
+                  >
+                    <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
+                  </select>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -770,7 +837,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   style={{ width: "auto" }}
                   value={queryState.pageSize}
                   onChange={(e) => {
-                    setQueryState((prev) => ({
+                    updateQueryState((prev) => ({
                       ...prev,
                       pageSize: Number(e.target.value),
                       page: 1,
@@ -791,7 +858,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page <= 1}
                   onClick={() =>
-                    setQueryState((prev) => ({
+                    updateQueryState((prev) => ({
                       ...prev,
                       page: Math.max(1, prev.page - 1),
                     }))
@@ -812,7 +879,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   className="btn btn-zen-secondary btn-sm"
                   disabled={queryState.page >= totalPages || totalPages === 0}
                   onClick={() =>
-                    setQueryState((prev) => ({
+                    updateQueryState((prev) => ({
                       ...prev,
                       page: Math.min(totalPages, prev.page + 1),
                     }))

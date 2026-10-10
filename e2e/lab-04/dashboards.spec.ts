@@ -574,6 +574,97 @@ test("empty requester dashboard keeps zero cards and useful empty lists", async 
   await capture(page, "requester-empty-desktop");
 });
 
+test("Requester My Tickets preserves changed filters and page through reload, detail return and browser-back", async ({
+  page,
+}) => {
+  const requester = await db.user.findUniqueOrThrow({
+    where: { email: DASHBOARD_ACCOUNTS.requester.email },
+  });
+  const category = await db.category.findFirstOrThrow();
+  const system = await db.relatedSystem.findFirstOrThrow();
+  const instant = new Date(Date.now() - 30000);
+  await db.ticket.createMany({
+    data: Array.from({ length: 12 }, (_, index) => ({
+      number: `TKT-QUERY-${String(index + 1).padStart(5, "0")}`,
+      requesterId: requester.id,
+      categoryId: category.id,
+      systemId: system.id,
+      summary: `Restorable dashboard ticket ${index + 1}`,
+      description: "Requester query persistence fixture",
+      requestedPriority: "HIGH",
+      itPriority: "MEDIUM",
+      status: "OPEN",
+      createdAt: new Date(instant.getTime() + index),
+      updatedAt: instant,
+    })),
+  });
+
+  await signIn(page, "requester");
+  const openCard = page.getByLabel("My Open Tickets: 17", { exact: true });
+  await expect(openCard).toBeVisible();
+  await openCard.click();
+  await expect(page).toHaveURL(/\/tickets\?statusGroup=open/);
+
+  await page.getByPlaceholder("Search number or summary").fill("Restorable");
+  await page
+    .getByLabel("Filter by category")
+    .selectOption({ label: "Account and Access" });
+  await page.getByLabel("Filter by priority").selectOption("HIGH");
+  await page.getByLabel("Filter by status").selectOption("OPEN");
+  await page.getByLabel("Sort by:").selectOption("createdAt");
+  await page.getByLabel("Sort order").selectOption("asc");
+  await page.getByLabel("Page size", { exact: true }).selectOption("5");
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  const filteredUrl = page.url();
+  const filters = new URL(filteredUrl).searchParams;
+  expect(filters.get("search")).toBe("Restorable");
+  expect(filters.get("categoryId")).toBe(String(category.id));
+  expect(filters.get("priority")).toBe("HIGH");
+  expect(filters.get("status")).toBe("OPEN");
+  expect(filters.get("sort")).toBe("createdAt");
+  expect(filters.get("order")).toBe("asc");
+  expect(filters.get("page")).toBe("2");
+  expect(filters.get("pageSize")).toBe("5");
+  expect(filters.has("statusGroup")).toBe(false);
+
+  await page.reload();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByPlaceholder("Search number or summary")).toHaveValue(
+    "Restorable"
+  );
+  await expect(page.getByLabel("Filter by category")).toHaveValue(
+    String(category.id)
+  );
+  await expect(page.getByLabel("Filter by priority")).toHaveValue("HIGH");
+  await expect(page.getByLabel("Filter by status")).toHaveValue("OPEN");
+  await expect(page.getByLabel("Sort by:")).toHaveValue("createdAt");
+  await expect(page.getByLabel("Sort order")).toHaveValue("asc");
+  await expect(page.getByLabel("Page size", { exact: true })).toHaveValue("5");
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  await page.getByRole("button", { name: "View" }).first().click();
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
+  await page.getByRole("button", { name: "Back to My Tickets" }).click();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  await page.getByRole("button", { name: "View" }).first().click();
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+});
+
 test("loading, stale refresh and safe failure retry are visible without replacing real counts", async ({
   page,
 }) => {

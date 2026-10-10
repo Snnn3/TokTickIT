@@ -19,6 +19,30 @@ let app: Express;
 let accounts: Awaited<ReturnType<typeof seedDashboardAccounts>>;
 const queries: Prisma.QueryEvent[] = [];
 
+function requesterQueryBreakdown(sql: Prisma.QueryEvent[]) {
+  const metricReads = sql.filter(
+    ({ query }) =>
+      /^SELECT/i.test(query) &&
+      /FROM "public"\."Ticket"/.test(query) &&
+      /COUNT\s*\(/i.test(query)
+  );
+  const collectionReads = sql.filter(
+    ({ query }) =>
+      /^SELECT/i.test(query) &&
+      /FROM "public"\."Ticket"/.test(query) &&
+      /ORDER BY/i.test(query) &&
+      !/COUNT|GROUP BY/i.test(query)
+  );
+  const standaloneRelationReads = sql.filter(
+    ({ query }) => /^SELECT/i.test(query) && /FROM "public"\."User"/.test(query)
+  );
+  return {
+    metricQueries: metricReads.length,
+    collectionQueries: collectionReads.length,
+    standaloneRelationQueries: standaloneRelationReads.length,
+  };
+}
+
 beforeAll(async () => {
   database = await createDisposableDatabase();
   process.env.DATABASE_URL = database.url;
@@ -50,14 +74,18 @@ async function populatePerformanceFixture() {
   const instant = new Date(Date.now() - 60000);
   await db.$executeRaw`
     INSERT INTO "Ticket" ("number", "requesterId", "ownerId", "categoryId", "systemId",
-      "summary", "description", "requestedPriority", "itPriority", "status", "createdAt", "updatedAt")
+      "summary", "description", "requestedPriority", "itPriority", "status", "createdAt", "updatedAt", "resolvedAt")
     SELECT 'PERF-' || lpad(g::text, 5, '0'), ${accounts.requester.id},
       CASE WHEN g % 3 = 0 THEN NULL WHEN g % 3 = 1 THEN ${accounts.staff.id} ELSE ${accounts.secondStaff.id} END,
       ${category.id}, ${accounts.system.id}, 'Performance ticket ' || g, 'Dashboard scale fixture',
-      'MEDIUM'::"TicketPriority", 'HIGH'::"TicketPriority",
-      (ARRAY['NEW','OPEN','IN_PROGRESS','WAITING_FOR_REQUESTER','RESOLVED','CLOSED','REOPENED','CANCELLED']::"TicketStatus"[])[1 + ((g-1) % 8)],
-      ${instant}, ${instant}
-    FROM generate_series(1, 10000) AS g
+      'MEDIUM'::"TicketPriority", 'HIGH'::"TicketPriority", status,
+      ${instant}, ${instant},
+      CASE WHEN status IN ('RESOLVED'::"TicketStatus", 'CLOSED'::"TicketStatus") THEN ${instant} ELSE NULL END
+    FROM (
+      SELECT g,
+        (ARRAY['NEW','OPEN','IN_PROGRESS','WAITING_FOR_REQUESTER','RESOLVED','CLOSED','REOPENED','CANCELLED']::"TicketStatus"[])[1 + ((g-1) % 8)] AS status
+      FROM generate_series(1, 10000) AS g
+    ) AS fixture
   `;
   await db.$executeRaw`
     INSERT INTO "ActionTaken" ("ticketId", "title", "details", "performedById", "assigneeId",
@@ -614,6 +642,7 @@ describe("P4-01 Staff Dashboard and Issue #60 Requester Dashboard", () => {
     });
     await resetDashboardTickets(db);
     const small = await fetchRequesterSnapshot(cookie);
+    const smallBreakdown = requesterQueryBreakdown(small.sql);
     await populatePerformanceFixture();
     expect(await db.ticket.count()).toBe(10000);
     expect(await db.actionTaken.count()).toBe(30000);
@@ -643,21 +672,24 @@ describe("P4-01 Staff Dashboard and Issue #60 Requester Dashboard", () => {
       const { response, milliseconds, sql } =
         await fetchRequesterSnapshot(cookie);
       expect(response.body.metrics).toEqual(expected);
-      expect(sql.length).toBe(small.sql.length);
       expect(sql.length).toBeLessThanOrEqual(16);
-      const collectionReads = sql.filter(
+      const queryBreakdown = requesterQueryBreakdown(sql);
+      expect(queryBreakdown.metricQueries).toBe(4);
+      expect(queryBreakdown.collectionQueries).toBe(3);
+      for (const { query } of sql.filter(
         ({ query }) =>
-          /^SELECT/.test(query) &&
+          /^SELECT/i.test(query) &&
           /FROM "public"\."Ticket"/.test(query) &&
           /ORDER BY/i.test(query) &&
           !/COUNT|GROUP BY/i.test(query)
-      );
-      expect(collectionReads).toHaveLength(3);
-      for (const { query } of collectionReads) expect(query).toContain("LIMIT");
+      )) {
+        expect(query).toContain("LIMIT");
+      }
       samples.push({
         milliseconds,
         bytes: Buffer.byteLength(response.text, "utf8"),
         queryCount: sql.length,
+        ...queryBreakdown,
       });
     }
     const sorted = samples
@@ -699,6 +731,7 @@ describe("P4-01 Staff Dashboard and Issue #60 Requester Dashboard", () => {
             maxQueries: 16,
           },
           smallFixtureQueryCount: small.sql.length,
+          smallFixtureQueryBreakdown: smallBreakdown,
           samples,
         },
         null,
