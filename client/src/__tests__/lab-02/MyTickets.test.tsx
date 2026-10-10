@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { MyTickets } from "../../components/MyTickets";
 import { AuthHarnessProvider, testUser } from "../../test/authHarness";
@@ -73,6 +79,73 @@ function AuthenticatedWrapper({
       </AuthHarnessProvider>
     </MemoryRouter>
   );
+}
+
+function BrowserBackButton() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Browser back
+    </button>
+  );
+}
+
+function AuthenticatedHistoryWrapper({ children }: { children: ReactNode }) {
+  return (
+    <MemoryRouter
+      initialEntries={[
+        "/tickets?status=OPEN",
+        "/tickets?status=WAITING_FOR_REQUESTER",
+      ]}
+      initialIndex={1}
+    >
+      <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+        {children}
+        <BrowserBackButton />
+        <CurrentLocation />
+      </AuthHarnessProvider>
+    </MemoryRouter>
+  );
+}
+
+function mockPendingTicketError() {
+  let releaseErrorBody!: (body: { error: { message: string } }) => void;
+  const pendingErrorBody = new Promise<{ error: { message: string } }>(
+    (resolve) => {
+      releaseErrorBody = resolve;
+    }
+  );
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes("/api/reference/categories")) {
+      return {
+        ok: true,
+        json: async () => ({ categories: mockCategories }),
+      } as Response;
+    }
+    if (url.includes("status=WAITING_FOR_REQUESTER")) {
+      return {
+        ok: false,
+        json: () => pendingErrorBody,
+      } as Response;
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        tickets: [
+          { ...mockTickets[0], summary: "Current tickets", status: "OPEN" },
+        ],
+        page: 1,
+        pageSize: 10,
+        total: 30,
+        totalPages: 3,
+      }),
+    } as Response;
+  });
+  return {
+    pendingErrorBody,
+    releaseErrorBody,
+  };
 }
 
 describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
@@ -552,5 +625,93 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
       expect(ticketRequest).toContain("page=2");
       expect(ticketRequest).toContain("pageSize=5");
     });
+  });
+
+  it("ignores an obsolete error body after a newer filter request succeeds", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Filter by status/i }),
+      "OPEN"
+    );
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
+  });
+
+  it("keeps cleared-filter results when a prior error body finishes parsing", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.click(
+      screen.getAllByRole("button", { name: "Clear filters" })[0]
+    );
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
+  });
+
+  it("keeps browser-back results when an earlier error body finishes parsing", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedHistoryWrapper>
+        <MyTickets />
+      </AuthenticatedHistoryWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.click(screen.getByRole("button", { name: "Browser back" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location")).toHaveTextContent(
+        "/tickets?status=OPEN"
+      );
+    });
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
   });
 });

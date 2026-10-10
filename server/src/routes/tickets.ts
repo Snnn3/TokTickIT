@@ -422,7 +422,12 @@ function validateTicketQuery(
   }
 
   // Parse and validate sort
-  const allowedSorts = ["updatedAt", "createdAt", "number"];
+  const allowedSorts = [
+    "updatedAt",
+    "createdAt",
+    "number",
+    ...(dateField ? [dateField] : []),
+  ];
   let sort = "updatedAt";
   if (query.sort !== undefined) {
     const s = String(query.sort);

@@ -96,9 +96,12 @@ function parseTicketQueryState(search: string): TicketQueryState {
   };
 }
 
-function serializeTicketQueryState(queryState: TicketQueryState): string {
+function serializeTicketQueryState(
+  queryState: TicketQueryState,
+  search = queryState.search
+): string {
   const params = new URLSearchParams();
-  if (queryState.search.trim()) params.set("search", queryState.search);
+  if (search.trim()) params.set("search", search);
   if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
   if (queryState.priority) params.set("priority", queryState.priority);
   if (queryState.status) params.set("status", queryState.status);
@@ -129,6 +132,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [queryState, setQueryState] = useState<TicketQueryState>(() => ({
     ...parseTicketQueryState(location.search),
   }));
+  const queryStateRef = useRef(queryState);
   const [debouncedSearch, setDebouncedSearch] = useState(
     () => parseTicketQueryState(location.search).search
   );
@@ -137,7 +141,8 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const updateQueryState = (
     update: (previous: TicketQueryState) => TicketQueryState
   ) => {
-    const next = update(queryState);
+    const next = update(queryStateRef.current);
+    queryStateRef.current = next;
     setQueryState(next);
     const serialized = serializeTicketQueryState(next);
     navigate(
@@ -180,30 +185,28 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     setLoading(true);
     setError(null);
 
-    const params = new URLSearchParams();
-    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
-    if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
-    if (queryState.priority) params.set("priority", queryState.priority);
-    if (queryState.status) params.set("status", queryState.status);
-    if (queryState.statusGroup)
-      params.set("statusGroup", queryState.statusGroup);
-    if (queryState.dateField && queryState.from && queryState.to) {
-      params.set("dateField", queryState.dateField);
-      params.set("from", queryState.from);
-      params.set("to", queryState.to);
-    } else {
-      if (queryState.sort) params.set("sort", queryState.sort);
-      if (queryState.order) params.set("order", queryState.order);
-    }
-    params.set("page", String(queryState.page));
-    params.set("pageSize", String(queryState.pageSize));
+    const params = serializeTicketQueryState({
+      search: debouncedSearch.trim(),
+      categoryId: queryState.categoryId,
+      priority: queryState.priority,
+      status: queryState.status,
+      statusGroup: queryState.statusGroup,
+      dateField: queryState.dateField,
+      from: queryState.from,
+      to: queryState.to,
+      sort: queryState.sort,
+      order: queryState.order,
+      page: queryState.page,
+      pageSize: queryState.pageSize,
+    });
 
     try {
-      const res = await fetch(`/api/tickets?${params.toString()}`);
+      const res = await fetch(`/api/tickets?${params}`);
       if (generation !== requestGeneration.current) return;
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (generation !== requestGeneration.current) return;
         setError(data?.error?.message || "Failed to load tickets.");
         setTickets([]);
         setTotal(0);
@@ -253,13 +256,16 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
 
   useEffect(() => {
     const restored = parseTicketQueryState(location.search);
+    const previousSearch = queryStateRef.current.search;
+    queryStateRef.current = restored;
     setQueryState(restored);
-    setDebouncedSearch((current) =>
-      restored.search === queryState.search ? current : restored.search
-    );
-  }, [location.search, queryState.search]);
+    if (restored.search !== previousSearch) {
+      setDebouncedSearch(restored.search);
+    }
+  }, [location.search]);
 
   const handleResetFilters = () => {
+    queryStateRef.current = initialQueryState;
     setQueryState(initialQueryState);
     setDebouncedSearch("");
     navigate(

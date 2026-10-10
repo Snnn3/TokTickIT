@@ -1,8 +1,8 @@
 {
   "testId": "P4-01",
   "scope": "Staff endpoint only; Requester coverage belongs to Issue #60",
-  "measuredAt": "2026-10-10T09:28:40.609Z",
-  "commit": "17ee0f8c405f9d89c5b22b15e2d4dd430fdae85f",
+  "measuredAt": "2026-10-10T14:17:46.341Z",
+  "commit": "9388984cb9058fe0fb0d06257d7c921d03831bf5",
   "workingTreeChanges": true,
   "runtime": {
     "node": "v24.14.1",
@@ -23,7 +23,7 @@
   "concurrency": 1,
   "warmupRequests": 3,
   "measuredRequests": 20,
-  "p95Milliseconds": 215.6602999999959,
+  "p95Milliseconds": 98.40940000000046,
   "budgets": {
     "p95Milliseconds": 1000,
     "responseBytes": 65536,
@@ -32,210 +32,210 @@
   "smallFixtureQueryCount": 15,
   "samples": [
     {
-      "milliseconds": 133.39650000000256,
+      "milliseconds": 82.47539999999935,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 132.5341000000044,
+      "milliseconds": 88.6244000000006,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 152.35169999999925,
+      "milliseconds": 78.39040000000023,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 174.60589999999502,
+      "milliseconds": 77.06450000000041,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 140.63850000000093,
+      "milliseconds": 74.61909999999989,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 198.85899999999674,
+      "milliseconds": 71.30370000000039,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 215.6602999999959,
+      "milliseconds": 73.41439999999784,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 195.54260000000068,
+      "milliseconds": 69.42629999999917,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 228.89710000000196,
+      "milliseconds": 82.62900000000081,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 191.6304999999993,
+      "milliseconds": 84.55029999999897,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 143.4528999999966,
+      "milliseconds": 87.6278999999995,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 170.2600999999995,
+      "milliseconds": 80.33289999999761,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 153.2600999999995,
+      "milliseconds": 80.9877000000015,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 142.6935999999987,
+      "milliseconds": 93.26870000000054,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 165.36439999999857,
+      "milliseconds": 116.11839999999938,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 162.09339999999793,
+      "milliseconds": 98.40940000000046,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 133.41330000000016,
+      "milliseconds": 83.86900000000242,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 129.72720000000118,
+      "milliseconds": 83.58970000000045,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 127.05049999999756,
+      "milliseconds": 78.22839999999997,
       "bytes": 3772,
       "queryCount": 15
     },
     {
-      "milliseconds": 138.98099999999977,
+      "milliseconds": 78.25800000000163,
       "bytes": 3772,
       "queryCount": 15
     }
   ],
   "queries": [
     {
-      "timestamp": "2026-10-10T09:28:40.282Z",
+      "timestamp": "2026-10-10T14:17:46.182Z",
       "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"email\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\", \"public\".\"User\".\"mustChangePassword\", \"public\".\"User\".\"tokenVersion\" FROM \"public\".\"User\" WHERE (\"public\".\"User\".\"id\" = $1 AND 1=1) LIMIT $2 OFFSET $3",
       "params": "[1,1,0]",
       "duration": 2,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.288Z",
+      "timestamp": "2026-10-10T14:17:46.185Z",
       "query": "BEGIN",
       "params": "[]",
-      "duration": 2,
+      "duration": 1,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.291Z",
+      "timestamp": "2026-10-10T14:17:46.187Z",
       "query": "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
       "params": "[]",
-      "duration": 4,
+      "duration": 1,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.304Z",
+      "timestamp": "2026-10-10T14:17:46.195Z",
       "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"Ticket\".\"id\" FROM \"public\".\"Ticket\" WHERE \"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) OFFSET $6) AS \"sub\"",
       "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",0]",
-      "duration": 5,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.309Z",
-      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"Ticket\".\"id\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"ownerId\" IS NULL) OFFSET $6) AS \"sub\"",
-      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",0]",
-      "duration": 5,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.314Z",
-      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"Ticket\".\"id\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"ownerId\" = $6) OFFSET $7) AS \"sub\"",
-      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",1,0]",
-      "duration": 4,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.335Z",
-      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"ActionTaken\".\"id\" FROM \"public\".\"ActionTaken\" WHERE (\"public\".\"ActionTaken\".\"performedById\" = $1 AND \"public\".\"ActionTaken\".\"status\" IN (CAST($2::text AS \"public\".\"ActionStatus\"),CAST($3::text AS \"public\".\"ActionStatus\"))) OFFSET $4) AS \"sub\"",
-      "params": "[1,\"PLANNED\",\"IN_PROGRESS\",0]",
-      "duration": 21,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.375Z",
-      "query": "SELECT \"public\".\"Ticket\".\"id\", \"public\".\"Ticket\".\"number\", \"public\".\"Ticket\".\"summary\", \"public\".\"Ticket\".\"status\"::text, \"public\".\"Ticket\".\"requestedPriority\"::text, \"public\".\"Ticket\".\"itPriority\"::text, \"public\".\"Ticket\".\"ownerId\", \"public\".\"Ticket\".\"version\", \"public\".\"Ticket\".\"createdAt\", \"public\".\"Ticket\".\"updatedAt\", \"public\".\"Ticket\".\"resolvedAt\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"updatedAt\" >= $6 AND \"public\".\"Ticket\".\"updatedAt\" <= $7) ORDER BY \"public\".\"Ticket\".\"updatedAt\" DESC, \"public\".\"Ticket\".\"id\" DESC LIMIT $8 OFFSET $9",
-      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",\"2026-10-03 09:28:40.283 UTC\",\"2026-10-10 09:28:40.283 UTC\",5,0]",
-      "duration": 39,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.378Z",
-      "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\" FROM \"public\".\"User\" WHERE \"public\".\"User\".\"id\" IN ($1,$2) OFFSET $3",
-      "params": "[2,1,0]",
-      "duration": 2,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.382Z",
-      "query": "SELECT \"public\".\"ActionTaken\".\"id\", \"public\".\"ActionTaken\".\"seedKey\", \"public\".\"ActionTaken\".\"ticketId\", \"public\".\"ActionTaken\".\"title\", \"public\".\"ActionTaken\".\"details\", \"public\".\"ActionTaken\".\"result\", \"public\".\"ActionTaken\".\"performedById\", \"public\".\"ActionTaken\".\"assigneeId\", \"public\".\"ActionTaken\".\"status\"::text, \"public\".\"ActionTaken\".\"followUpRequired\", \"public\".\"ActionTaken\".\"followUpNote\", \"public\".\"ActionTaken\".\"attachmentNotes\", \"public\".\"ActionTaken\".\"version\", \"public\".\"ActionTaken\".\"createdAt\", \"public\".\"ActionTaken\".\"updatedAt\", \"public\".\"ActionTaken\".\"completedAt\" FROM \"public\".\"ActionTaken\" WHERE (\"public\".\"ActionTaken\".\"performedById\" = $1 AND \"public\".\"ActionTaken\".\"createdAt\" >= $2 AND \"public\".\"ActionTaken\".\"createdAt\" <= $3) ORDER BY \"public\".\"ActionTaken\".\"createdAt\" DESC, \"public\".\"ActionTaken\".\"id\" DESC LIMIT $4 OFFSET $5",
-      "params": "[1,\"2026-10-03 09:28:40.283 UTC\",\"2026-10-10 09:28:40.283 UTC\",5,0]",
-      "duration": 2,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.385Z",
-      "query": "SELECT \"public\".\"Ticket\".\"id\", \"public\".\"Ticket\".\"number\" FROM \"public\".\"Ticket\" WHERE \"public\".\"Ticket\".\"id\" IN ($1,$2,$3,$4,$5) OFFSET $6",
-      "params": "[10026,10023,10020,10017,10014,0]",
-      "duration": 2,
-      "target": "quaint::connector::metrics"
-    },
-    {
-      "timestamp": "2026-10-10T09:28:40.389Z",
-      "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\" FROM \"public\".\"User\" WHERE \"public\".\"User\".\"id\" IN ($1) OFFSET $2",
-      "params": "[1,0]",
       "duration": 3,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.392Z",
+      "timestamp": "2026-10-10T14:17:46.197Z",
+      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"Ticket\".\"id\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"ownerId\" IS NULL) OFFSET $6) AS \"sub\"",
+      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",0]",
+      "duration": 2,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.201Z",
+      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"Ticket\".\"id\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"ownerId\" = $6) OFFSET $7) AS \"sub\"",
+      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",1,0]",
+      "duration": 2,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.211Z",
+      "query": "SELECT COUNT(*) AS \"_count$_all\" FROM (SELECT \"public\".\"ActionTaken\".\"id\" FROM \"public\".\"ActionTaken\" WHERE (\"public\".\"ActionTaken\".\"performedById\" = $1 AND \"public\".\"ActionTaken\".\"status\" IN (CAST($2::text AS \"public\".\"ActionStatus\"),CAST($3::text AS \"public\".\"ActionStatus\"))) OFFSET $4) AS \"sub\"",
+      "params": "[1,\"PLANNED\",\"IN_PROGRESS\",0]",
+      "duration": 10,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.229Z",
+      "query": "SELECT \"public\".\"Ticket\".\"id\", \"public\".\"Ticket\".\"number\", \"public\".\"Ticket\".\"summary\", \"public\".\"Ticket\".\"status\"::text, \"public\".\"Ticket\".\"requestedPriority\"::text, \"public\".\"Ticket\".\"itPriority\"::text, \"public\".\"Ticket\".\"ownerId\", \"public\".\"Ticket\".\"version\", \"public\".\"Ticket\".\"createdAt\", \"public\".\"Ticket\".\"updatedAt\", \"public\".\"Ticket\".\"resolvedAt\" FROM \"public\".\"Ticket\" WHERE (\"public\".\"Ticket\".\"status\" IN (CAST($1::text AS \"public\".\"TicketStatus\"),CAST($2::text AS \"public\".\"TicketStatus\"),CAST($3::text AS \"public\".\"TicketStatus\"),CAST($4::text AS \"public\".\"TicketStatus\"),CAST($5::text AS \"public\".\"TicketStatus\")) AND \"public\".\"Ticket\".\"updatedAt\" >= $6 AND \"public\".\"Ticket\".\"updatedAt\" <= $7) ORDER BY \"public\".\"Ticket\".\"updatedAt\" DESC, \"public\".\"Ticket\".\"id\" DESC LIMIT $8 OFFSET $9",
+      "params": "[\"NEW\",\"OPEN\",\"IN_PROGRESS\",\"WAITING_FOR_REQUESTER\",\"REOPENED\",\"2026-10-03 14:17:46.183 UTC\",\"2026-10-10 14:17:46.183 UTC\",5,0]",
+      "duration": 17,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.231Z",
+      "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\" FROM \"public\".\"User\" WHERE \"public\".\"User\".\"id\" IN ($1,$2) OFFSET $3",
+      "params": "[2,1,0]",
+      "duration": 1,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.234Z",
+      "query": "SELECT \"public\".\"ActionTaken\".\"id\", \"public\".\"ActionTaken\".\"seedKey\", \"public\".\"ActionTaken\".\"ticketId\", \"public\".\"ActionTaken\".\"title\", \"public\".\"ActionTaken\".\"details\", \"public\".\"ActionTaken\".\"result\", \"public\".\"ActionTaken\".\"performedById\", \"public\".\"ActionTaken\".\"assigneeId\", \"public\".\"ActionTaken\".\"status\"::text, \"public\".\"ActionTaken\".\"followUpRequired\", \"public\".\"ActionTaken\".\"followUpNote\", \"public\".\"ActionTaken\".\"attachmentNotes\", \"public\".\"ActionTaken\".\"version\", \"public\".\"ActionTaken\".\"createdAt\", \"public\".\"ActionTaken\".\"updatedAt\", \"public\".\"ActionTaken\".\"completedAt\" FROM \"public\".\"ActionTaken\" WHERE (\"public\".\"ActionTaken\".\"performedById\" = $1 AND \"public\".\"ActionTaken\".\"createdAt\" >= $2 AND \"public\".\"ActionTaken\".\"createdAt\" <= $3) ORDER BY \"public\".\"ActionTaken\".\"createdAt\" DESC, \"public\".\"ActionTaken\".\"id\" DESC LIMIT $4 OFFSET $5",
+      "params": "[1,\"2026-10-03 14:17:46.183 UTC\",\"2026-10-10 14:17:46.183 UTC\",5,0]",
+      "duration": 2,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.236Z",
+      "query": "SELECT \"public\".\"Ticket\".\"id\", \"public\".\"Ticket\".\"number\" FROM \"public\".\"Ticket\" WHERE \"public\".\"Ticket\".\"id\" IN ($1,$2,$3,$4,$5) OFFSET $6",
+      "params": "[10046,10043,10040,10037,10034,0]",
+      "duration": 1,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.238Z",
+      "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\" FROM \"public\".\"User\" WHERE \"public\".\"User\".\"id\" IN ($1) OFFSET $2",
+      "params": "[1,0]",
+      "duration": 1,
+      "target": "quaint::connector::metrics"
+    },
+    {
+      "timestamp": "2026-10-10T14:17:46.240Z",
       "query": "SELECT \"public\".\"User\".\"id\", \"public\".\"User\".\"name\", \"public\".\"User\".\"role\"::text, \"public\".\"User\".\"isActive\" FROM \"public\".\"User\" WHERE \"public\".\"User\".\"id\" IN ($1) OFFSET $2",
       "params": "[2,0]",
-      "duration": 2,
+      "duration": 1,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.402Z",
+      "timestamp": "2026-10-10T14:17:46.245Z",
       "query": "SELECT COUNT(*) AS \"_count$_all\", \"public\".\"Ticket\".\"status\"::text FROM \"public\".\"Ticket\" WHERE 1=1 GROUP BY \"public\".\"Ticket\".\"status\" OFFSET $1",
       "params": "[0]",
-      "duration": 9,
+      "duration": 4,
       "target": "quaint::connector::metrics"
     },
     {
-      "timestamp": "2026-10-10T09:28:40.407Z",
+      "timestamp": "2026-10-10T14:17:46.248Z",
       "query": "COMMIT",
       "params": "[]",
-      "duration": 2,
+      "duration": 1,
       "target": "quaint::connector::metrics"
     }
   ],
@@ -252,8 +252,8 @@
               "Total Cost": 8.17,
               "Plan Rows": 1,
               "Plan Width": 332,
-              "Actual Startup Time": 0.074,
-              "Actual Total Time": 0.075,
+              "Actual Startup Time": 0.087,
+              "Actual Total Time": 0.091,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Shared Hit Blocks": 2,
@@ -280,8 +280,8 @@
                   "Total Cost": 8.17,
                   "Plan Rows": 1,
                   "Plan Width": 332,
-                  "Actual Startup Time": 0.073,
-                  "Actual Total Time": 0.073,
+                  "Actual Startup Time": 0.086,
+                  "Actual Total Time": 0.088,
                   "Actual Rows": 1,
                   "Actual Loops": 1,
                   "Index Cond": "(id = '1'::bigint)",
@@ -311,9 +311,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.147,
+            "Planning Time": 0.107,
             "Triggers": [],
-            "Execution Time": 0.299
+            "Execution Time": 0.14
           }
         ]
       }
@@ -328,15 +328,15 @@
               "Partial Mode": "Simple",
               "Parallel Aware": false,
               "Async Capable": false,
-              "Startup Cost": 661.81,
-              "Total Cost": 661.82,
+              "Startup Cost": 662.81,
+              "Total Cost": 662.82,
               "Plan Rows": 1,
               "Plan Width": 8,
-              "Actual Startup Time": 3.67,
-              "Actual Total Time": 3.673,
+              "Actual Startup Time": 2.076,
+              "Actual Total Time": 2.079,
               "Actual Rows": 1,
               "Actual Loops": 1,
-              "Shared Hit Blocks": 215,
+              "Shared Hit Blocks": 216,
               "Shared Read Blocks": 0,
               "Shared Dirtied Blocks": 0,
               "Shared Written Blocks": 0,
@@ -355,18 +355,18 @@
                   "Relation Name": "Ticket",
                   "Alias": "Ticket",
                   "Startup Cost": 120.87,
-                  "Total Cost": 583.68,
+                  "Total Cost": 584.68,
                   "Plan Rows": 6250,
                   "Plan Width": 4,
-                  "Actual Startup Time": 0.435,
-                  "Actual Total Time": 2.749,
+                  "Actual Startup Time": 0.448,
+                  "Actual Total Time": 1.651,
                   "Actual Rows": 6250,
                   "Actual Loops": 1,
                   "Recheck Cond": "(status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"]))",
                   "Rows Removed by Index Recheck": 0,
-                  "Exact Heap Blocks": 205,
+                  "Exact Heap Blocks": 206,
                   "Lossy Heap Blocks": 0,
-                  "Shared Hit Blocks": 215,
+                  "Shared Hit Blocks": 216,
                   "Shared Read Blocks": 0,
                   "Shared Dirtied Blocks": 0,
                   "Shared Written Blocks": 0,
@@ -387,9 +387,9 @@
                       "Total Cost": 119.31,
                       "Plan Rows": 6250,
                       "Plan Width": 0,
-                      "Actual Startup Time": 0.394,
-                      "Actual Total Time": 0.395,
-                      "Actual Rows": 6268,
+                      "Actual Startup Time": 0.406,
+                      "Actual Total Time": 0.408,
+                      "Actual Rows": 6276,
                       "Actual Loops": 1,
                       "Index Cond": "(status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"]))",
                       "Shared Hit Blocks": 10,
@@ -419,9 +419,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.258,
+            "Planning Time": 0.179,
             "Triggers": [],
-            "Execution Time": 3.863
+            "Execution Time": 2.179
           }
         ]
       }
@@ -436,15 +436,15 @@
               "Partial Mode": "Simple",
               "Parallel Aware": false,
               "Async Capable": false,
-              "Startup Cost": 355.49,
-              "Total Cost": 355.5,
+              "Startup Cost": 356.49,
+              "Total Cost": 356.5,
               "Plan Rows": 1,
               "Plan Width": 8,
-              "Actual Startup Time": 1.325,
-              "Actual Total Time": 1.327,
+              "Actual Startup Time": 1.064,
+              "Actual Total Time": 1.065,
               "Actual Rows": 1,
               "Actual Loops": 1,
-              "Shared Hit Blocks": 210,
+              "Shared Hit Blocks": 211,
               "Shared Read Blocks": 0,
               "Shared Dirtied Blocks": 0,
               "Shared Written Blocks": 0,
@@ -463,18 +463,18 @@
                   "Relation Name": "Ticket",
                   "Alias": "Ticket",
                   "Startup Cost": 38.53,
-                  "Total Cost": 329.45,
+                  "Total Cost": 330.45,
                   "Plan Rows": 2083,
                   "Plan Width": 4,
-                  "Actual Startup Time": 0.225,
-                  "Actual Total Time": 1.047,
+                  "Actual Startup Time": 0.165,
+                  "Actual Total Time": 0.871,
                   "Actual Rows": 2084,
                   "Actual Loops": 1,
                   "Recheck Cond": "((\"ownerId\" IS NULL) AND (status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"])))",
                   "Rows Removed by Index Recheck": 0,
-                  "Exact Heap Blocks": 205,
+                  "Exact Heap Blocks": 206,
                   "Lossy Heap Blocks": 0,
-                  "Shared Hit Blocks": 210,
+                  "Shared Hit Blocks": 211,
                   "Shared Read Blocks": 0,
                   "Shared Dirtied Blocks": 0,
                   "Shared Written Blocks": 0,
@@ -495,8 +495,8 @@
                       "Total Cost": 38,
                       "Plan Rows": 2083,
                       "Plan Width": 0,
-                      "Actual Startup Time": 0.185,
-                      "Actual Total Time": 0.186,
+                      "Actual Startup Time": 0.131,
+                      "Actual Total Time": 0.132,
                       "Actual Rows": 2086,
                       "Actual Loops": 1,
                       "Index Cond": "((\"ownerId\" IS NULL) AND (status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"])))",
@@ -527,9 +527,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.226,
+            "Planning Time": 0.204,
             "Triggers": [],
-            "Execution Time": 1.57
+            "Execution Time": 1.233
           }
         ]
       }
@@ -544,12 +544,12 @@
               "Partial Mode": "Simple",
               "Parallel Aware": false,
               "Async Capable": false,
-              "Startup Cost": 360.75,
-              "Total Cost": 360.76,
+              "Startup Cost": 361.75,
+              "Total Cost": 361.76,
               "Plan Rows": 1,
               "Plan Width": 8,
-              "Actual Startup Time": 1.689,
-              "Actual Total Time": 1.691,
+              "Actual Startup Time": 0.851,
+              "Actual Total Time": 0.852,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Shared Hit Blocks": 210,
@@ -571,11 +571,11 @@
                   "Relation Name": "Ticket",
                   "Alias": "Ticket",
                   "Startup Cost": 38.53,
-                  "Total Cost": 334.7,
+                  "Total Cost": 335.7,
                   "Plan Rows": 2084,
                   "Plan Width": 4,
-                  "Actual Startup Time": 0.453,
-                  "Actual Total Time": 1.424,
+                  "Actual Startup Time": 0.177,
+                  "Actual Total Time": 0.719,
                   "Actual Rows": 2084,
                   "Actual Loops": 1,
                   "Recheck Cond": "((\"ownerId\" = '1'::bigint) AND (status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"])))",
@@ -603,9 +603,9 @@
                       "Total Cost": 38,
                       "Plan Rows": 2084,
                       "Plan Width": 0,
-                      "Actual Startup Time": 0.385,
-                      "Actual Total Time": 0.386,
-                      "Actual Rows": 2099,
+                      "Actual Startup Time": 0.142,
+                      "Actual Total Time": 0.142,
+                      "Actual Rows": 2107,
                       "Actual Loops": 1,
                       "Index Cond": "((\"ownerId\" = '1'::bigint) AND (status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"])))",
                       "Shared Hit Blocks": 5,
@@ -635,9 +635,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.299,
+            "Planning Time": 0.245,
             "Triggers": [],
-            "Execution Time": 2.614
+            "Execution Time": 1.011
           }
         ]
       }
@@ -656,8 +656,8 @@
               "Total Cost": 1194.05,
               "Plan Rows": 1,
               "Plan Width": 8,
-              "Actual Startup Time": 23.49,
-              "Actual Total Time": 23.493,
+              "Actual Startup Time": 7.629,
+              "Actual Total Time": 7.63,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Shared Hit Blocks": 590,
@@ -682,8 +682,8 @@
                   "Total Cost": 1131.54,
                   "Plan Rows": 5000,
                   "Plan Width": 4,
-                  "Actual Startup Time": 2.975,
-                  "Actual Total Time": 22.478,
+                  "Actual Startup Time": 0.925,
+                  "Actual Total Time": 7.272,
                   "Actual Rows": 5000,
                   "Actual Loops": 1,
                   "Recheck Cond": "(\"performedById\" = '1'::bigint)",
@@ -713,8 +713,8 @@
                       "Total Cost": 379.29,
                       "Plan Rows": 10000,
                       "Plan Width": 0,
-                      "Actual Startup Time": 2.826,
-                      "Actual Total Time": 2.827,
+                      "Actual Startup Time": 0.821,
+                      "Actual Total Time": 0.821,
                       "Actual Rows": 10000,
                       "Actual Loops": 1,
                       "Index Cond": "(\"performedById\" = '1'::bigint)",
@@ -745,9 +745,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.182,
+            "Planning Time": 0.227,
             "Triggers": [],
-            "Execution Time": 23.64
+            "Execution Time": 7.72
           }
         ]
       }
@@ -760,15 +760,15 @@
               "Node Type": "Limit",
               "Parallel Aware": false,
               "Async Capable": false,
-              "Startup Cost": 812.5,
-              "Total Cost": 812.51,
+              "Startup Cost": 813.5,
+              "Total Cost": 813.51,
               "Plan Rows": 5,
               "Plan Width": 166,
-              "Actual Startup Time": 26.447,
-              "Actual Total Time": 26.453,
+              "Actual Startup Time": 10.077,
+              "Actual Total Time": 10.081,
               "Actual Rows": 5,
               "Actual Loops": 1,
-              "Shared Hit Blocks": 215,
+              "Shared Hit Blocks": 216,
               "Shared Read Blocks": 0,
               "Shared Dirtied Blocks": 0,
               "Shared Written Blocks": 0,
@@ -784,12 +784,12 @@
                   "Parent Relationship": "Outer",
                   "Parallel Aware": false,
                   "Async Capable": false,
-                  "Startup Cost": 812.5,
-                  "Total Cost": 828.12,
+                  "Startup Cost": 813.5,
+                  "Total Cost": 829.12,
                   "Plan Rows": 6250,
                   "Plan Width": 166,
-                  "Actual Startup Time": 26.436,
-                  "Actual Total Time": 26.439,
+                  "Actual Startup Time": 10.075,
+                  "Actual Total Time": 10.077,
                   "Actual Rows": 5,
                   "Actual Loops": 1,
                   "Sort Key": [
@@ -799,7 +799,7 @@
                   "Sort Method": "top-N heapsort",
                   "Sort Space Used": 26,
                   "Sort Space Type": "Memory",
-                  "Shared Hit Blocks": 215,
+                  "Shared Hit Blocks": 216,
                   "Shared Read Blocks": 0,
                   "Shared Dirtied Blocks": 0,
                   "Shared Written Blocks": 0,
@@ -818,20 +818,20 @@
                       "Relation Name": "Ticket",
                       "Alias": "Ticket",
                       "Startup Cost": 120.87,
-                      "Total Cost": 708.68,
+                      "Total Cost": 709.68,
                       "Plan Rows": 6250,
                       "Plan Width": 166,
-                      "Actual Startup Time": 0.951,
-                      "Actual Total Time": 16.44,
+                      "Actual Startup Time": 0.367,
+                      "Actual Total Time": 5.805,
                       "Actual Rows": 6250,
                       "Actual Loops": 1,
                       "Recheck Cond": "(status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"]))",
                       "Rows Removed by Index Recheck": 0,
-                      "Filter": "((\"updatedAt\" >= '2026-10-03 09:28:40.283+00'::timestamp with time zone) AND (\"updatedAt\" <= '2026-10-10 09:28:40.283+00'::timestamp with time zone))",
+                      "Filter": "((\"updatedAt\" >= '2026-10-03 14:17:46.183+00'::timestamp with time zone) AND (\"updatedAt\" <= '2026-10-10 14:17:46.183+00'::timestamp with time zone))",
                       "Rows Removed by Filter": 0,
-                      "Exact Heap Blocks": 205,
+                      "Exact Heap Blocks": 206,
                       "Lossy Heap Blocks": 0,
-                      "Shared Hit Blocks": 215,
+                      "Shared Hit Blocks": 216,
                       "Shared Read Blocks": 0,
                       "Shared Dirtied Blocks": 0,
                       "Shared Written Blocks": 0,
@@ -852,9 +852,9 @@
                           "Total Cost": 119.31,
                           "Plan Rows": 6250,
                           "Plan Width": 0,
-                          "Actual Startup Time": 0.806,
-                          "Actual Total Time": 0.807,
-                          "Actual Rows": 6268,
+                          "Actual Startup Time": 0.314,
+                          "Actual Total Time": 0.315,
+                          "Actual Rows": 6276,
                           "Actual Loops": 1,
                           "Index Cond": "(status = ANY (ARRAY[('NEW'::cstring)::\"TicketStatus\", ('OPEN'::cstring)::\"TicketStatus\", ('IN_PROGRESS'::cstring)::\"TicketStatus\", ('WAITING_FOR_REQUESTER'::cstring)::\"TicketStatus\", ('REOPENED'::cstring)::\"TicketStatus\"]))",
                           "Shared Hit Blocks": 10,
@@ -886,9 +886,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.989,
+            "Planning Time": 0.415,
             "Triggers": [],
-            "Execution Time": 26.872
+            "Execution Time": 10.212
           }
         ]
       }
@@ -907,8 +907,8 @@
               "Total Cost": 9.51,
               "Plan Rows": 2,
               "Plan Width": 295,
-              "Actual Startup Time": 0.155,
-              "Actual Total Time": 0.16,
+              "Actual Startup Time": 0.07,
+              "Actual Total Time": 0.072,
               "Actual Rows": 2,
               "Actual Loops": 1,
               "Recheck Cond": "(id = ANY ('{2,1}'::bigint[]))",
@@ -936,8 +936,8 @@
                   "Total Cost": 4.16,
                   "Plan Rows": 2,
                   "Plan Width": 0,
-                  "Actual Startup Time": 0.128,
-                  "Actual Total Time": 0.129,
+                  "Actual Startup Time": 0.047,
+                  "Actual Total Time": 0.048,
                   "Actual Rows": 2,
                   "Actual Loops": 1,
                   "Index Cond": "(id = ANY ('{2,1}'::bigint[]))",
@@ -966,9 +966,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 1.738,
+            "Planning Time": 0.691,
             "Triggers": [],
-            "Execution Time": 0.295
+            "Execution Time": 0.124
           }
         ]
       }
@@ -985,8 +985,8 @@
               "Total Cost": 1.52,
               "Plan Rows": 5,
               "Plan Width": 456,
-              "Actual Startup Time": 0.199,
-              "Actual Total Time": 0.206,
+              "Actual Startup Time": 0.155,
+              "Actual Total Time": 0.162,
               "Actual Rows": 5,
               "Actual Loops": 1,
               "Shared Hit Blocks": 7,
@@ -1013,11 +1013,11 @@
                   "Total Cost": 2468.66,
                   "Plan Rows": 10000,
                   "Plan Width": 456,
-                  "Actual Startup Time": 0.197,
-                  "Actual Total Time": 0.203,
+                  "Actual Startup Time": 0.153,
+                  "Actual Total Time": 0.16,
                   "Actual Rows": 5,
                   "Actual Loops": 1,
-                  "Index Cond": "((\"performedById\" = '1'::bigint) AND (\"createdAt\" >= '2026-10-03 09:28:40.283+00'::timestamp with time zone) AND (\"createdAt\" <= '2026-10-10 09:28:40.283+00'::timestamp with time zone))",
+                  "Index Cond": "((\"performedById\" = '1'::bigint) AND (\"createdAt\" >= '2026-10-03 14:17:46.183+00'::timestamp with time zone) AND (\"createdAt\" <= '2026-10-10 14:17:46.183+00'::timestamp with time zone))",
                   "Rows Removed by Index Recheck": 0,
                   "Shared Hit Blocks": 7,
                   "Shared Read Blocks": 0,
@@ -1044,9 +1044,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.438,
+            "Planning Time": 0.229,
             "Triggers": [],
-            "Execution Time": 0.268
+            "Execution Time": 0.233
           }
         ]
       }
@@ -1067,13 +1067,13 @@
               "Total Cost": 25.51,
               "Plan Rows": 5,
               "Plan Width": 15,
-              "Actual Startup Time": 0.076,
-              "Actual Total Time": 0.089,
+              "Actual Startup Time": 0.056,
+              "Actual Total Time": 0.06,
               "Actual Rows": 5,
               "Actual Loops": 1,
-              "Index Cond": "(id = ANY ('{10026,10023,10020,10017,10014}'::bigint[]))",
+              "Index Cond": "(id = ANY ('{10046,10043,10040,10037,10034}'::bigint[]))",
               "Rows Removed by Index Recheck": 0,
-              "Shared Hit Blocks": 3,
+              "Shared Hit Blocks": 4,
               "Shared Read Blocks": 0,
               "Shared Dirtied Blocks": 0,
               "Shared Written Blocks": 0,
@@ -1096,9 +1096,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.371,
+            "Planning Time": 0.191,
             "Triggers": [],
-            "Execution Time": 0.158
+            "Execution Time": 0.104
           }
         ]
       }
@@ -1119,8 +1119,8 @@
               "Total Cost": 8.17,
               "Plan Rows": 1,
               "Plan Width": 295,
-              "Actual Startup Time": 0.097,
-              "Actual Total Time": 0.1,
+              "Actual Startup Time": 0.036,
+              "Actual Total Time": 0.037,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Index Cond": "(id = '1'::bigint)",
@@ -1148,9 +1148,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.088,
+            "Planning Time": 0.103,
             "Triggers": [],
-            "Execution Time": 0.174
+            "Execution Time": 0.079
           }
         ]
       }
@@ -1171,8 +1171,8 @@
               "Total Cost": 8.17,
               "Plan Rows": 1,
               "Plan Width": 295,
-              "Actual Startup Time": 0.121,
-              "Actual Total Time": 0.123,
+              "Actual Startup Time": 0.035,
+              "Actual Total Time": 0.036,
               "Actual Rows": 1,
               "Actual Loops": 1,
               "Index Cond": "(id = '2'::bigint)",
@@ -1200,9 +1200,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.115,
+            "Planning Time": 0.096,
             "Triggers": [],
-            "Execution Time": 0.268
+            "Execution Time": 0.079
           }
         ]
       }
@@ -1217,12 +1217,12 @@
               "Partial Mode": "Simple",
               "Parallel Aware": false,
               "Async Capable": false,
-              "Startup Cost": 355,
-              "Total Cost": 355.12,
+              "Startup Cost": 356,
+              "Total Cost": 356.12,
               "Plan Rows": 8,
               "Plan Width": 44,
-              "Actual Startup Time": 11.011,
-              "Actual Total Time": 11.021,
+              "Actual Startup Time": 3.96,
+              "Actual Total Time": 3.965,
               "Actual Rows": 8,
               "Actual Loops": 1,
               "Group Key": [
@@ -1232,7 +1232,7 @@
               "HashAgg Batches": 1,
               "Peak Memory Usage": 24,
               "Disk Usage": 0,
-              "Shared Hit Blocks": 205,
+              "Shared Hit Blocks": 206,
               "Shared Read Blocks": 0,
               "Shared Dirtied Blocks": 0,
               "Shared Written Blocks": 0,
@@ -1251,14 +1251,14 @@
                   "Relation Name": "Ticket",
                   "Alias": "Ticket",
                   "Startup Cost": 0,
-                  "Total Cost": 305,
+                  "Total Cost": 306,
                   "Plan Rows": 10000,
                   "Plan Width": 4,
-                  "Actual Startup Time": 0.018,
-                  "Actual Total Time": 6.741,
+                  "Actual Startup Time": 0.021,
+                  "Actual Total Time": 2.222,
                   "Actual Rows": 10000,
                   "Actual Loops": 1,
-                  "Shared Hit Blocks": 205,
+                  "Shared Hit Blocks": 206,
                   "Shared Read Blocks": 0,
                   "Shared Dirtied Blocks": 0,
                   "Shared Written Blocks": 0,
@@ -1283,9 +1283,9 @@
               "Temp Read Blocks": 0,
               "Temp Written Blocks": 0
             },
-            "Planning Time": 0.307,
+            "Planning Time": 0.189,
             "Triggers": [],
-            "Execution Time": 11.07
+            "Execution Time": 4.012
           }
         ]
       }

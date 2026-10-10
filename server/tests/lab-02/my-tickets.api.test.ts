@@ -237,12 +237,43 @@ describe("GET /api/tickets (A-07..A-12, FR-08, BR-04, BR-19..BR-21)", () => {
     );
   });
 
+  it("accepts an explicit sort matching the resolved-time drill-down ordering", async () => {
+    vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
+      sessionUser({ id: 1, mustChangePassword: false })
+    );
+    const findMany = vi.spyOn(prisma.ticket, "findMany").mockResolvedValue([]);
+    vi.spyOn(prisma.ticket, "count").mockResolvedValue(0);
+
+    const response = await request(app)
+      .get(
+        `/api/tickets?${new URLSearchParams({
+          statusGroup: "resolved",
+          dateField: "resolvedAt",
+          from: "2026-10-01T01:00:00.000Z",
+          to: "2026-10-08T01:00:00.000Z",
+          sort: "resolvedAt",
+          order: "desc",
+        })}`
+      )
+      .set("Cookie", sessionCookie(1));
+
+    expect(response.status).toBe(200);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ resolvedAt: "desc" }, { id: "desc" }],
+      })
+    );
+  });
+
   it.each([
     "statusGroup=open&status=NEW",
     "dateField=updatedAt&from=2026-10-01T01%3A00%3A00.000Z",
     "dateField=createdAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z",
     "dateField=updatedAt&from=2026-10-08T01%3A00%3A00.000Z&to=2026-10-01T01%3A00%3A00.000Z",
     "dateField=updatedAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z&order=asc",
+    "dateField=resolvedAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z&sort=updatedAt",
+    "dateField=resolvedAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z&sort=resolvedAt&order=asc",
+    "sort=resolvedAt",
   ])("rejects malformed dashboard drill-down query %s", async (query) => {
     vi.spyOn(prisma.user, "findUnique").mockResolvedValue(
       sessionUser({ id: 1, mustChangePassword: false })
