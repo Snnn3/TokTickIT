@@ -29,8 +29,11 @@ async function signIn(
   await expect(page.getByTestId("identity-chip")).toContainText(
     DASHBOARD_ACCOUNTS[account].name
   );
-  if (account !== "staff" && account !== "secondStaff")
+  if (account === "requester") {
+    await page.goto("/dashboard/requester");
+  } else if (account === "admin") {
     await page.goto("/dashboard/staff");
+  }
 }
 
 async function snapshot(page: Page): Promise<StaffDashboardResponse> {
@@ -44,7 +47,7 @@ async function capture(page: Page, name: string) {
     "artifacts",
     "lab-04",
     "screenshots",
-    "staff-dashboard"
+    name.startsWith("requester-") ? "requester-dashboard" : "staff-dashboard"
   );
   mkdirSync(directory, { recursive: true });
   await page.screenshot({
@@ -401,6 +404,7 @@ test("anonymous and Requester cannot retrieve Staff data or navigate its dashboa
 }) => {
   expect((await page.request.get("/api/dashboard/staff")).status()).toBe(401);
   await signIn(page, "requester");
+  await page.goto("/dashboard/staff");
   await expect(page.getByTestId("forbidden-panel")).toBeVisible();
   await expect(page.getByTestId("staff-dashboard-view")).toHaveCount(0);
   const response = await page.request.get("/api/dashboard/staff");
@@ -412,6 +416,253 @@ test("anonymous and Requester cannot retrieve Staff data or navigate its dashboa
     },
   });
   await capture(page, "requester-forbidden-desktop");
+});
+
+test("Requester dashboard isolates ownership, shows authoritative metrics and drills into Tickets", async ({
+  page,
+}) => {
+  const otherRequester = await db.user.findUniqueOrThrow({
+    where: { email: DASHBOARD_ACCOUNTS.secondRequester.email },
+  });
+  const category = await db.category.findFirstOrThrow();
+  const instant = new Date(Date.now() - 30000);
+  const foreignTicket = await db.ticket.create({
+    data: {
+      number: "TKT-FOREIGN-00001",
+      requesterId: otherRequester.id,
+      categoryId: category.id,
+      systemId: (await db.relatedSystem.findFirstOrThrow()).id,
+      summary: "Belongs to a different requester",
+      description: "Ownership isolation fixture",
+      requestedPriority: "HIGH",
+      itPriority: "HIGH",
+      status: "OPEN",
+      createdAt: instant,
+      updatedAt: instant,
+    },
+  });
+
+  await signIn(page, "requester");
+  await expect(page.getByTestId("requester-dashboard-view")).toBeVisible();
+  const response = await page.request.get("/api/dashboard/requester");
+  expect(response.status()).toBe(200);
+  const data = await response.json();
+  expect(data.metrics).toEqual({
+    openTickets: 5,
+    waitingForRequester: 1,
+    recentlyUpdated: 8,
+    recentlyResolved: 2,
+  });
+  expect(
+    data.lists.recentTickets.map((ticket: { number: string }) => ticket.number)
+  ).toEqual([
+    "TKT-TEST-00008",
+    "TKT-TEST-00007",
+    "TKT-TEST-00006",
+    "TKT-TEST-00005",
+    "TKT-TEST-00004",
+  ]);
+  expect(JSON.stringify(data)).not.toContain(foreignTicket.number);
+  expect(
+    data.lists.resolvedTickets.map(
+      (ticket: { status: string }) => ticket.status
+    )
+  ).toEqual(["CLOSED", "RESOLVED"]);
+
+  const changedIdentity = await page.request.get(
+    `/api/dashboard/requester?requesterId=${otherRequester.id}`
+  );
+  expect(changedIdentity.status()).toBe(400);
+  expect((await changedIdentity.json()).error.code).toBe("INVALID_QUERY");
+
+  const openCard = page.getByLabel("My Open Tickets: 5", { exact: true });
+  await expect(openCard).toHaveAttribute("href", "/tickets?statusGroup=open");
+  await openCard.click();
+  await expect(page).toHaveURL(/\/tickets\?statusGroup=open/);
+  await expect(page.getByTestId("ticket-dashboard-filters")).toContainText(
+    "open"
+  );
+  const openTickets = await page.request.get(
+    "/api/tickets?statusGroup=open&page=1&pageSize=10"
+  );
+  expect(openTickets.status()).toBe(200);
+  const openData = await openTickets.json();
+  expect(openData.total).toBe(5);
+  expect(
+    openData.tickets.map((ticket: { number: string }) => ticket.number)
+  ).not.toContain(foreignTicket.number);
+
+  await page.goto("/dashboard/requester");
+  await page.getByRole("link", { name: /TKT-TEST-00008/ }).click();
+  await expect(page).toHaveURL(/\/tickets\/\d+$/);
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
+  await page.getByRole("button", { name: "Back to My Dashboard" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/requester$/);
+
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await expect(
+    page.getByLabel("My Open Tickets: 5", { exact: true })
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1
+    )
+  ).toBe(true);
+  await capture(page, "requester-populated-tablet");
+
+  const keyboardOpenCard = page.getByLabel("My Open Tickets: 5", {
+    exact: true,
+  });
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+  for (let tab = 0; tab < 50; tab += 1) {
+    await page.keyboard.press("Tab");
+    if (
+      await keyboardOpenCard.evaluate(
+        (element) => element === document.activeElement
+      )
+    ) {
+      break;
+    }
+  }
+  await expect(keyboardOpenCard).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/tickets\?statusGroup=open/);
+  await page.goto("/dashboard/requester");
+  await expect(page.getByTestId("requester-dashboard-view")).toBeVisible();
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(
+    page.getByLabel("My Open Tickets: 5", { exact: true })
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth + 1
+    )
+  ).toBe(true);
+  const mobileTargets = await page
+    .getByTestId("requester-dashboard-view")
+    .locator("a, button")
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })
+    );
+  for (const target of mobileTargets) {
+    expect(target.width).toBeGreaterThanOrEqual(44);
+    expect(target.height).toBeGreaterThanOrEqual(44);
+  }
+  await capture(page, "requester-populated-mobile");
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await capture(page, "requester-populated-desktop");
+});
+
+test("empty requester dashboard keeps zero cards and useful empty lists", async ({
+  page,
+}) => {
+  await signIn(page, "requester");
+  await expect(
+    page.getByLabel("My Open Tickets: 0", { exact: true })
+  ).toBeVisible();
+  await expect(page.getByTestId("requester-attention-empty")).toBeVisible();
+  await expect(page.getByTestId("requester-recent-empty")).toBeVisible();
+  await expect(page.getByTestId("requester-resolved-empty")).toBeVisible();
+  await capture(page, "requester-empty-desktop");
+});
+
+test("Requester My Tickets preserves changed filters and page through reload, detail return and browser-back", async ({
+  page,
+}) => {
+  const requester = await db.user.findUniqueOrThrow({
+    where: { email: DASHBOARD_ACCOUNTS.requester.email },
+  });
+  const category = await db.category.findFirstOrThrow();
+  const system = await db.relatedSystem.findFirstOrThrow();
+  const instant = new Date(Date.now() - 30000);
+  await db.ticket.createMany({
+    data: Array.from({ length: 12 }, (_, index) => ({
+      number: `TKT-QUERY-${String(index + 1).padStart(5, "0")}`,
+      requesterId: requester.id,
+      categoryId: category.id,
+      systemId: system.id,
+      summary: `Restorable dashboard ticket ${index + 1}`,
+      description: "Requester query persistence fixture",
+      requestedPriority: "HIGH",
+      itPriority: "MEDIUM",
+      status: "OPEN",
+      createdAt: new Date(instant.getTime() + index),
+      updatedAt: instant,
+    })),
+  });
+
+  await signIn(page, "requester");
+  const openCard = page.getByLabel("My Open Tickets: 17", { exact: true });
+  await expect(openCard).toBeVisible();
+  await openCard.click();
+  await expect(page).toHaveURL(/\/tickets\?statusGroup=open/);
+
+  await page.getByPlaceholder("Search number or summary").fill("Restorable");
+  await page
+    .getByLabel("Filter by category")
+    .selectOption({ label: "Account and Access" });
+  await page.getByLabel("Filter by priority").selectOption("HIGH");
+  await page.getByLabel("Filter by status").selectOption("OPEN");
+  await page.getByLabel("Sort by:").selectOption("createdAt");
+  await page.getByLabel("Sort order").selectOption("asc");
+  await page.getByLabel("Page size", { exact: true }).selectOption("5");
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  const filteredUrl = page.url();
+  const filters = new URL(filteredUrl).searchParams;
+  expect(filters.get("search")).toBe("Restorable");
+  expect(filters.get("categoryId")).toBe(String(category.id));
+  expect(filters.get("priority")).toBe("HIGH");
+  expect(filters.get("status")).toBe("OPEN");
+  expect(filters.get("sort")).toBe("createdAt");
+  expect(filters.get("order")).toBe("asc");
+  expect(filters.get("page")).toBe("2");
+  expect(filters.get("pageSize")).toBe("5");
+  expect(filters.has("statusGroup")).toBe(false);
+
+  await page.reload();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByPlaceholder("Search number or summary")).toHaveValue(
+    "Restorable"
+  );
+  await expect(page.getByLabel("Filter by category")).toHaveValue(
+    String(category.id)
+  );
+  await expect(page.getByLabel("Filter by priority")).toHaveValue("HIGH");
+  await expect(page.getByLabel("Filter by status")).toHaveValue("OPEN");
+  await expect(page.getByLabel("Sort by:")).toHaveValue("createdAt");
+  await expect(page.getByLabel("Sort order")).toHaveValue("asc");
+  await expect(page.getByLabel("Page size", { exact: true })).toHaveValue("5");
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  await page.getByRole("button", { name: "View" }).first().click();
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
+  await page.getByRole("button", { name: "Back to My Tickets" }).click();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
+
+  await page.getByRole("button", { name: "View" }).first().click();
+  await expect(page.getByTestId("ticket-detail-view")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(filteredUrl);
+  await expect(page.getByTestId("pagination-page-info")).toHaveText(
+    "Page 2 of 3 (12 tickets)"
+  );
 });
 
 test("loading, stale refresh and safe failure retry are visible without replacing real counts", async ({

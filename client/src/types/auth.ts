@@ -61,7 +61,7 @@ export const ROLE_LABELS: Record<Role, string> = {
  * permissions are shared, because an Administrator is a superset of IT Staff.
  */
 export const ROLE_LANDING: Record<Role, string> = {
-  REQUESTER: "/tickets",
+  REQUESTER: "/dashboard/requester",
   IT_STAFF: "/dashboard/staff",
   ADMINISTRATOR: "/admin/users",
 };

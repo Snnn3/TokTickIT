@@ -1,7 +1,7 @@
 import type { TicketPriority, TicketStatus } from "./ticket";
 import type { ActionSummary } from "./action";
 
-export interface StaffDashboardTicket {
+export interface DashboardTicketSummary {
   id: number;
   number: string;
   summary: string;
@@ -18,6 +18,24 @@ export interface StaffDashboardTicket {
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+}
+
+export type StaffDashboardTicket = DashboardTicketSummary;
+
+export interface RequesterDashboardResponse {
+  asOf: string;
+  windowDays: 7;
+  metrics: {
+    openTickets: number;
+    waitingForRequester: number;
+    recentlyUpdated: number;
+    recentlyResolved: number;
+  };
+  lists: {
+    attentionTickets: DashboardTicketSummary[];
+    recentTickets: DashboardTicketSummary[];
+    resolvedTickets: DashboardTicketSummary[];
+  };
 }
 
 export interface StaffDashboardResponse {
