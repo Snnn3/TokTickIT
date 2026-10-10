@@ -16,6 +16,7 @@ import { ActionsTakenPanel } from "./ActionsTakenPanel";
 interface RequesterTicketDetailProps {
   ticketId: number;
   onBack: () => void;
+  backLabel?: string;
 }
 
 const COMMENT_MAX_LENGTH = 2000;
@@ -23,6 +24,7 @@ const COMMENT_MAX_LENGTH = 2000;
 export function RequesterTicketDetail({
   ticketId,
   onBack,
+  backLabel = "Back to My Tickets",
 }: RequesterTicketDetailProps) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -363,7 +365,7 @@ export function RequesterTicketDetail({
             onClick={onBack}
             data-testid="back-to-tickets-error-btn"
           >
-            ← Back to My Tickets
+            ← {backLabel}
           </button>
         </div>
       </div>
@@ -398,11 +400,11 @@ export function RequesterTicketDetail({
               type="button"
               className="btn btn-zen-secondary btn-sm d-flex align-items-center gap-1"
               onClick={onBack}
-              aria-label="Back to My Tickets"
+              aria-label={backLabel}
               data-testid="back-to-tickets-btn"
             >
               <span>←</span>
-              <span>Back to My Tickets</span>
+              <span>{backLabel}</span>
             </button>
             <h1
               className="h4 fw-bold mb-0 text-zen-primary"

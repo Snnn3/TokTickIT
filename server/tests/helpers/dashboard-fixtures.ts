@@ -24,6 +24,11 @@ export const DASHBOARD_ACCOUNTS = {
     email: "dashboard.requester@example.com",
     role: Role.REQUESTER,
   },
+  secondRequester: {
+    name: "Other Dashboard Requester",
+    email: "dashboard.other-requester@example.com",
+    role: Role.REQUESTER,
+  },
 } as const;
 
 export async function seedDashboardAccounts(db: PrismaClient) {
@@ -53,6 +58,7 @@ export async function seedDashboardAccounts(db: PrismaClient) {
     secondStaff: users[1],
     admin: users[2],
     requester: users[3],
+    secondRequester: users[4],
     system,
   };
 }
@@ -103,6 +109,10 @@ export async function resetDashboardTickets(
           requestedPriority: "MEDIUM",
           itPriority: "HIGH",
           status,
+          resolvedAt:
+            status === TicketStatus.RESOLVED || status === TicketStatus.CLOSED
+              ? instant
+              : null,
           createdAt: new Date(instant.getTime() - 30 * 86400000),
           updatedAt: instant,
         },

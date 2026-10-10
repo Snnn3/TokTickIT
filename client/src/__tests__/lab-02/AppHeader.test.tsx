@@ -16,9 +16,11 @@ describe("AppHeader Component (Issue #24 adapted for Lab 3, FR-18, FR-19)", () =
 
     expect(screen.getByText("TokTickIT")).toBeInTheDocument();
 
+    const myDashboard = screen.getByRole("link", { name: "My Dashboard" });
     const myTickets = screen.getByRole("link", { name: "My Tickets" });
     const createTicket = screen.getByRole("link", { name: "Create Ticket" });
 
+    expect(myDashboard).not.toHaveClass("active");
     expect(myTickets).toHaveClass("active");
     expect(createTicket).not.toHaveClass("active");
     expect(myTickets).toHaveAttribute("href", "/tickets");

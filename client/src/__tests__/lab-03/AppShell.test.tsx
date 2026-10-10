@@ -62,6 +62,27 @@ describe("C-08 shell navigation and route guards", () => {
           }),
         } as Response;
       }
+      if (String(input).includes("/api/dashboard/requester")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            asOf: "2026-10-08T00:00:00.000Z",
+            windowDays: 7,
+            metrics: {
+              openTickets: 0,
+              waitingForRequester: 0,
+              recentlyUpdated: 0,
+              recentlyResolved: 0,
+            },
+            lists: {
+              attentionTickets: [],
+              recentTickets: [],
+              resolvedTickets: [],
+            },
+          }),
+        } as Response;
+      }
       return {
         ok: true,
         status: 200,
@@ -82,7 +103,11 @@ describe("C-08 shell navigation and route guards", () => {
     await waitFor(() => {
       expect(screen.getByTestId("identity-chip")).toBeInTheDocument();
     });
-    expect(navLabels()).toEqual(["My Tickets", "Create Ticket"]);
+    expect(navLabels()).toEqual([
+      "My Dashboard",
+      "My Tickets",
+      "Create Ticket",
+    ]);
     expect(screen.queryByRole("link", { name: "Ticket Queue" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Users" })).toBeNull();
   });
@@ -94,6 +119,7 @@ describe("C-08 shell navigation and route guards", () => {
       expect(screen.getByTestId("identity-chip")).toBeInTheDocument();
     });
     expect(navLabels()).toEqual([
+      "My Dashboard",
       "My Tickets",
       "Create Ticket",
       "Staff Dashboard",
@@ -109,6 +135,7 @@ describe("C-08 shell navigation and route guards", () => {
       expect(screen.getByTestId("identity-chip")).toBeInTheDocument();
     });
     expect(navLabels()).toEqual([
+      "My Dashboard",
       "My Tickets",
       "Create Ticket",
       "Staff Dashboard",
@@ -183,7 +210,7 @@ describe("C-08 shell navigation and route guards", () => {
 
   it("lands each role on its own destination from the root address", async () => {
     const cases: [Role, string][] = [
-      ["REQUESTER", "identity-chip"],
+      ["REQUESTER", "requester-dashboard-view"],
       // IT Staff land on the Staff Dashboard; Administrators retain Users.
       ["IT_STAFF", "staff-dashboard-view"],
       ["ADMINISTRATOR", "user-management-view"],
@@ -199,7 +226,7 @@ describe("C-08 shell navigation and route guards", () => {
 
     // The landing table itself is the contract the routes above implement.
     expect(ROLE_LANDING).toEqual({
-      REQUESTER: "/tickets",
+      REQUESTER: "/dashboard/requester",
       IT_STAFF: "/dashboard/staff",
       ADMINISTRATOR: "/admin/users",
     });

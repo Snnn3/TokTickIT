@@ -561,6 +561,20 @@ body {
     min-width: 44px;
   }
 
+  [data-testid="requester-dashboard-view"] :is(a, button),
+  [data-testid="requester-dashboard-failure"] button,
+  [data-testid="requester-dashboard-forbidden"] a,
+  [data-testid="requester-dashboard-not-found"] a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  [data-testid="requester-dashboard-view"] .zg-breakable-text {
+    display: inline-flex;
+  }
+
   [data-testid="staff-actions-list-view"] .form-select {
     min-height: 44px;
   }

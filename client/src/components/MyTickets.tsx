@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type {
   TicketSummaryItem,
   TicketPriority,
   TicketStatus,
 } from "../types/ticket";
+import { TICKET_STATUSES, TICKET_STATUS_LABELS } from "../types/ticket";
 import { useCategories } from "../hooks/useReferenceData";
 import { ZenPriorityBadge, ZenStatusBadge } from "./ZenBadge";
 import { formatDateTime } from "../utils/format";
@@ -20,6 +22,10 @@ interface TicketQueryState {
   categoryId: string;
   priority: TicketPriority | "";
   status: TicketStatus | "";
+  statusGroup: "" | "open" | "resolved";
+  dateField: "" | "updatedAt" | "resolvedAt";
+  from: string;
+  to: string;
   sort: "updatedAt" | "createdAt" | "number";
   order: "asc" | "desc";
   page: number;
@@ -31,13 +37,43 @@ const initialQueryState: TicketQueryState = {
   categoryId: "",
   priority: "",
   status: "",
+  statusGroup: "",
+  dateField: "",
+  from: "",
+  to: "",
   sort: "updatedAt",
   order: "desc",
   page: 1,
   pageSize: 10,
 };
 
+function dashboardQueryState(
+  search: string
+): Pick<
+  TicketQueryState,
+  "statusGroup" | "dateField" | "from" | "to" | "status"
+> {
+  const params = new URLSearchParams(search);
+  const statusGroup = params.get("statusGroup");
+  const dateField = params.get("dateField");
+  const rawStatus = params.get("status");
+  const status = TICKET_STATUSES.includes(rawStatus as TicketStatus)
+    ? (rawStatus as TicketStatus)
+    : "";
+  return {
+    statusGroup:
+      statusGroup === "open" || statusGroup === "resolved" ? statusGroup : "",
+    dateField:
+      dateField === "updatedAt" || dateField === "resolvedAt" ? dateField : "",
+    from: params.get("from") ?? "",
+    to: params.get("to") ?? "",
+    status,
+  };
+}
+
 export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   // State
   const [tickets, setTickets] = useState<TicketSummaryItem[]>([]);
   const { categories } = useCategories();
@@ -45,9 +81,12 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Consolidated Query State
-  const [queryState, setQueryState] =
-    useState<TicketQueryState>(initialQueryState);
+  const [queryState, setQueryState] = useState<TicketQueryState>(() => ({
+    ...initialQueryState,
+    ...dashboardQueryState(location.search),
+  }));
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const requestGeneration = useRef(0);
 
   // Debounce search input by 300ms [ui-spec.md Section 8]
   useEffect(() => {
@@ -66,13 +105,16 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     queryState.search.trim() ||
       queryState.categoryId ||
       queryState.priority ||
-      queryState.status
+      queryState.status ||
+      queryState.statusGroup ||
+      queryState.dateField
   );
 
   // Fetch tickets
   // The list is scoped by the session cookie, so there is nothing to wait for
   // before fetching and no identity for this component to carry.
   const fetchTickets = useCallback(async () => {
+    const generation = ++requestGeneration.current;
     setLoading(true);
     setError(null);
 
@@ -81,13 +123,22 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
     if (queryState.priority) params.set("priority", queryState.priority);
     if (queryState.status) params.set("status", queryState.status);
-    if (queryState.sort) params.set("sort", queryState.sort);
-    if (queryState.order) params.set("order", queryState.order);
+    if (queryState.statusGroup)
+      params.set("statusGroup", queryState.statusGroup);
+    if (queryState.dateField && queryState.from && queryState.to) {
+      params.set("dateField", queryState.dateField);
+      params.set("from", queryState.from);
+      params.set("to", queryState.to);
+    } else {
+      if (queryState.sort) params.set("sort", queryState.sort);
+      if (queryState.order) params.set("order", queryState.order);
+    }
     params.set("page", String(queryState.page));
     params.set("pageSize", String(queryState.pageSize));
 
     try {
       const res = await fetch(`/api/tickets?${params.toString()}`);
+      if (generation !== requestGeneration.current) return;
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -99,22 +150,28 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       }
 
       const data = await res.json();
+      if (generation !== requestGeneration.current) return;
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 0);
     } catch {
+      if (generation !== requestGeneration.current) return;
       setError("Network error. Unable to connect to the server.");
       setTickets([]);
       setTotal(0);
       setTotalPages(0);
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
   }, [
     debouncedSearch,
     queryState.categoryId,
     queryState.priority,
     queryState.status,
+    queryState.statusGroup,
+    queryState.dateField,
+    queryState.from,
+    queryState.to,
     queryState.sort,
     queryState.order,
     queryState.page,
@@ -125,6 +182,18 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
     fetchTickets();
   }, [fetchTickets]);
 
+  useEffect(
+    () => () => {
+      requestGeneration.current += 1;
+    },
+    []
+  );
+
+  useEffect(() => {
+    const filters = dashboardQueryState(location.search);
+    setQueryState((prev) => ({ ...prev, ...filters, page: 1 }));
+  }, [location.search]);
+
   const handleResetFilters = () => {
     setQueryState((prev) => ({
       ...prev,
@@ -132,8 +201,13 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
       categoryId: "",
       priority: "",
       status: "",
+      statusGroup: "",
+      dateField: "",
+      from: "",
+      to: "",
       page: 1,
     }));
+    navigate("/tickets", { replace: true });
   };
 
   const handleSelectTicket = (ticketId: number) => {
@@ -252,12 +326,17 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
                   setQueryState((prev) => ({
                     ...prev,
                     status: e.target.value as TicketStatus | "",
+                    statusGroup: "",
                     page: 1,
                   }));
                 }}
               >
                 <option value="">All Statuses</option>
-                <option value="NEW">NEW</option>
+                {TICKET_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {TICKET_STATUS_LABELS[status]}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -274,6 +353,32 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
             </div>
           </div>
 
+          {(queryState.status ||
+            queryState.statusGroup ||
+            queryState.dateField) && (
+            <div
+              className="alert alert-info py-2 mt-3 mb-0"
+              data-testid="ticket-dashboard-filters"
+            >
+              <span>
+                Active filters:{" "}
+                {queryState.status
+                  ? TICKET_STATUS_LABELS[queryState.status]
+                  : queryState.statusGroup || "all statuses"}
+                {queryState.dateField
+                  ? ` · ${queryState.dateField === "updatedAt" ? "updated" : "resolved"} from ${queryState.from} to ${queryState.to}`
+                  : ""}
+              </span>
+              <button
+                className="btn btn-sm btn-outline-secondary ms-2"
+                onClick={handleResetFilters}
+                type="button"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+
           {/* Sort Options Strip */}
           <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
             <div className="col-12 d-flex align-items-center gap-2">
@@ -283,6 +388,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               <select
                 id="sort-select"
                 className="form-select form-select-sm"
+                disabled={Boolean(queryState.dateField)}
                 style={{ width: "auto" }}
                 value={queryState.sort}
                 onChange={(e) => {
@@ -306,6 +412,7 @@ export function MyTickets({ onCreateTicket, onSelectTicket }: MyTicketsProps) {
               <select
                 id="order-select"
                 className="form-select form-select-sm"
+                disabled={Boolean(queryState.dateField)}
                 style={{ width: "auto" }}
                 value={queryState.order}
                 onChange={(e) => {

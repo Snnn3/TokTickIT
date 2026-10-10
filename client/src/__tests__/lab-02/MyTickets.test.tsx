@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { MyTickets } from "../../components/MyTickets";
 import { AuthHarnessProvider, testUser } from "../../test/authHarness";
@@ -46,11 +47,19 @@ const mockTickets = [
   },
 ];
 
-function AuthenticatedWrapper({ children }: { children: ReactNode }) {
+function AuthenticatedWrapper({
+  children,
+  route = "/tickets",
+}: {
+  children: ReactNode;
+  route?: string;
+}) {
   return (
-    <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
-      {children}
-    </AuthHarnessProvider>
+    <MemoryRouter initialEntries={[route]}>
+      <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+        {children}
+      </AuthHarnessProvider>
+    </MemoryRouter>
   );
 }
 
@@ -365,6 +374,63 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
 
     await waitFor(() => {
       expect(screen.queryByTestId("tickets-loading")).not.toBeInTheDocument();
+    });
+  });
+
+  it("loads fixed dashboard filters from the URL and clears them as one view", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(
+      <AuthenticatedWrapper route="/tickets?statusGroup=resolved&dateField=resolvedAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    expect(
+      await screen.findByTestId("ticket-dashboard-filters")
+    ).toHaveTextContent("resolved");
+    await waitFor(() => {
+      const ticketRequest = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .find((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequest).toContain("statusGroup=resolved");
+      expect(ticketRequest).toContain("dateField=resolvedAt");
+      expect(ticketRequest).toContain("from=2026-10-01T01%3A00%3A00.000Z");
+      expect(ticketRequest).toContain("to=2026-10-08T01%3A00%3A00.000Z");
+    });
+    expect(screen.getByLabelText("Sort by:")).toBeDisabled();
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Clear filters" })[0]
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("ticket-dashboard-filters")).toBeNull();
+      const ticketRequests = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequests.at(-1)).not.toContain("statusGroup=");
+      expect(ticketRequests.at(-1)).not.toContain("dateField=");
+    });
+  });
+
+  it("loads and visibly labels a dashboard status drill-down from the URL", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    expect(
+      await screen.findByTestId("ticket-dashboard-filters")
+    ).toHaveTextContent("WAITING FOR REQUESTER");
+    expect(
+      screen.getByRole("combobox", { name: /Filter by status/i })
+    ).toHaveValue("WAITING_FOR_REQUESTER");
+    await waitFor(() => {
+      const ticketRequest = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .find((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequest).toContain("status=WAITING_FOR_REQUESTER");
     });
   });
 });

@@ -9,7 +9,12 @@ import {
   serializeAttachment,
 } from "../utils/attachment";
 import { getOwnedResource } from "../utils/ownership";
-import { isTicketStatus, TICKET_STATUSES } from "../utils/ticketStatus";
+import {
+  isTicketStatus,
+  OPEN_TICKET_STATUSES,
+  TICKET_STATUSES,
+} from "../utils/ticketStatus";
+import { parseUtcDateRange } from "../utils/query-validation";
 import { sendUnexpectedError } from "../utils/unexpected-response";
 import {
   markTicketAppearsResolved,
@@ -245,6 +250,10 @@ interface QueryValidationResult {
   categoryId?: number;
   priority?: TicketPriority;
   status?: TicketStatus;
+  statusGroup?: "open" | "resolved";
+  dateField?: "updatedAt" | "resolvedAt";
+  from?: Date;
+  to?: Date;
   sort: string;
   order: "asc" | "desc";
   page: number;
@@ -346,6 +355,72 @@ function validateTicketQuery(
     }
   }
 
+  let statusGroup: QueryValidationResult["statusGroup"];
+  if (query.statusGroup !== undefined) {
+    const raw = String(query.statusGroup);
+    if (raw === "open" || raw === "resolved") {
+      statusGroup = raw;
+    } else {
+      details.push({
+        field: "statusGroup",
+        parameter: "statusGroup",
+        issue: "Status group must be open or resolved",
+      });
+    }
+  }
+  if (statusGroup && status) {
+    details.push({
+      field: "statusGroup",
+      parameter: "statusGroup",
+      issue: "Status group cannot be combined with status",
+    });
+  }
+
+  let dateField: QueryValidationResult["dateField"];
+  if (query.dateField !== undefined) {
+    const raw = String(query.dateField);
+    if (raw === "updatedAt" || raw === "resolvedAt") {
+      dateField = raw;
+    } else {
+      details.push({
+        field: "dateField",
+        parameter: "dateField",
+        issue: "Date field must be updatedAt or resolvedAt",
+      });
+    }
+  }
+  const { from, to, issues } = parseUtcDateRange(query.from, query.to);
+  details.push(
+    ...issues.map((issue) => ({ ...issue, parameter: issue.field }))
+  );
+  const hasFrom = query.from !== undefined;
+  const hasTo = query.to !== undefined;
+  if (hasFrom !== hasTo || Boolean(dateField) !== (hasFrom && hasTo)) {
+    details.push({
+      field: "dateField",
+      parameter: "dateField",
+      issue: "Date field, from and to must be supplied together",
+    });
+  }
+  if (dateField && query.sort !== undefined && query.sort !== dateField) {
+    details.push({
+      field: "sort",
+      parameter: "sort",
+      issue: "Sort must match the date-filter ordering",
+    });
+  }
+  if (
+    dateField &&
+    query.order !== undefined &&
+    String(query.order).toLowerCase() !== "desc"
+  ) {
+    details.push({
+      field: "order",
+      parameter: "order",
+      issue: "Order must be descending with a date filter",
+    });
+  }
+
   // Parse and validate sort
   const allowedSorts = ["updatedAt", "createdAt", "number"];
   let sort = "updatedAt";
@@ -403,6 +478,10 @@ function validateTicketQuery(
     categoryId,
     priority,
     status,
+    statusGroup,
+    dateField,
+    from,
+    to,
     sort,
     order,
     page,
@@ -434,6 +513,10 @@ ticketsRouter.get(
       categoryId,
       priority,
       status,
+      statusGroup,
+      dateField,
+      from,
+      to,
       sort,
       order,
       page,
@@ -462,10 +545,19 @@ ticketsRouter.get(
 
       if (status) {
         where.status = status;
+      } else if (statusGroup === "open") {
+        where.status = { in: OPEN_TICKET_STATUSES };
+      } else if (statusGroup === "resolved") {
+        where.status = { in: [TicketStatus.RESOLVED, TicketStatus.CLOSED] };
       }
 
-      const orderBy: Prisma.TicketOrderByWithRelationInput[] =
-        sort === "number"
+      if (dateField && from && to) {
+        where[dateField] = { gte: from, lte: to };
+      }
+
+      const orderBy: Prisma.TicketOrderByWithRelationInput[] = dateField
+        ? [{ [dateField]: "desc" }, { id: "desc" }]
+        : sort === "number"
           ? [{ number: order }]
           : [{ [sort]: order }, { number: order }];
 
