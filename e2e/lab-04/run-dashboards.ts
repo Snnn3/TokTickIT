@@ -8,6 +8,7 @@ async function main() {
       "test",
       "--config",
       "playwright.dashboard.config.ts",
+      "dashboards.spec.ts",
       ...process.argv.slice(2),
     ]
   );

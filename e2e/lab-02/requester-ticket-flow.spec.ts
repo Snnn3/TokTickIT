@@ -154,6 +154,7 @@ test.describe("Lab 2 requester regression under session authentication", () => {
         ACCOUNTS.secondRequester,
         E2E_PASSWORD
       );
+      await secondPage.goto("/tickets");
       await secondPage.locator("#ticket-search").fill(ticketNumber);
       await expect(secondPage.getByTestId("no-results-state")).toBeVisible();
       await expect(secondPage.getByText(ticketNumber)).toHaveCount(0);

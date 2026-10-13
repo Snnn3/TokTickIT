@@ -69,6 +69,8 @@ export async function resetDashboardTickets(
 ) {
   requireDisposableDatabase();
   // Only this runner's new database, never the demo seed or an existing database.
+  await db.actionCreationRequest.deleteMany();
+  await db.actionEvent.deleteMany();
   await db.actionTaken.deleteMany();
   await db.ticket.deleteMany();
   if (!populated) return;

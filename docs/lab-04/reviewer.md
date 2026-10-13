@@ -14,6 +14,8 @@
 | https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested, then approved - merged into `lab4-staging` on 2026-10-05 |
 | https://github.com/Snnn3/TokTickIT/pull/66 | feature/lab4-4-ticket-workflow | Approved - merged into `lab4-staging` on 2026-10-07 |
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
+| https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
+| https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
 
 ### Reviewer comments I received and how I responded
 
@@ -41,6 +43,23 @@
 - **Peer review (YummieGG, APPROVED, 2026-10-08):** Accepted action cardinality, transitions, immutable performer identity, follow-up validation, requester read-only behavior, conflict recovery and idempotency. The peer verified 17 Actions Taken component tests and 158 client tests at that implementation head, and requested the C4-01 test-plan status update.
 - **Merge:** Merged into `lab4-staging` at `2026-10-08 04:10 UTC`.
 - **Verification:** Results for the implementation head are recorded below. The PR description also discloses the repository-wide `npm run check` failure.
+
+**PR #68 - feature/lab4-6-staff-dashboard** (MERGED)
+- **Peer review (YummieGG, APPROVED, 2026-10-10):** Verified AC-1 through AC-10, authoritative dashboard metrics and status groups, bounded recent lists, Bangkok time, session identity, drill-downs, and stale-response protection. The reviewer reported 17/17 focused client tests, 15/15 dashboard API tests, and passing server/client builds plus the scoped formatting check. A non-blocking recommendation was to wrap one retry-count assertion in `waitFor` to reduce CI timing sensitivity.
+- **My comment:** Thanked the reviewer for the detailed review and for merging PR #68; the response is recorded in the PR conversation.
+- **Merge:** Merged into `lab4-staging` at `2026-10-10 05:26 UTC`, merge commit `5409b44b366a9cf3ebfb01929d05697abca9c5a7`.
+
+**PR #69 - feature/lab4-7-requester-dashboard** (MERGED)
+- **Peer review (YummieGG, APPROVED, 2026-10-13):** Verified AC-1 through AC-9, requester ownership, rejection of query/body identity overrides, UTC window/Bangkok display, stable latest-five lists, and persistence across refresh/Back. The reviewer reported 7/7 Requester Dashboard component tests, 196/196 client tests, 23/23 focused server API tests, and passing production builds/scoped formatting. The review flagged C4-02's documented count of 6 as stale; it should be 7.
+- **My comment:** Thanked the reviewer and acknowledged the C4-02 count discrepancy; the comment is recorded in the PR conversation. This test-plan correction is made in the Issue #61 evidence update below.
+- **Merge:** Merged into `lab4-staging` at `2026-10-13 08:08 UTC`, merge commit `1f558d05a898dd66952bffb652cb829d52b6b6fe`.
+
+## Issue #61 branch evidence — 2026-10-13
+
+The Issue #61 work is on `feature/lab4-8-e2e-visual`, based on the merged
+`lab4-staging` head. This branch has no PR or peer review yet. The measured
+branch results and remaining release limits are recorded in `tests.md`; they
+must not be presented as final `main` evidence before integration.
 
 ## Verification for Issue #58
 

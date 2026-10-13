@@ -50,9 +50,10 @@ async function capture(page: Page, name: string) {
     name.startsWith("requester-") ? "requester-dashboard" : "staff-dashboard"
   );
   mkdirSync(directory, { recursive: true });
+  const fullPage = page.viewportSize()?.width !== 375;
   await page.screenshot({
     path: join(directory, `${name}.png`),
-    fullPage: true,
+    fullPage,
   });
   writeFileSync(
     join(directory, `${name}.json`),
@@ -64,7 +65,7 @@ async function capture(page: Page, name: string) {
         role: name.startsWith("requester-") ? "REQUESTER" : "IT_STAFF",
         route: new URL(page.url()).pathname,
         viewport: page.viewportSize(),
-        fullPage: true,
+        fullPage,
         capturedAt: new Date().toISOString(),
         expectedResult:
           "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views",

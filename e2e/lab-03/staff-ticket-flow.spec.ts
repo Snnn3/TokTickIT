@@ -63,6 +63,7 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
 
     await signInAndChangePassword(staffPage, ACCOUNTS.staff, "E2E.Staff!2026");
 
+    await staffPage.goto("/staff/queue");
     await expect(staffPage.getByTestId("staff-queue-view")).toBeVisible();
     await staffPage.locator("#queue-search").fill(workflowTicketNumber);
     const workflowRow = staffPage

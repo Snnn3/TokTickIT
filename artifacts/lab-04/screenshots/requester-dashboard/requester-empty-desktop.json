@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "empty requester dashboard keeps zero cards and useful empty lists",
+  "screenshot": "requester-empty-desktop.png",
+  "role": "REQUESTER",
+  "route": "/dashboard/requester",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-13T12:32:34.748Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

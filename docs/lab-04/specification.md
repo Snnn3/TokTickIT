@@ -236,20 +236,20 @@ to existing Ticket routes, exact validation, responses and safe conflict codes.
 
 Contract delivery:
 - [x] Six draft files, requirements, matrices, exact API/UI and test plan exist.
-- [ ] Independent peer approval is recorded in reviewer.md.
-- [ ] Contract is merged before implementation PRs are completed.
+- [x] Independent peer approval is recorded in reviewer.md (PR #63, approved by YummieGG).
+- [x] Contract is merged before implementation PRs are completed (PR #63 merged 2026-09-30 before PR #64).
 
 Product completion (future implementation; do not check without evidence):
 - [ ] AC-01 through AC-23 pass with exact test paths and recorded results.
-- [ ] Actions Taken and both role dashboards work with correct authorization.
+- [x] Actions Taken and both role dashboards work with correct authorization. Issue #61 branch E2E covers the Staff, Admin and Requester journeys; see `docs/lab-04/tests.md`.
 - [ ] Whole Ticket/action matrices, resolution and advisory feedback pass.
 - [ ] Idempotency, concurrency, inactive assignments and safe failure pass.
-- [ ] Migration preservation, repeat seed and restore verification pass.
+- [x] Migration preservation, repeat seed and restore verification pass; see M4-01/M4-02 in `docs/lab-04/tests.md` and `server/prisma/migration-evidence/lab4-actions.md`.
 - [ ] Labs 1-3 regression, server/client tests, lint/check, builds and E2E pass.
-- [ ] Performance-smoke query evidence and dashboard/database count comparisons exist.
+- [x] Performance-smoke query evidence and dashboard/database count comparisons exist; see P4-01 in `docs/lab-04/tests.md`.
 - [ ] Desktop/tablet/mobile screenshots and accessibility checklist are complete.
 - [ ] No broken links, placeholder controls, unexpected console errors, clipping or overflow remain.
-- [ ] README setup, seed, migration/recovery, tests and demonstration steps are current.
+- [x] README setup, seed, migration/recovery, tests and demonstration steps are current; migration evidence remains linked from `README.md`.
 - [ ] Peer review records identity, PR links, findings, responses and approvals.
 - [ ] Feature branches merge into lab4-staging, then main; final tests run from main and Kanban reflects completed work.
 - [ ] Final report has Answer Part 1 through Answer Part 9, readable evidence and working links; AI disclosure selects 6-10 actual prompts.

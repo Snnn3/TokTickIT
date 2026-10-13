@@ -1,0 +1,14 @@
+{
+  "testId": "E4-02",
+  "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
+  "screenshot": "resolved-staff-tablet.png",
+  "role": "IT_STAFF",
+  "route": "/staff/tickets/113",
+  "viewport": {
+    "width": 768,
+    "height": 1024
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-13T12:33:05.724Z",
+  "expectedResult": "Staff Ticket detail remains readable at tablet width without horizontal overflow."
+}

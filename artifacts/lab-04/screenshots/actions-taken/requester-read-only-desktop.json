@@ -1,0 +1,14 @@
+{
+  "testId": "E4-01",
+  "test": "E4-01 Administrator can create an action and Requester history remains read-only",
+  "screenshot": "requester-read-only-desktop.png",
+  "role": "REQUESTER",
+  "route": "/tickets/2",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-13T12:31:46.539Z",
+  "expectedResult": "The ticket owner can read the Administrator's Action Taken and history but has no create or edit controls."
+}

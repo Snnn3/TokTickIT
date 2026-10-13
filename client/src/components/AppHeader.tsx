@@ -75,7 +75,7 @@ export function AppHeader() {
   };
 
   return (
-    <nav className="navbar navbar-expand-md zg-header sticky-top py-2 px-3 shadow-sm">
+    <nav className="navbar navbar-expand-lg zg-header sticky-top py-2 px-3 shadow-sm">
       <div className="container-fluid">
         <span className="navbar-brand fw-bold text-white mb-0">TokTickIT</span>
 

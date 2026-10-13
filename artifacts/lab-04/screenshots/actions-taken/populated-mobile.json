@@ -1,0 +1,14 @@
+{
+  "testId": "E4-01",
+  "test": "E4-01 IT Staff validates, assigns, edits, completes and cancels two Actions Taken",
+  "screenshot": "populated-mobile.png",
+  "role": "IT_STAFF",
+  "route": "/staff/tickets/1",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-13T12:31:38.703Z",
+  "expectedResult": "The viewport shows the completed Action details; the journey also verifies the second, cancelled Action and no horizontal overflow."
+}

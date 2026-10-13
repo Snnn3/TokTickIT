@@ -28,7 +28,7 @@ test.describe("E-01 authentication journey", () => {
     );
 
     await signInAndChangePassword(page, ACCOUNTS.requester, changedPassword);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/dashboard\/requester$/);
 
     const sessionBeforeLogout = await page.context().cookies();
     await page.getByTestId("logout-btn").click();
@@ -86,7 +86,7 @@ test.describe("E-01 authentication journey", () => {
       await page.locator("#new-password").fill(`E2E.${viewportName}!2026`);
       await page.locator("#confirm-password").fill(`E2E.${viewportName}!2026`);
       await page.getByRole("button", { name: "Save new password" }).click();
-      await expect(page).toHaveURL(/\/tickets$/);
+      await expect(page).toHaveURL(/\/dashboard\/requester$/);
       await context.close();
     }
   });

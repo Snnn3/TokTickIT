@@ -17,19 +17,19 @@ export const ACCOUNTS = {
     name: "Anucha Wongchai",
     email: "anucha.wongchai@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+  landing: "/dashboard/requester",
   },
   secondRequester: {
     name: "Busaba Srisawat",
     email: "busaba.srisawat@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+  landing: "/dashboard/requester",
   },
   thirdRequester: {
     name: "Chatchai Promma",
     email: "chatchai.promma@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+  landing: "/dashboard/requester",
   },
   staff: {
     name: "Kittipong Saelim",
@@ -227,7 +227,7 @@ export async function captureScreenshot(
     filename
   );
   mkdirSync(dirname(destination), { recursive: true });
-  await page.screenshot({ fullPage: true, path: destination });
+  writeFileSync(destination, await page.screenshot({ fullPage: true }));
 }
 
 export function writeEvidence(relativePath: string, value: unknown): void {

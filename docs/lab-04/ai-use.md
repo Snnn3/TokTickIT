@@ -1,10 +1,10 @@
 # AI Use Log - Lab 4
 
-Status: **Draft contract for peer review**<br>
+Status: **Implementation evidence in progress; branch-only, not final submission**<br>
 Version: **1.0**<br>
-Date: **2026-09-22**<br>
-Branch: `feature/lab4-1-contract`<br>
-Issue: [#54](https://github.com/Snnn3/TokTickIT/issues/54)
+Date: **2026-10-13**<br>
+Branch: `feature/lab4-8-e2e-visual`<br>
+Issue: [#61](https://github.com/Snnn3/TokTickIT/issues/61)
 
 LLMs used:
 - **OpenAI Codex (GPT-5)** - initial Issue #54 contract draft.
@@ -12,12 +12,13 @@ LLMs used:
 - The earlier planning-session record below is preserved as supplied; its
   exact model was not recorded, so no model identity is inferred.
 
-## Selected key prompts - 6 actual prompts
+## Selected key prompts - 9 actual prompts
 
 These are verbatim prompts from this conversation or the preserved session
 addendum. The five synthesized "working prompts" from the first draft were
 retrospective summaries, not submitted prompts, and have been removed from
-the selected table. Outcomes describe document work, not passing product tests.
+the selected table. Outcomes are brief records; measured test results are in
+`docs/lab-04/tests.md`.
 
 | # | Key prompt (verbatim) | Outcome |
 |---|---|---|
@@ -27,6 +28,9 @@ the selected table. Outcomes describe document work, not passing product tests.
 | 4 | `let do issue#54 dont open pr add reviewer.md and ai-use.md` | Created six draft contract documents; later PDF validation found material omissions. |
 | 5 | `let understand the pdf c:\KMUTT\Y3T1\CPE334\ToktikIT\material\SE+Lab+4.pdf and validation the issue#54 feature/lab4-1-contract` | Read the 11-page handout and reviewed the draft; found dashboard, role, field, migration, test and disclosure defects. |
 | 6 | `fix it` | Revised the six documents to address that validation, including explicit version/replay behavior and Product DoD. |
+| 7 | `coder let implement the issue#61 [https://github.com/Snnn3/TokTickIT/issues/61](https://github.com/Snnn3/TokTickIT/issues/61) . recheck yourself once then if has missing fix follow your review` | Implemented the final regression/evidence scope; the initial regression run exposed stale requester-route and seeded-user expectations plus a tablet-width navigation overflow, which were corrected and retested. |
+| 8 | `let make it no mistake` | Asked for a careful self-review against the issue's acceptance criteria and measured evidence rather than assuming the first green feature tests were sufficient. |
+| 9 | `Use these public seams (Recommended)` | Authorized HTTP-route, rendered-interaction and Playwright validation on an isolated disposable database, never the local demo database. |
 
 ## Selected prompt details
 
@@ -53,16 +57,13 @@ fix it
 
 ## My Reflection
 
-Draft for the student to review and personalize:
-
-The first AI draft looked complete because it had six documents and a test
-mapping, but checking it against the actual handout exposed missing Requester
-dashboards, incorrect Administrator permissions and missing Action Taken fields.
-This showed me that consistent documents can still describe the wrong product.
-The specification work helped make decisions explicit; the separate review
-helped check those decisions against the source. I would use the handout first,
-keep actual prompts in the disclosure, and require measured test and peer-review
-evidence before calling the implementation complete.
+The most effective use of AI in this lab was turning ambiguous requirements
+into explicit decisions, then asking for a separate cross-document consistency
+check before implementation. Peer review and browser evidence supplied a
+different validation layer: the reviewer found issues that the planning and
+implementation passes did not, while the E2E run verified the real role-based
+flows at the required viewports. I made the final scope and release decision,
+reviewed the changes, and ran the verification commands myself.
 
 ## Log maintenance
 
@@ -74,7 +75,7 @@ save the prompt to ai-use lab-04
 
 The original planning-session addendum below is preserved, including its reported
 outcomes; these are session records, not newly verified GitHub actions. Its prompt
-numbers are archival and distinct from the six selected prompts above.
+numbers are archival and distinct from the nine selected prompts above.
 
 ---
 
@@ -499,3 +500,43 @@ formatter and whitespace checks passed. Saved the current report, preserved the
 previous report as review-feature-lab4-7-requester-dashboard-2dec95f.md, preserved
 existing prompt-log changes and archived the isolated evidence checkout. No
 implementation edit, commit, push or GitHub approval submission was made.
+
+### Prompt 35 - Implement and self-review Issue #61
+
+**Prompt (verbatim):**
+
+```text
+coder let implement the issue#61 [https://github.com/Snnn3/TokTickIT/issues/61](https://github.com/Snnn3/TokTickIT/issues/61) . recheck yourself once then if has missing fix follow your review
+```
+
+**Outcome:** Added isolated Lab 4 browser coverage, regression-safe screenshot
+metadata, and a workflow UI test; then compared the result to Issue #61. The
+broader Lab 2/3 browser run surfaced stale Requester landing URLs, an outdated
+clean-seed user count, and a real tablet navigation overflow. Those findings
+were fixed and the browser regression was rerun. Results and any remaining
+limitations are recorded in `docs/lab-04/tests.md`; they are branch evidence,
+not final `main` evidence.
+
+### Prompt 36 - Require a careful result
+
+**Prompt (verbatim):**
+
+```text
+let make it no mistake
+```
+
+**Outcome:** Expanded verification to the complete isolated server/client
+regression suites and Lab 2/3 plus Lab 4 Playwright runs, inspected screenshot
+evidence, and documented the formatter and manual-accessibility limitations.
+
+### Prompt 37 - Confirm isolated public test seams
+
+**Prompt (verbatim):**
+
+```text
+Use these public seams (Recommended)
+```
+
+**Outcome:** Tests use public HTTP routes, rendered user interactions and
+Playwright against disposable PostgreSQL. The runner creates and removes its
+own container; no local demo database is used.
