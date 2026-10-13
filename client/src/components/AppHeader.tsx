@@ -23,6 +23,7 @@ const STAFF_ROLES: Role[] = ["IT_STAFF", "ADMINISTRATOR"];
 
 /** Every role files its own tickets (FR-27), so the first two are unrestricted. */
 const DESTINATIONS: NavDestination[] = [
+  { to: "/dashboard/requester", label: "My Dashboard", roles: ALL_ROLES },
   { to: "/tickets", label: "My Tickets", roles: ALL_ROLES },
   { to: "/tickets/new", label: "Create Ticket", roles: ALL_ROLES },
   { to: "/dashboard/staff", label: "Staff Dashboard", roles: STAFF_ROLES },

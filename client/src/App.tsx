@@ -17,6 +17,7 @@ import { StaffTicketDetail } from "./components/StaffTicketDetail";
 import { StaffTicketQueue } from "./components/StaffTicketQueue";
 import { StaffActionsList } from "./components/StaffActionsList";
 import { StaffDashboard } from "./components/StaffDashboard";
+import { RequesterDashboard } from "./components/RequesterDashboard";
 import { UserManagement } from "./components/UserManagement";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import {
@@ -73,10 +74,15 @@ function ChangePasswordRoute() {
 
 function MyTicketsRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   return (
     <MyTickets
       onCreateTicket={() => navigate("/tickets/new")}
-      onSelectTicket={(ticketId) => navigate(`/tickets/${ticketId}`)}
+      onSelectTicket={(ticketId) =>
+        navigate(`/tickets/${ticketId}`, {
+          state: { from: `${location.pathname}${location.search}` },
+        })
+      }
     />
   );
 }
@@ -93,8 +99,18 @@ function CreateTicketRoute() {
 
 function TicketDetailRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { ticketId } = useParams();
   const parsed = Number(ticketId);
+  const routeState = location.state as { from?: unknown } | null;
+  const requestedBackTo = routeState?.from;
+  const backTo =
+    typeof requestedBackTo === "string" &&
+    (requestedBackTo === "/dashboard/requester" ||
+      requestedBackTo === "/tickets" ||
+      requestedBackTo.startsWith("/tickets?"))
+      ? requestedBackTo
+      : "/tickets";
 
   if (!Number.isInteger(parsed) || parsed <= 0) {
     return <NotFound backTo="/tickets" />;
@@ -102,7 +118,12 @@ function TicketDetailRoute() {
 
   return (
     <RequesterTicketDetail
-      onBack={() => navigate("/tickets")}
+      backLabel={
+        backTo === "/dashboard/requester"
+          ? "Back to My Dashboard"
+          : "Back to My Tickets"
+      }
+      onBack={() => navigate(backTo)}
       ticketId={parsed}
     />
   );
@@ -181,6 +202,7 @@ export function AppRoutes() {
 
       <Route element={<RequireAuth />}>
         <Route element={<RoleLanding />} path="/" />
+        <Route element={<RequesterDashboard />} path="/dashboard/requester" />
         <Route element={<MyTicketsRoute />} path="/tickets" />
         <Route element={<CreateTicketRoute />} path="/tickets/new" />
         <Route element={<TicketDetailRoute />} path="/tickets/:ticketId" />

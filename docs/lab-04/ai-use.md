@@ -374,3 +374,128 @@ Action write parsing until after path, Ticket, self-service and Action checks.
 Consolidated Serializable retry behavior and repeated Action test transaction
 setup. The full server/client suites passed (233/135), as did the server build,
 focused formatter check and whitespace check.
+
+### Prompt 29 - Review Issue #60 requester dashboard against staging
+
+**Prompt (verbatim):**
+
+```text
+reviewer review the Issue #60  in the scope of issue in feature/lab4-7-requester-dashboardcompare to origin/lab4-staging the new change is already push
+```
+
+**Outcome:** Reviewed pushed head `17ee0f8` against `origin/lab4-staging`
+(`5409b44`), limited to Issue #60, with independent Standards and Spec passes.
+Saved `.reviews/review-feature-lab4-7-requester-dashboard.md` with a Changes
+requested verdict: active My Tickets filters/pagination are lost through
+refresh/detail-back, resolved drill-down shows the wrong sorting label,
+visible date bounds are raw UTC instead of Bangkok time, and the new requester
+performance test reproducibly fails its unequal-fixture query-count assertion.
+Server tests passed 360/360; client diagnostic retry passed 191/191 with an
+explicit 15-second timeout after default-timeout failures; dashboard E2E passed
+13/13. Performance tests passed 4/5, and the failing requester test failed again
+in isolation; requester p95 remains unverified. Builds, client lint, changed-file
+formatter and whitespace checks passed. No implementation edits, GitHub review,
+commit or push were made.
+
+### Prompt 30 - Re-review Issue #60 requester dashboard
+
+**Prompt (verbatim):**
+
+```text
+reviewer review the Issue #60  in the scope of issue in feature/lab4-7-requester-dashboardcompare to origin/lab4-staging
+```
+
+**Outcome:** Verified that local and remote feature heads remain `17ee0f8`
+and the staging base remains `5409b44`, matching the previous review. Found
+uncommitted implementation/test corrections and new requester performance
+evidence in the working tree. Requested confirmation to include those changes,
+because the reviewer guidance excludes uncommitted changes unless explicitly
+requested. Preserved all existing changes; no new test run, implementation edit,
+commit, push or GitHub review was made.
+
+### Prompt 31 - Re-review the pushed Issue #60 fixes
+
+**Prompt (verbatim):**
+
+```text
+i already push the fix
+```
+
+**Outcome:** Confirmed the pushed head is now `9388984`, compared its complete
+Issue #60 diff against staging `5409b44`, and saved the updated branch review.
+The previous filter/pagination persistence, resolved-sort label, Bangkok-bound
+display and performance-query comparison findings are resolved. Standards has
+only non-blocking notes. Spec still requests changes for rejection of matching
+`sort=resolvedAt`, obsolete error-body parsing clearing a newer filtered list,
+and missing resolved-time boundary/overflowing attention/resolved tie assertions.
+Both behavior findings were independently reproduced without implementation
+edits. Server tests passed 360/360; client passed 192/192 with a recorded
+15-second timeout, focused thread-worker retry passed 16/16, dashboard E2E
+passed 14/14, and real-database performance passed 5/5 (Requester p95 106.65ms,
+Staff p95 108.90ms). Builds, client lint, changed-file formatter and whitespace
+checks passed. Initial environment setup/worker timeouts are recorded separately
+from successful retries. Preserved prior prompt-log changes and archived the
+earlier report; no source edit, commit, push or GitHub approval was made.
+
+### Prompt 32 - Re-review Issue #60 after the pushed review fixes
+
+**Prompt (verbatim):**
+
+```text
+reviewer review the Issue #60  in the scope of issue in feature/lab4-7-requester-dashboardcompare to origin/lab4-staging
+```
+
+**Outcome:** Reviewed pushed head `2dec95f` against staging `5409b44`, limited
+to Issue #60, with independent Standards and Spec reviews of all three commits.
+All three previous blockers are resolved. The verdict remains Changes requested
+for one new P2: an obsolete initial Requester Dashboard response can replace a
+newer snapshot and enable Refresh while a later refresh is still pending. This
+was independently reproduced in Chromium under the existing development
+StrictMode setup with controlled responses. Standards has three optional P3
+maintainability suggestions and no hard violations. Focused client tests passed
+19/19; full client passed 195/195 with the recorded 15-second timeout; server
+isolated retry passed 364/364; dashboard E2E passed 14/14; real-database tests
+passed 6/6, including resolved boundaries and exact attention/resolved tie IDs.
+Requester p95 was 111.56ms and Staff p95 91.62ms. Builds, client lint, changed-file
+formatter and whitespace checks passed. The initial database readiness timeout
+is recorded separately. Saved the current review and preserved the previous
+report under its commit-suffixed name. Generated evidence was kept isolated and
+the managed review checkout archived. No implementation edit, commit, push,
+GitHub review or approval was made; existing prompt-log changes were preserved.
+
+### Prompt 33 - Locate the requester dashboard review
+
+**Prompt (verbatim):**
+
+```text
+which file i need to read
+```
+
+**Outcome:** Linked the current requester dashboard review report, especially
+Spec F1 and Where to fix, and the relevant RequesterDashboard.tsx code location.
+No additional review, test run or implementation change was made for this prompt.
+
+### Prompt 34 - Re-review Issue #60 after the dashboard race fix
+
+**Prompt (verbatim):**
+
+```text
+reviewer review the Issue #60  in the scope of issue in feature/lab4-7-requester-dashboardcompare to origin/lab4-staging
+```
+
+**Outcome:** Reviewed pushed head `fdaa916` against staging `5409b44`, covering
+all four commits and 25 changed files with independent Standards and Spec passes.
+Approved locally within Issue #60 scope: no blocking findings remain. The last
+P2 dashboard refresh race is fixed by generation guards and effect cleanup, with
+a new StrictMode regression and six independent Chromium stale-response variants
+passing. Standards has three optional P3 suggestions; Spec has zero findings.
+Focused tests passed 20/20, server 364/364, final client rerun 196/196, dashboard
+E2E 14/14 and real-database/performance tests 6/6. The initial full-client run
+failed one inherited logout assertion (195/196); its file passed 9/9 separately
+and the identical full suite passed without concurrent browser workload. This
+failure and the explicit single-thread/15-second test settings are recorded.
+Requester p95 was 77.48ms, Staff p95 87.05ms; builds, client lint, changed-file
+formatter and whitespace checks passed. Saved the current report, preserved the
+previous report as review-feature-lab4-7-requester-dashboard-2dec95f.md, preserved
+existing prompt-log changes and archived the isolated evidence checkout. No
+implementation edit, commit, push or GitHub approval submission was made.

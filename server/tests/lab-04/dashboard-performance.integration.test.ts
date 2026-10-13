@@ -19,6 +19,30 @@ let app: Express;
 let accounts: Awaited<ReturnType<typeof seedDashboardAccounts>>;
 const queries: Prisma.QueryEvent[] = [];
 
+function requesterQueryBreakdown(sql: Prisma.QueryEvent[]) {
+  const metricReads = sql.filter(
+    ({ query }) =>
+      /^SELECT/i.test(query) &&
+      /FROM "public"\."Ticket"/.test(query) &&
+      /COUNT\s*\(/i.test(query)
+  );
+  const collectionReads = sql.filter(
+    ({ query }) =>
+      /^SELECT/i.test(query) &&
+      /FROM "public"\."Ticket"/.test(query) &&
+      /ORDER BY/i.test(query) &&
+      !/COUNT|GROUP BY/i.test(query)
+  );
+  const standaloneRelationReads = sql.filter(
+    ({ query }) => /^SELECT/i.test(query) && /FROM "public"\."User"/.test(query)
+  );
+  return {
+    metricQueries: metricReads.length,
+    collectionQueries: collectionReads.length,
+    standaloneRelationQueries: standaloneRelationReads.length,
+  };
+}
+
 beforeAll(async () => {
   database = await createDisposableDatabase();
   process.env.DATABASE_URL = database.url;
@@ -50,14 +74,18 @@ async function populatePerformanceFixture() {
   const instant = new Date(Date.now() - 60000);
   await db.$executeRaw`
     INSERT INTO "Ticket" ("number", "requesterId", "ownerId", "categoryId", "systemId",
-      "summary", "description", "requestedPriority", "itPriority", "status", "createdAt", "updatedAt")
+      "summary", "description", "requestedPriority", "itPriority", "status", "createdAt", "updatedAt", "resolvedAt")
     SELECT 'PERF-' || lpad(g::text, 5, '0'), ${accounts.requester.id},
       CASE WHEN g % 3 = 0 THEN NULL WHEN g % 3 = 1 THEN ${accounts.staff.id} ELSE ${accounts.secondStaff.id} END,
       ${category.id}, ${accounts.system.id}, 'Performance ticket ' || g, 'Dashboard scale fixture',
-      'MEDIUM'::"TicketPriority", 'HIGH'::"TicketPriority",
-      (ARRAY['NEW','OPEN','IN_PROGRESS','WAITING_FOR_REQUESTER','RESOLVED','CLOSED','REOPENED','CANCELLED']::"TicketStatus"[])[1 + ((g-1) % 8)],
-      ${instant}, ${instant}
-    FROM generate_series(1, 10000) AS g
+      'MEDIUM'::"TicketPriority", 'HIGH'::"TicketPriority", status,
+      ${instant}, ${instant},
+      CASE WHEN status IN ('RESOLVED'::"TicketStatus", 'CLOSED'::"TicketStatus") THEN ${instant} ELSE NULL END
+    FROM (
+      SELECT g,
+        (ARRAY['NEW','OPEN','IN_PROGRESS','WAITING_FOR_REQUESTER','RESOLVED','CLOSED','REOPENED','CANCELLED']::"TicketStatus"[])[1 + ((g-1) % 8)] AS status
+      FROM generate_series(1, 10000) AS g
+    ) AS fixture
   `;
   await db.$executeRaw`
     INSERT INTO "ActionTaken" ("ticketId", "title", "details", "performedById", "assigneeId",
@@ -92,7 +120,186 @@ async function fetchSnapshot(cookie: string) {
   return { response, milliseconds, sql };
 }
 
-describe("P4-01 Staff Dashboard (Issue #59 only; Requester endpoint remains Issue #60)", () => {
+async function fetchRequesterSnapshot(cookie: string) {
+  queries.length = 0;
+  const start = performance.now();
+  const response = await request(app)
+    .get("/api/dashboard/requester")
+    .set("Cookie", cookie);
+  const milliseconds = performance.now() - start;
+  const sql = [...queries];
+  expect(response.status).toBe(200);
+  expect(response.body.lists.attentionTickets.length).toBeLessThanOrEqual(5);
+  expect(response.body.lists.recentTickets.length).toBeLessThanOrEqual(5);
+  expect(response.body.lists.resolvedTickets.length).toBeLessThanOrEqual(5);
+  expect(Buffer.byteLength(response.text, "utf8")).toBeLessThanOrEqual(
+    64 * 1024
+  );
+  return { response, milliseconds, sql };
+}
+
+describe("P4-01 Staff Dashboard and Issue #60 Requester Dashboard", () => {
+  it("scopes requester metrics, honors inclusive seven-day bounds and matches both drill-downs", async () => {
+    await db.actionTaken.deleteMany();
+    await db.ticket.deleteMany();
+    const category = await db.category.findFirstOrThrow();
+    const asOf = new Date("2026-10-08T01:00:00.000Z");
+    const fixtures = [
+      {
+        number: "TKT-EDGE-00001",
+        summary: "Before the window",
+        status: TicketStatus.OPEN,
+        updatedAt: new Date("2026-10-01T00:59:59.999Z"),
+      },
+      {
+        number: "TKT-EDGE-00002",
+        summary: "At the window start",
+        status: TicketStatus.OPEN,
+        updatedAt: new Date("2026-10-01T01:00:00.000Z"),
+      },
+      {
+        number: "TKT-EDGE-00003",
+        summary: "Waiting for requester",
+        status: TicketStatus.WAITING_FOR_REQUESTER,
+        updatedAt: new Date("2026-10-07T12:00:00.000Z"),
+      },
+      {
+        number: "TKT-EDGE-00004",
+        summary: "At the snapshot",
+        status: TicketStatus.OPEN,
+        updatedAt: asOf,
+      },
+      {
+        number: "TKT-EDGE-00005",
+        summary: "After the snapshot",
+        status: TicketStatus.OPEN,
+        updatedAt: new Date(asOf.getTime() + 1),
+      },
+      {
+        number: "TKT-EDGE-00006",
+        summary: "Resolved inside the window",
+        status: TicketStatus.CLOSED,
+        updatedAt: new Date("2026-10-04T12:00:00.000Z"),
+        resolvedAt: new Date("2026-10-04T11:00:00.000Z"),
+      },
+      {
+        number: "TKT-EDGE-00007",
+        summary: "Legacy resolution time is unknown",
+        status: TicketStatus.CLOSED,
+        updatedAt: new Date("2026-10-05T12:00:00.000Z"),
+        resolvedAt: null,
+      },
+    ];
+
+    for (const fixture of fixtures) {
+      await db.ticket.create({
+        data: {
+          ...fixture,
+          description: "Requester dashboard fixed-clock fixture",
+          requesterId: accounts.requester.id,
+          ownerId: accounts.staff.id,
+          categoryId: category.id,
+          systemId: accounts.system.id,
+          requestedPriority: "MEDIUM",
+          itPriority: "HIGH",
+          createdAt: new Date("2026-09-01T00:00:00.000Z"),
+        },
+      });
+    }
+    await db.ticket.create({
+      data: {
+        number: "TKT-EDGE-FOREIGN",
+        summary: "Another requester ticket",
+        description: "Ownership isolation fixture",
+        requesterId: accounts.secondRequester.id,
+        ownerId: accounts.staff.id,
+        categoryId: category.id,
+        systemId: accounts.system.id,
+        requestedPriority: "MEDIUM",
+        itPriority: "HIGH",
+        status: TicketStatus.OPEN,
+        createdAt: new Date("2026-09-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-10-07T12:00:00.000Z"),
+      },
+    });
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(asOf);
+    try {
+      const cookie = sessionCookie({
+        id: accounts.requester.id,
+        role: accounts.requester.role,
+      });
+      const response = await request(app)
+        .get("/api/dashboard/requester")
+        .set("Cookie", cookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.asOf).toBe(asOf.toISOString());
+      expect(response.body.metrics).toEqual({
+        openTickets: 5,
+        waitingForRequester: 1,
+        recentlyUpdated: 5,
+        recentlyResolved: 1,
+      });
+      expect(
+        response.body.lists.recentTickets.map(
+          (ticket: { number: string }) => ticket.number
+        )
+      ).toEqual([
+        "TKT-EDGE-00004",
+        "TKT-EDGE-00003",
+        "TKT-EDGE-00007",
+        "TKT-EDGE-00006",
+        "TKT-EDGE-00002",
+      ]);
+      expect(
+        response.body.lists.resolvedTickets.map(
+          (ticket: { number: string }) => ticket.number
+        )
+      ).toEqual(["TKT-EDGE-00006"]);
+
+      const bounds = {
+        from: "2026-10-01T01:00:00.000Z",
+        to: asOf.toISOString(),
+      };
+      const updatedTickets = await request(app)
+        .get(
+          `/api/tickets?${new URLSearchParams({
+            dateField: "updatedAt",
+            ...bounds,
+          })}`
+        )
+        .set("Cookie", cookie);
+      expect(updatedTickets.status).toBe(200);
+      expect(updatedTickets.body.total).toBe(5);
+      expect(
+        updatedTickets.body.tickets.map(
+          (ticket: { number: string }) => ticket.number
+        )
+      ).toEqual(
+        response.body.lists.recentTickets.map(
+          (ticket: { number: string }) => ticket.number
+        )
+      );
+
+      const resolvedTickets = await request(app)
+        .get(
+          `/api/tickets?${new URLSearchParams({
+            statusGroup: "resolved",
+            dateField: "resolvedAt",
+            ...bounds,
+          })}`
+        )
+        .set("Cookie", cookie);
+      expect(resolvedTickets.status).toBe(200);
+      expect(resolvedTickets.body.total).toBe(1);
+      expect(resolvedTickets.body.tickets[0].number).toBe("TKT-EDGE-00006");
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 30000);
+
   it("keeps older actionable tickets visible when newer terminal tickets exist", async () => {
     await db.actionTaken.deleteMany();
     await db.ticket.deleteMany();
@@ -199,6 +406,171 @@ describe("P4-01 Staff Dashboard (Issue #59 only; Requester endpoint remains Issu
         (ticket: { summary: string }) => ticket.summary
       )
     );
+  }, 30000);
+
+  it("includes exact resolved-window endpoints and orders tied requester lists by descending id", async () => {
+    await db.actionTaken.deleteMany();
+    await db.ticket.deleteMany();
+    const category = await db.category.findFirstOrThrow();
+    const asOf = new Date("2026-10-08T01:00:00.000Z");
+    const from = new Date(asOf.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oldUpdate = new Date("2026-09-30T00:00:00.000Z");
+
+    const createTicket = (
+      number: string,
+      requesterId: number,
+      status: TicketStatus,
+      updatedAt: Date,
+      resolvedAt: Date | null = null
+    ) =>
+      db.ticket.create({
+        data: {
+          number,
+          summary: number,
+          description: "Requester boundary and tie-order fixture",
+          requesterId,
+          ownerId: accounts.staff.id,
+          categoryId: category.id,
+          systemId: accounts.system.id,
+          requestedPriority: "MEDIUM",
+          itPriority: "HIGH",
+          status,
+          createdAt: oldUpdate,
+          updatedAt,
+          resolvedAt,
+        },
+      });
+
+    const beforeStart = await createTicket(
+      "R-BEFORE-START",
+      accounts.requester.id,
+      TicketStatus.RESOLVED,
+      oldUpdate,
+      new Date(from.getTime() - 1)
+    );
+    const atStart = await createTicket(
+      "R-AT-START",
+      accounts.requester.id,
+      TicketStatus.CLOSED,
+      oldUpdate,
+      from
+    );
+    const resolvedTieIds: number[] = [];
+    for (let index = 1; index <= 7; index += 1) {
+      const ticket = await createTicket(
+        `R-TIE-${index}`,
+        accounts.requester.id,
+        index % 2 === 0 ? TicketStatus.CLOSED : TicketStatus.RESOLVED,
+        oldUpdate,
+        asOf
+      );
+      resolvedTieIds.push(ticket.id);
+    }
+    const afterEnd = await createTicket(
+      "R-AFTER-END",
+      accounts.requester.id,
+      TicketStatus.CLOSED,
+      oldUpdate,
+      new Date(asOf.getTime() + 1)
+    );
+    const legacyNull = await createTicket(
+      "R-LEGACY-NULL",
+      accounts.requester.id,
+      TicketStatus.CLOSED,
+      oldUpdate
+    );
+
+    const attentionIds: number[] = [];
+    for (let index = 1; index <= 7; index += 1) {
+      const ticket = await createTicket(
+        `A-TIE-${index}`,
+        accounts.requester.id,
+        TicketStatus.WAITING_FOR_REQUESTER,
+        asOf
+      );
+      attentionIds.push(ticket.id);
+    }
+    const foreignAttention = await createTicket(
+      "F-ATT-TIE",
+      accounts.secondRequester.id,
+      TicketStatus.WAITING_FOR_REQUESTER,
+      asOf
+    );
+    const foreignResolved = await createTicket(
+      "F-RES-TIE",
+      accounts.secondRequester.id,
+      TicketStatus.CLOSED,
+      oldUpdate,
+      asOf
+    );
+
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(asOf);
+    try {
+      const cookie = sessionCookie({
+        id: accounts.requester.id,
+        role: accounts.requester.role,
+      });
+      const dashboard = await request(app)
+        .get("/api/dashboard/requester")
+        .set("Cookie", cookie);
+
+      expect(dashboard.status).toBe(200);
+      expect(dashboard.body.asOf).toBe(asOf.toISOString());
+      expect(dashboard.body.metrics.waitingForRequester).toBe(7);
+      expect(dashboard.body.metrics.recentlyResolved).toBe(8);
+      expect(
+        dashboard.body.lists.attentionTickets.map(
+          (ticket: { id: number }) => ticket.id
+        )
+      ).toEqual(attentionIds.slice(-5).reverse());
+      expect(
+        dashboard.body.lists.attentionTickets.map(
+          (ticket: { id: number }) => ticket.id
+        )
+      ).not.toContain(foreignAttention.id);
+      expect(
+        dashboard.body.lists.resolvedTickets.map(
+          (ticket: { id: number }) => ticket.id
+        )
+      ).toEqual(resolvedTieIds.slice(-5).reverse());
+      expect(
+        dashboard.body.lists.resolvedTickets.map(
+          (ticket: { id: number }) => ticket.id
+        )
+      ).not.toContain(foreignResolved.id);
+
+      const resolvedDrilldown = await request(app)
+        .get(
+          `/api/tickets?${new URLSearchParams({
+            statusGroup: "resolved",
+            dateField: "resolvedAt",
+            from: from.toISOString(),
+            to: asOf.toISOString(),
+          })}`
+        )
+        .set("Cookie", cookie);
+      const expectedResolvedIds = [
+        ...resolvedTieIds.slice().reverse(),
+        atStart.id,
+      ];
+      const resolvedIds = resolvedDrilldown.body.tickets.map(
+        (ticket: { id: number }) => ticket.id
+      );
+
+      expect(resolvedDrilldown.status).toBe(200);
+      expect(resolvedDrilldown.body.total).toBe(8);
+      expect(resolvedIds).toEqual(expectedResolvedIds);
+      expect(resolvedDrilldown.body.total).toBe(
+        dashboard.body.metrics.recentlyResolved
+      );
+      expect(resolvedIds).not.toContain(beforeStart.id);
+      expect(resolvedIds).not.toContain(afterEnd.id);
+      expect(resolvedIds).not.toContain(legacyNull.id);
+      expect(resolvedIds).not.toContain(foreignResolved.id);
+    } finally {
+      vi.useRealTimers();
+    }
   }, 30000);
 
   it("includes exact seven-day endpoints, excludes one millisecond outside them, and agrees with both drill-downs", async () => {
@@ -420,6 +792,112 @@ describe("P4-01 Staff Dashboard (Issue #59 only; Requester endpoint remains Issu
           samples,
           queries: lastSql,
           plans,
+        },
+        null,
+        2
+      )}\n`
+    );
+    expect(p95).toBeLessThanOrEqual(1000);
+  }, 120000);
+
+  it("keeps the Requester Dashboard bounded at 10k Tickets with a constant query count and small response", async () => {
+    const cookie = sessionCookie({
+      id: accounts.requester.id,
+      role: accounts.requester.role,
+    });
+    await resetDashboardTickets(db);
+    const small = await fetchRequesterSnapshot(cookie);
+    const smallBreakdown = requesterQueryBreakdown(small.sql);
+    await populatePerformanceFixture();
+    expect(await db.ticket.count()).toBe(10000);
+    expect(await db.actionTaken.count()).toBe(30000);
+
+    const from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const to = new Date();
+    const [expected] = await db.$queryRaw<
+      {
+        openTickets: number;
+        waitingForRequester: number;
+        recentlyUpdated: number;
+        recentlyResolved: number;
+      }[]
+    >`
+      SELECT
+        (SELECT count(*)::int FROM "Ticket" WHERE "requesterId" = ${accounts.requester.id} AND status IN ('NEW','OPEN','IN_PROGRESS','WAITING_FOR_REQUESTER','REOPENED')) AS "openTickets",
+        (SELECT count(*)::int FROM "Ticket" WHERE "requesterId" = ${accounts.requester.id} AND status = 'WAITING_FOR_REQUESTER') AS "waitingForRequester",
+        (SELECT count(*)::int FROM "Ticket" WHERE "requesterId" = ${accounts.requester.id} AND "updatedAt" BETWEEN ${from} AND ${to}) AS "recentlyUpdated",
+        (SELECT count(*)::int FROM "Ticket" WHERE "requesterId" = ${accounts.requester.id} AND status IN ('RESOLVED','CLOSED') AND "resolvedAt" BETWEEN ${from} AND ${to}) AS "recentlyResolved"
+    `;
+
+    for (let index = 0; index < 3; index += 1) {
+      await fetchRequesterSnapshot(cookie);
+    }
+    const samples = [];
+    for (let index = 0; index < 20; index += 1) {
+      const { response, milliseconds, sql } =
+        await fetchRequesterSnapshot(cookie);
+      expect(response.body.metrics).toEqual(expected);
+      expect(sql.length).toBeLessThanOrEqual(16);
+      const queryBreakdown = requesterQueryBreakdown(sql);
+      expect(queryBreakdown.metricQueries).toBe(4);
+      expect(queryBreakdown.collectionQueries).toBe(3);
+      for (const { query } of sql.filter(
+        ({ query }) =>
+          /^SELECT/i.test(query) &&
+          /FROM "public"\."Ticket"/.test(query) &&
+          /ORDER BY/i.test(query) &&
+          !/COUNT|GROUP BY/i.test(query)
+      )) {
+        expect(query).toContain("LIMIT");
+      }
+      samples.push({
+        milliseconds,
+        bytes: Buffer.byteLength(response.text, "utf8"),
+        queryCount: sql.length,
+        ...queryBreakdown,
+      });
+    }
+    const sorted = samples
+      .map((sample) => sample.milliseconds)
+      .sort((a, b) => a - b);
+    const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1];
+    const directory = resolve(__dirname, "../../../artifacts/lab-04");
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(
+      resolve(directory, "requester-dashboard-performance.json"),
+      `${JSON.stringify(
+        {
+          testId: "P4-01",
+          scope: "Requester Dashboard endpoint at 10k owned Tickets",
+          measuredAt: new Date().toISOString(),
+          commit: execFileSync("git", ["rev-parse", "HEAD"], {
+            encoding: "utf8",
+          }).trim(),
+          workingTreeChanges:
+            execFileSync("git", ["status", "--porcelain"], {
+              encoding: "utf8",
+            }).trim().length > 0,
+          runtime: {
+            node: process.version,
+            postgres: await db.$queryRaw`SELECT version()`,
+            cpu: cpus()[0]?.model,
+            logicalCpus: cpus().length,
+            memoryBytes: totalmem(),
+          },
+          fixture: { tickets: 10000, actions: 30000 },
+          endpoint: "/api/dashboard/requester",
+          concurrency: 1,
+          warmupRequests: 3,
+          measuredRequests: 20,
+          p95Milliseconds: p95,
+          budgets: {
+            p95Milliseconds: 1000,
+            responseBytes: 65536,
+            maxQueries: 16,
+          },
+          smallFixtureQueryCount: small.sql.length,
+          smallFixtureQueryBreakdown: smallBreakdown,
+          samples,
         },
         null,
         2

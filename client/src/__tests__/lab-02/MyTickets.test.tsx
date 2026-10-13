@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import { MyTickets } from "../../components/MyTickets";
 import { AuthHarnessProvider, testUser } from "../../test/authHarness";
@@ -46,12 +54,98 @@ const mockTickets = [
   },
 ];
 
-function AuthenticatedWrapper({ children }: { children: ReactNode }) {
+function CurrentLocation() {
+  const location = useLocation();
   return (
-    <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
-      {children}
-    </AuthHarnessProvider>
+    <output data-testid="current-location">
+      {location.pathname}
+      {location.search}
+    </output>
   );
+}
+
+function AuthenticatedWrapper({
+  children,
+  route = "/tickets",
+}: {
+  children: ReactNode;
+  route?: string;
+}) {
+  return (
+    <MemoryRouter initialEntries={[route]}>
+      <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+        {children}
+        <CurrentLocation />
+      </AuthHarnessProvider>
+    </MemoryRouter>
+  );
+}
+
+function BrowserBackButton() {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(-1)}>
+      Browser back
+    </button>
+  );
+}
+
+function AuthenticatedHistoryWrapper({ children }: { children: ReactNode }) {
+  return (
+    <MemoryRouter
+      initialEntries={[
+        "/tickets?status=OPEN",
+        "/tickets?status=WAITING_FOR_REQUESTER",
+      ]}
+      initialIndex={1}
+    >
+      <AuthHarnessProvider harness={{ user: testUser(mockRequester) }}>
+        {children}
+        <BrowserBackButton />
+        <CurrentLocation />
+      </AuthHarnessProvider>
+    </MemoryRouter>
+  );
+}
+
+function mockPendingTicketError() {
+  let releaseErrorBody!: (body: { error: { message: string } }) => void;
+  const pendingErrorBody = new Promise<{ error: { message: string } }>(
+    (resolve) => {
+      releaseErrorBody = resolve;
+    }
+  );
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = String(input);
+    if (url.includes("/api/reference/categories")) {
+      return {
+        ok: true,
+        json: async () => ({ categories: mockCategories }),
+      } as Response;
+    }
+    if (url.includes("status=WAITING_FOR_REQUESTER")) {
+      return {
+        ok: false,
+        json: () => pendingErrorBody,
+      } as Response;
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        tickets: [
+          { ...mockTickets[0], summary: "Current tickets", status: "OPEN" },
+        ],
+        page: 1,
+        pageSize: 10,
+        total: 30,
+        totalPages: 3,
+      }),
+    } as Response;
+  });
+  return {
+    pendingErrorBody,
+    releaseErrorBody,
+  };
 }
 
 describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
@@ -366,5 +460,258 @@ describe("MyTickets Component (C-07..C-12, FR-08, BR-19..BR-21, BR-24)", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("tickets-loading")).not.toBeInTheDocument();
     });
+  });
+
+  it("loads fixed dashboard filters from the URL and clears them as one view", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(
+      <AuthenticatedWrapper route="/tickets?statusGroup=resolved&dateField=resolvedAt&from=2026-10-01T01%3A00%3A00.000Z&to=2026-10-08T01%3A00%3A00.000Z">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    expect(
+      await screen.findByTestId("ticket-dashboard-filters")
+    ).toHaveTextContent("resolved");
+    expect(screen.getByTestId("ticket-dashboard-filters")).toHaveTextContent(
+      "1 Oct 2026, 08:00"
+    );
+    expect(screen.getByTestId("ticket-dashboard-filters")).toHaveTextContent(
+      "(Bangkok)"
+    );
+    await waitFor(() => {
+      const ticketRequest = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .find((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequest).toContain("statusGroup=resolved");
+      expect(ticketRequest).toContain("dateField=resolvedAt");
+      expect(ticketRequest).toContain("from=2026-10-01T01%3A00%3A00.000Z");
+      expect(ticketRequest).toContain("to=2026-10-08T01%3A00%3A00.000Z");
+    });
+    expect(screen.getByTestId("ticket-fixed-sort")).toHaveTextContent(
+      "Resolution time — newest first"
+    );
+    expect(screen.queryByLabelText("Sort by:")).toBeNull();
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.selectOptions(screen.getByLabelText(/Filter by category/i), "2");
+    await waitFor(() => {
+      const currentUrl = screen.getByTestId("current-location").textContent;
+      const params = new URLSearchParams(currentUrl?.split("?")[1]);
+      expect(params.get("statusGroup")).toBe("resolved");
+      expect(params.get("dateField")).toBe("resolvedAt");
+      expect(params.get("from")).toBe("2026-10-01T01:00:00.000Z");
+      expect(params.get("to")).toBe("2026-10-08T01:00:00.000Z");
+      expect(params.get("categoryId")).toBe("2");
+      expect(params.get("page")).toBe("1");
+      expect(params.get("pageSize")).toBe("10");
+    });
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Clear filters" })[0]
+    );
+    await waitFor(() => {
+      expect(screen.queryByTestId("ticket-dashboard-filters")).toBeNull();
+      const ticketRequests = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequests.at(-1)).not.toContain("statusGroup=");
+      expect(ticketRequests.at(-1)).not.toContain("dateField=");
+    });
+  });
+
+  it("loads and visibly labels a dashboard status drill-down from the URL", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    expect(
+      await screen.findByTestId("ticket-dashboard-filters")
+    ).toHaveTextContent("WAITING FOR REQUESTER");
+    expect(
+      screen.getByRole("combobox", { name: /Filter by status/i })
+    ).toHaveValue("WAITING_FOR_REQUESTER");
+    await waitFor(() => {
+      const ticketRequest = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .find((url) => url.startsWith("/api/tickets?"));
+      expect(ticketRequest).toContain("status=WAITING_FOR_REQUESTER");
+    });
+  });
+
+  it("keeps every active filter and the effective sort/page in the URL", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.includes("/api/reference/categories")) {
+          return {
+            ok: true,
+            json: async () => ({ categories: mockCategories }),
+          } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            tickets: mockTickets,
+            page: 1,
+            pageSize: 5,
+            total: 25,
+            totalPages: 5,
+          }),
+        } as Response;
+      });
+
+    render(
+      <AuthenticatedWrapper>
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.type(
+      screen.getByPlaceholderText(/Search number or summary/i),
+      "Printer"
+    );
+    await user.selectOptions(screen.getByLabelText(/Filter by category/i), "2");
+    await user.selectOptions(
+      screen.getByLabelText(/Filter by priority/i),
+      "HIGH"
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/Filter by status/i),
+      "OPEN"
+    );
+    await user.selectOptions(screen.getByLabelText("Sort by:"), "createdAt");
+    await user.selectOptions(screen.getByLabelText("Sort order"), "asc");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /page size/i }),
+      "5"
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Next page" })).toBeEnabled()
+    );
+    await user.click(screen.getByRole("button", { name: "Next page" }));
+
+    await waitFor(() => {
+      const currentUrl = screen.getByTestId("current-location").textContent;
+      const params = new URLSearchParams(currentUrl?.split("?")[1]);
+      expect(params.get("search")).toBe("Printer");
+      expect(params.get("categoryId")).toBe("2");
+      expect(params.get("priority")).toBe("HIGH");
+      expect(params.get("status")).toBe("OPEN");
+      expect(params.get("sort")).toBe("createdAt");
+      expect(params.get("order")).toBe("asc");
+      expect(params.get("page")).toBe("2");
+      expect(params.get("pageSize")).toBe("5");
+    });
+
+    await waitFor(() => {
+      const ticketRequest = fetchSpy.mock.calls
+        .map(([input]) => String(input))
+        .filter((url) => url.startsWith("/api/tickets?"))
+        .at(-1);
+      expect(ticketRequest).toContain("search=Printer");
+      expect(ticketRequest).toContain("categoryId=2");
+      expect(ticketRequest).toContain("priority=HIGH");
+      expect(ticketRequest).toContain("status=OPEN");
+      expect(ticketRequest).toContain("sort=createdAt");
+      expect(ticketRequest).toContain("order=asc");
+      expect(ticketRequest).toContain("page=2");
+      expect(ticketRequest).toContain("pageSize=5");
+    });
+  });
+
+  it("ignores an obsolete error body after a newer filter request succeeds", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /Filter by status/i }),
+      "OPEN"
+    );
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
+  });
+
+  it("keeps cleared-filter results when a prior error body finishes parsing", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedWrapper route="/tickets?status=WAITING_FOR_REQUESTER">
+        <MyTickets />
+      </AuthenticatedWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.click(
+      screen.getAllByRole("button", { name: "Clear filters" })[0]
+    );
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
+  });
+
+  it("keeps browser-back results when an earlier error body finishes parsing", async () => {
+    const { pendingErrorBody, releaseErrorBody } = mockPendingTicketError();
+    const user = userEvent.setup();
+
+    render(
+      <AuthenticatedHistoryWrapper>
+        <MyTickets />
+      </AuthenticatedHistoryWrapper>
+    );
+
+    await screen.findByRole("option", { name: "Hardware" });
+    await user.click(screen.getByRole("button", { name: "Browser back" }));
+    await waitFor(() => {
+      expect(screen.getByTestId("current-location")).toHaveTextContent(
+        "/tickets?status=OPEN"
+      );
+    });
+    expect(await screen.findAllByText("Current tickets")).not.toHaveLength(0);
+
+    await act(async () => {
+      releaseErrorBody({ error: { message: "Obsolete request failed" } });
+      await pendingErrorBody;
+    });
+
+    expect(screen.getAllByText("Current tickets")).not.toHaveLength(0);
+    expect(screen.getByTestId("pagination-page-info")).toHaveTextContent(
+      "30 tickets"
+    );
+    expect(screen.queryByText("Obsolete request failed")).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { Prisma, Role } from "@prisma/client";
+import { Prisma, Role, TicketStatus } from "@prisma/client";
 import { Router, type Response } from "express";
 import {
   AuthenticatedRequest,
@@ -7,6 +7,7 @@ import {
 } from "../middleware/auth";
 import { prisma } from "../prisma";
 import { hasRequestBody } from "../utils/request-body";
+import { parseUtcDateRange } from "../utils/query-validation";
 import { sendUnexpectedError } from "../utils/unexpected-response";
 import { OPEN_TICKET_STATUSES, TICKET_STATUSES } from "../utils/ticketStatus";
 import { USER_REF_SELECT } from "../utils/user-ref";
@@ -33,6 +34,11 @@ const STAFF_TICKET_SELECT = {
 
 export const dashboardRouter = Router();
 
+const REQUESTER_RESOLVED_STATUSES: TicketStatus[] = [
+  TicketStatus.RESOLVED,
+  TicketStatus.CLOSED,
+];
+
 function rejectReadInput(req: AuthenticatedRequest, res: Response): boolean {
   if (Object.keys(req.query).length > 0) {
     res.status(400).json({
@@ -56,6 +62,92 @@ function rejectReadInput(req: AuthenticatedRequest, res: Response): boolean {
 
   return false;
 }
+
+// GET /api/dashboard/requester [AC-11, AC-13, AC-16]
+dashboardRouter.get(
+  "/requester",
+  ...requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    if (rejectReadInput(req, res)) return;
+
+    const requesterId = req.authUser!.id;
+    const asOf = new Date();
+    const from = new Date(asOf.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    try {
+      const snapshot = await prisma.$transaction(
+        async (tx) => {
+          const [
+            openTickets,
+            waitingForRequester,
+            recentlyUpdated,
+            recentlyResolved,
+            attentionTickets,
+            recentTickets,
+            resolvedTickets,
+          ] = await Promise.all([
+            tx.ticket.count({
+              where: {
+                requesterId,
+                status: { in: OPEN_TICKET_STATUSES },
+              },
+            }),
+            tx.ticket.count({
+              where: { requesterId, status: "WAITING_FOR_REQUESTER" },
+            }),
+            tx.ticket.count({
+              where: { requesterId, updatedAt: { gte: from, lte: asOf } },
+            }),
+            tx.ticket.count({
+              where: {
+                requesterId,
+                status: { in: REQUESTER_RESOLVED_STATUSES },
+                resolvedAt: { gte: from, lte: asOf },
+              },
+            }),
+            tx.ticket.findMany({
+              where: { requesterId, status: "WAITING_FOR_REQUESTER" },
+              orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: STAFF_TICKET_SELECT,
+            }),
+            tx.ticket.findMany({
+              where: { requesterId, updatedAt: { gte: from, lte: asOf } },
+              orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: STAFF_TICKET_SELECT,
+            }),
+            tx.ticket.findMany({
+              where: {
+                requesterId,
+                status: { in: REQUESTER_RESOLVED_STATUSES },
+                resolvedAt: { gte: from, lte: asOf },
+              },
+              orderBy: [{ resolvedAt: "desc" }, { id: "desc" }],
+              take: 5,
+              select: STAFF_TICKET_SELECT,
+            }),
+          ]);
+
+          return {
+            metrics: {
+              openTickets,
+              waitingForRequester,
+              recentlyUpdated,
+              recentlyResolved,
+            },
+            lists: { attentionTickets, recentTickets, resolvedTickets },
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+      );
+
+      return res.status(200).json({ asOf, windowDays: 7, ...snapshot });
+    } catch {
+      return sendUnexpectedError(res, "Failed to load the requester dashboard");
+    }
+  }
+);
 
 // GET /api/dashboard/staff [AC-12, AC-13, AC-16]
 dashboardRouter.get(

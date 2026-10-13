@@ -4,20 +4,14 @@ import { getStaffDashboard } from "../api/dashboard";
 import { useAuth } from "../context/AuthContext";
 import type { StaffDashboardResponse } from "../types/dashboard";
 import { isAuthRequired } from "../utils/authRequired";
+import { getRecentDateBounds } from "../utils/dashboardDateBounds";
 import { formatBangkokDateTime } from "../utils/format";
-
-function recentBounds(asOf: string) {
-  const from = new Date(
-    new Date(asOf).getTime() - 7 * 24 * 60 * 60 * 1000
-  ).toISOString();
-  return { from, to: asOf };
-}
 
 function recentQueueHref(asOf: string): string {
   const params = new URLSearchParams({
     statusGroup: "open",
     dateField: "updatedAt",
-    ...recentBounds(asOf),
+    ...getRecentDateBounds(asOf),
   });
   return `/staff/queue?${params.toString()}`;
 }
@@ -25,7 +19,7 @@ function recentQueueHref(asOf: string): string {
 function recentActionsHref(asOf: string): string {
   const params = new URLSearchParams({
     performedBy: "me",
-    ...recentBounds(asOf),
+    ...getRecentDateBounds(asOf),
   });
   return `/staff/actions?${params.toString()}`;
 }

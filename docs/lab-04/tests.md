@@ -22,17 +22,17 @@ api-spec.md. Implementation replaces Planned with measured results and links.
 | API4-05 | Real DB integration | AC-05, AC-14, AC-15, AC-16 | `server/tests/lab-04/concurrency.integration.test.ts` | Two editors, create replay/lost response, same key changed payload, assignment vs deactivation/demotion races | One create/event;409 on stale/key conflict; no partial changes; proper cascade versions | Planned |
 | API4-06 | API | AC-10, AC-22 | `server/tests/lab-04/action-history.api.test.ts` | Create/edit/transition/cascade event actors and immutable public history; comments/notes regression | Stable order; no event update/delete; requester sees no internal notes | Planned |
 | C4-01 | Component | AC-03, AC-05, AC-06, AC-10, AC-17 | `client/src/__tests__/lab-04/ActionsTaken.test.tsx` | Staff/Admin writes, requester read-only, fields/follow-up, assignee options and feedback states | Correct controls/errors; draft retained; disabled repeated submit | Passed — 18 tests, including deep-link focus recovery, 2026-10-08 |
-| C4-02 | Component | AC-11, AC-13, AC-18 | `client/src/__tests__/lab-04/RequesterDashboard.test.tsx` | Cards/lists, own filters, fixed-bound drill-down, loading/empty/failure | Server counts rendered; correct URLs and Bangkok display | Planned |
+| C4-02 | Component | AC-11, AC-13, AC-18 | `client/src/__tests__/lab-04/RequesterDashboard.test.tsx` | Cards/lists, own filters, fixed-bound drill-down, loading/empty/forbidden/not-found/failure | Server counts rendered; correct URLs and Bangkok display | Passed — 6 tests, 2026-10-10 |
 | C4-03 | Component | AC-12, AC-13, AC-18 | `client/src/__tests__/lab-04/StaffDashboard.test.tsx` | Staff/Admin cards, all-status grouping, actionable recent-ticket drill-down with `statusGroup=open`, current-performer list, empty/loading/forbidden/failure/refresh | Correct destinations; previous snapshot labelled during refresh/failure | Passed — 6 tests, 2026-10-09 |
 | C4-04 | Component | AC-07, AC-08, AC-09, AC-14, AC-15, AC-17 | `client/src/__tests__/lab-04/TicketWorkflow.test.tsx` | Resolve/reopen/advisory, versions, stale reload/compare and lost-response replay | State/summary refresh; no silent overwrite or new replay key | Planned |
 | V4-01 | Style/responsive/a11y | AC-17, AC-18, AC-23 | `client/src/__tests__/lab-04/Accessibility.test.tsx`; `e2e/lab-04/visual-accessibility.spec.ts` | Zen Green, labels, keyboard/dialog focus, status cues, 3 viewports, console/links | No unexpected errors, clipping/overlap/overflow; readable screenshots | Planned |
 | E4-01 | E2E | AC-03, AC-04, AC-05, AC-06, AC-10, AC-17, AC-22 | `e2e/lab-04/actions-taken-flow.spec.ts` | Staff and Admin record different actions under one Ticket; assign/edit/complete/cancel/history | End-to-end fields, performer, follow-up, terminal and authorization evidence | Planned |
 | E4-02 | E2E | AC-07, AC-08, AC-09, AC-10, AC-19 | `e2e/lab-04/ticket-resolution.spec.ts` | Real requester/staff resolution gate, reopen and advisory, comments/notes/attachments | Correct lifecycle; requester sees public history only | Planned |
-| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Staff/Admin dashboards, actionable recent-ticket list, 150-character Ticket summary, 120-character performer/assignee names, drill-down/browser-back and isolation | Metrics match database queries; terminal Tickets do not displace actionable work; long text wraps without horizontal overflow at 375px; Bangkok times | Partial — Staff/Admin 11/11 passed, 2026-10-09; Requester dashboard pending Issue #60 |
+| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Staff/Admin and Requester dashboards; ownership, drill-down/browser-back, desktop/tablet/mobile layout, mobile targets and keyboard navigation | Metrics match database queries; terminal Tickets do not displace actionable work; long text wraps; no horizontal overflow; Bangkok times | Partial — Full dashboard suite 14/14 passed at reviewed head `9388984`; after the query-state follow-up, the Issue #60 filter/reload/detail-return/browser-back journey passed 5/5 repeated runs; full suite not rerun on follow-up tree, 2026-10-10 |
 | E4-04 | E2E | AC-14, AC-15, AC-17 | `e2e/lab-04/concurrent-edit.spec.ts` | Two sessions stale parent/action and lost create response | 409 with drafts preserved and explicit reload/review; one created record | Planned |
 | M4-01 | Migration real DB | AC-02, AC-13, AC-21 | `server/prisma/migration-evidence/lab4-actions.md` | Legacy backup/apply/compare/restore in isolated databases | All prior data/hash values preserved; versions1; zero actions; recovery readable | Passed — disposable PostgreSQL run |
 | M4-02 | Seed real DB | AC-02, AC-05, AC-11, AC-12, AC-21, AC-22 | `server/prisma/migration-evidence/lab4-actions.md`; `server/tests/lab-04/seed-fixtures.test.ts` | Run seed twice; zero/one/many action/status/priority/ownership/time fixtures | Stable counts and events; no unrelated user/data overwrite | Passed — repeat seed and fixture assertions |
-| P4-01 | Performance smoke | AC-12, AC-18 | `server/tests/lab-04/dashboard-performance.integration.test.ts`; `artifacts/lab-04/staff-dashboard-performance.json` | 10k Tickets/30k actions; both endpoints and query plans on documented local fixture | 20 warm requests each p95 <=1000ms; <=64KiB responses; no N+1/unbounded collections | Partial — Staff endpoint passed, 2026-10-08; Requester endpoint pending Issue #60 |
+| P4-01 | Performance smoke | AC-11, AC-12, AC-18 | `server/tests/lab-04/dashboard-performance.integration.test.ts`; `artifacts/lab-04/staff-dashboard-performance.json`; `artifacts/lab-04/requester-dashboard-performance.json` | 10k Tickets/30k actions; both endpoints on documented local fixture; staff query plans and independent SQL counts | 20 warm requests per endpoint p95 <=1000ms; <=64KiB responses; bounded query count and latest-five collections | Passed — Staff p95 98.41ms and Requester p95 103.70ms; Requester response 4,988 bytes and 14 SQL queries (4 metric, 3 limited collections), 2026-10-10 |
 | R4-01 | Regression | AC-19 | `server/tests/`; `client/src/__tests__/`; `e2e/lab-02/`; `e2e/lab-03/`; `server/prisma/migration-evidence/lab4-actions.md` | Auth, requester, attachments, comments, private notes, queue/detail, Admin guards and authenticated browser journeys | All existing behavioral assertions pass after documented additive fixture adaptations | Passed — server isolated 348/348 (2026-10-08); client 182/182 (2026-10-09); Lab 2/3 Playwright 13/13 (prior regression run) |
 | D4-01 | Contract audit | AC-01, AC-20 | `docs/lab-04/reviewer.md` | PDF/Issue54 six-doc alignment, exact inverse mappings, approval/merge evidence | Draft gaps resolved; peer approval and contract merge recorded before implementation PR completion | Planned |
 | REL4-01 | Release/manual | AC-18, AC-19, AC-23 | `docs/lab-04/reviewer.md`; `README.md` | Product DoD, actual main test results, setup/demo/recovery, visual checklist and final report | All evidence linked; no invented approvals/results; report Parts1-9 | Planned |
@@ -55,7 +55,7 @@ cannot prove foreign keys, transaction races, migration preservation or recovery
 | AC-08 | API4-02, C4-04, E4-02 |
 | AC-09 | API4-02, C4-04, E4-02 |
 | AC-10 | API4-01, API4-02, API4-03, API4-04, API4-06, C4-01, E4-01, E4-02, E4-03 |
-| AC-11 | API4-03, C4-02, E4-03, M4-02 |
+| AC-11 | API4-03, C4-02, E4-03, M4-02, P4-01 |
 | AC-12 | API4-04, C4-03, E4-03, M4-02, P4-01 |
 | AC-13 | U4-01, API4-03, API4-04, C4-02, C4-03, E4-03, M4-01 |
 | AC-14 | API4-02, API4-05, C4-04, E4-04 |
@@ -172,9 +172,15 @@ The review-fix run includes the working-tree changes after `6374ea1`.
   files; those diagnostics are outside this branch's changed files. No
   repository-wide formatting rewrite was performed.
 
-The Staff part of E4-03/P4-01 is evidenced; neither row claims Requester
-Dashboard completion. Issue #60 must supply that endpoint's remaining checks.
-These are branch results, not final main/release evidence or peer approval.
+Issue #60 adds the Requester Dashboard implementation and corresponding API,
+component, E2E and performance coverage. C4-02 passed (6 tests). The full
+Staff/Admin and Requester dashboard suite passed 14/14 at reviewed head
+`9388984`; after the query-state follow-up, the focused filter/reload/detail-
+return/browser-back journey passed 5/5 repeated runs. The updated full suite
+was not rerun on this follow-up tree. P4-01 passed 6/6 against disposable
+PostgreSQL: Staff p95 was 98.41ms and Requester p95 was 103.70ms, both within
+the 1,000ms budget. These are branch results, not final main/release evidence
+or peer approval.
 
 ### Issue #59 follow-up review fixes — 2026-10-09
 
