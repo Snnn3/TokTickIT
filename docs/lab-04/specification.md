@@ -1,6 +1,6 @@
 # Lab 4 Engineering Specification - Actions Taken and Role Dashboards
 
-Status: **Draft contract for peer review**<br>
+Status: **Contract approved and merged; product completion in progress**<br>
 Version: **1.0**<br>
 Date: **2026-09-22**<br>
 Branch: `feature/lab4-1-contract`<br>
@@ -9,8 +9,13 @@ Issue: [#54](https://github.com/Snnn3/TokTickIT/issues/54)
 Sources: Lab 4 handout, Issue #54, and the existing
 Lab 3 contract. Companions: [API](api-spec.md), [UI](ui-spec.md),
 [tests](tests.md), [reviewer](reviewer.md), [AI use](ai-use.md).
-This revision repairs the PDF-validation findings while retaining draft version
-1.0. Peer approval and merge are still pending.
+The contract was approved in PR #63 and merged into `lab4-staging` on
+2026-09-30. Issue #61 implementation evidence is recorded for
+`feature/lab4-8-e2e-visual` in [tests.md](tests.md): server 365/365, client
+197/197, Lab 4 E2E 20/20, and concurrency 8/8 passed. Product completion is
+still pending a complete Labs 2-3 browser regression, repository-wide check,
+manual accessibility review, Issue #61 peer review and integration. The final
+report remains for the author to complete.
 
 ## 1. Sprint goal
 

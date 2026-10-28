@@ -1,6 +1,6 @@
 # Lab 4 visual and accessibility checklist
 
-Status: **Branch evidence; final manual sign-off after integration is pending**
+Status: **Branch evidence recorded; manual accessibility and integrated-main sign-off pending**
 
 Branch: `feature/lab4-8-e2e-visual`
 
