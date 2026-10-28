@@ -3,12 +3,12 @@
   "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
   "screenshot": "resolved-staff-desktop.png",
   "role": "IT_STAFF",
-  "route": "/staff/tickets/113",
+  "route": "/staff/tickets/115",
   "viewport": {
     "width": 1366,
     "height": 900
   },
   "fullPage": false,
-  "capturedAt": "2026-10-13T12:33:05.520Z",
+  "capturedAt": "2026-10-14T17:20:03.308Z",
   "expectedResult": "The Staff detail shows the resolved Ticket and summary; the journey also verifies completed work and role-separated discussion."
 }

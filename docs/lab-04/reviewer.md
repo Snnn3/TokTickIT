@@ -61,6 +61,28 @@ The Issue #61 work is on `feature/lab4-8-e2e-visual`, based on the merged
 branch results and remaining release limits are recorded in `tests.md`; they
 must not be presented as final `main` evidence before integration.
 
+### Issue #61 review remediation — 2026-10-29
+
+- Fixed serialization-conflict detection for raw PostgreSQL row-lock failures
+  (`P2010`, SQLSTATE `40001`), which otherwise returned 500 instead of
+  retrying to a current-version `409 STALE_WRITE`.
+- Added eight real-disposable-PostgreSQL cases for all five versioned Ticket
+  routes, Action edit/create replay, and assignment versus Admin deactivation.
+  Added two Playwright journeys for a two-session stale-write retry and a
+  committed create whose first response is dropped. API race tests passed 8/8;
+  E4-04 passed 2/2.
+- Corrected the requester tablet viewport to 768x1024 and the mobile
+  Actions Taken capture to show its completed Action title, result and
+  performer within the viewport.
+- Verification: isolated server 365/365; client 197/197; Lab 4 Playwright
+  20/20; both production builds and client lint passed. The Lab 2/3 rerun
+  stopped after 10/13 when its tool session ended. The full check still reports
+  54 repository-wide formatter diagnostics.
+- Remaining gates are a complete Lab 2/3 rerun and any interrupted-container
+  disposal check after Docker returns, manual accessibility acceptance,
+  human peer review and integrated-main verification. Issue #61 has no PR or
+  approval recorded; none is inferred.
+
 ## Verification for Issue #58
 
 The following results were run on implementation head `fea80f0` on 2026-10-08, before this reviewer-record update:

@@ -9,6 +9,6 @@
     "height": 812
   },
   "fullPage": false,
-  "capturedAt": "2026-10-13T12:31:38.703Z",
-  "expectedResult": "The viewport shows the completed Action details; the journey also verifies the second, cancelled Action and no horizontal overflow."
+  "capturedAt": "2026-10-14T17:18:04.146Z",
+  "expectedResult": "The captured viewport shows the completed Action title, result, and performer; the journey also verifies a cancelled Action and no horizontal overflow."
 }

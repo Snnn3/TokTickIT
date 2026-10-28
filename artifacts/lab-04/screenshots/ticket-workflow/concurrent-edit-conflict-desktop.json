@@ -1,0 +1,14 @@
+{
+  "testId": "E4-04",
+  "test": "E4-04 two Staff sessions preserve a stale resolution draft for explicit retry",
+  "screenshot": "concurrent-edit-conflict-desktop.png",
+  "role": "IT_STAFF",
+  "route": "/staff/tickets/4",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-14T17:18:27.719Z",
+  "expectedResult": "A second Staff session receives STALE_WRITE, sees the latest priority, and retains its unsaved resolution summary for review."
+}

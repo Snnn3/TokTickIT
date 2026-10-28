@@ -365,17 +365,13 @@ Run browser tests through the isolated runners so they cannot seed or reset the
 local demo database:
 
 ```bash
+npm run test:concurrency --prefix server # Real DB race/replay cases
 npm run test:e2e:regression # Lab 2 and Lab 3 browser regression
 npm run test:e2e:lab4       # Lab 4 dashboards, Actions Taken and workflow
 ```
 
-The Issue #61 branch verification on 2026-10-13 recorded 364/364 isolated
-server tests, 197/197 client tests, 18/18 Lab 4 Playwright journeys, and 13/13
-Lab 2/3 regression journeys. Client lint and both production builds passed.
-The root `npm run check` still reports 54 repository-wide formatter diagnostics
-across 157 files (including CRLF/LF normalization); no broad rewrite was applied.
-These are branch results, not final `main` results; the current verification
-record and visual/accessibility checklist are in `docs/lab-04/tests.md` and
-`docs/lab-04/visual-accessibility-checklist.md`. The nine-part branch report
-draft is [`output/pdf/Lab4_Report-DRAFT.pdf`](output/pdf/Lab4_Report-DRAFT.pdf);
-manual accessibility sign-off and integrated-main verification remain pending.
+The Issue #61 branch verification record, including the 2026-10-15 real-DB,
+browser, build and regression results, is in `docs/lab-04/tests.md`. These are
+feature-branch results, not final `main` results. The nine-part final report,
+manual accessibility sign-off, peer review and integrated-main verification
+remain pending.

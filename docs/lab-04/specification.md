@@ -243,7 +243,7 @@ Product completion (future implementation; do not check without evidence):
 - [ ] AC-01 through AC-23 pass with exact test paths and recorded results.
 - [x] Actions Taken and both role dashboards work with correct authorization. Issue #61 branch E2E covers the Staff, Admin and Requester journeys; see `docs/lab-04/tests.md`.
 - [ ] Whole Ticket/action matrices, resolution and advisory feedback pass.
-- [ ] Idempotency, concurrency, inactive assignments and safe failure pass.
+- [x] Idempotency, concurrency, inactive assignments and safe failure pass; see API4-05/E4-04 in `docs/lab-04/tests.md` and the isolated server regression results.
 - [x] Migration preservation, repeat seed and restore verification pass; see M4-01/M4-02 in `docs/lab-04/tests.md` and `server/prisma/migration-evidence/lab4-actions.md`.
 - [ ] Labs 1-3 regression, server/client tests, lint/check, builds and E2E pass.
 - [x] Performance-smoke query evidence and dashboard/database count comparisons exist; see P4-01 in `docs/lab-04/tests.md`.

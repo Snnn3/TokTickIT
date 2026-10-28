@@ -29,7 +29,11 @@ export async function captureEvidence(
     join(directory, `${name}.json`),
     `${JSON.stringify(
       {
-        testId: testInfo.title.includes("E4-02") ? "E4-02" : "E4-01",
+        testId: testInfo.title.includes("E4-04")
+          ? "E4-04"
+          : testInfo.title.includes("E4-02")
+            ? "E4-02"
+            : "E4-01",
         test: testInfo.title,
         screenshot: `${name}.png`,
         role,

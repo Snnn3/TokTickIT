@@ -500,7 +500,7 @@ test("Requester dashboard isolates ownership, shows authoritative metrics and dr
   await page.getByRole("button", { name: "Back to My Dashboard" }).click();
   await expect(page).toHaveURL(/\/dashboard\/requester$/);
 
-  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.setViewportSize({ width: 768, height: 1024 });
   await expect(
     page.getByLabel("My Open Tickets: 5", { exact: true })
   ).toBeVisible();

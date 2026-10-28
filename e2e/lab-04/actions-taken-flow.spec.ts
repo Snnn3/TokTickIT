@@ -141,6 +141,10 @@ test("E4-01 IT Staff validates, assigns, edits, completes and cancels two Action
   await expect(secondAction.getByTestId("action-status")).toHaveText(
     "Cancelled"
   );
+  const hideHistory = firstAction.getByRole("button", {
+    name: "Hide history for Network adapter inspection",
+  });
+  if (await hideHistory.count()) await hideHistory.click();
 
   for (const viewport of [
     { width: 1366, height: 900, name: "populated-desktop" },
@@ -156,14 +160,34 @@ test("E4-01 IT Staff validates, assigns, edits, completes and cancels two Action
         () => document.documentElement.scrollWidth <= window.innerWidth + 1
       )
     ).toBe(true);
+    const visibleDetails = [
+      firstAction.getByRole("heading", {
+        name: "Network adapter inspection",
+      }),
+      firstAction.getByText(
+        "Replaced the adapter and verified the connection.",
+        { exact: true }
+      ),
+      firstAction.getByText(DASHBOARD_ACCOUNTS.staff.name, { exact: true }),
+    ];
+    await firstAction.scrollIntoViewIfNeeded();
+    for (const detail of visibleDetails) {
+      await expect(detail).toBeVisible();
+      const bounds = await detail.evaluate((element) => {
+        const { top, bottom } = element.getBoundingClientRect();
+        return { top, bottom, height: window.innerHeight };
+      });
+      expect(bounds.top).toBeGreaterThanOrEqual(0);
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.height);
+    }
     await captureEvidence(
       page,
       testInfo,
       "actions-taken",
       viewport.name,
       "IT_STAFF",
-      "The viewport shows the completed Action details; the journey also verifies the second, cancelled Action and no horizontal overflow.",
-      page.getByTestId("action-add-btn")
+      "The captured viewport shows the completed Action title, result, and performer; the journey also verifies a cancelled Action and no horizontal overflow.",
+      firstAction
     );
   }
 });

@@ -3,12 +3,12 @@
   "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
   "screenshot": "requester-reopened-mobile.png",
   "role": "REQUESTER",
-  "route": "/tickets/113",
+  "route": "/tickets/115",
   "viewport": {
     "width": 375,
     "height": 812
   },
   "fullPage": false,
-  "capturedAt": "2026-10-13T12:33:08.635Z",
+  "capturedAt": "2026-10-14T17:20:07.194Z",
   "expectedResult": "Requester can reopen the resolved Ticket and record an advisory appears-resolved signal without changing workflow status."
 }

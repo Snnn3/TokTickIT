@@ -5,10 +5,10 @@
   "role": "REQUESTER",
   "route": "/dashboard/requester",
   "viewport": {
-    "width": 820,
-    "height": 1180
+    "width": 768,
+    "height": 1024
   },
   "fullPage": true,
-  "capturedAt": "2026-10-13T12:32:30.073Z",
+  "capturedAt": "2026-10-14T17:19:28.672Z",
   "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
 }
