@@ -7,7 +7,6 @@ LLMs used:
 
 Prompts are recorded below in full, verbatim. Outcomes summarize the recorded work; actual test results and remaining limitations are maintained in `docs/lab-04/tests.md`.
 
-> Note: following the Lab 2 disclosure format, this file keeps 6 selected key prompts in the grading table plus their full verbatim details. Repeated review iterations and log-maintenance requests are omitted from this selected version. These records do not claim final main-branch verification or Issue #61 peer approval.
 
 ---
 
