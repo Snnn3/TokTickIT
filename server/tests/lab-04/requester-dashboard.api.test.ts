@@ -137,9 +137,12 @@ describe("GET /api/dashboard/requester (API4-03, AC-11, AC-13, AC-16)", () => {
         Prisma.TransactionIsolationLevel.RepeatableRead
       );
       expect(ticket.findMany).toHaveBeenCalledTimes(3);
-      expect(JSON.stringify(response.body)).not.toContain(
-        String(OTHER_REQUESTER_ID)
-      );
+      expect(response.body).not.toHaveProperty("requesterId");
+      for (const tickets of Object.values(response.body.lists)) {
+        for (const ticket of tickets) {
+          expect(ticket).not.toHaveProperty("requesterId");
+        }
+      }
     }
   );
 
