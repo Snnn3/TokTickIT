@@ -136,9 +136,10 @@ kept tidy by hand.
 
 - `main` — stable release branch
 - `lab1-staging` — Lab 1 integration branch
+- `lab4-staging` — Lab 4 integration branch
 - `feature/*` — individual issue branches, merged via reviewed Pull Requests
 
-All work happens on feature branches and enters `main` through `lab1-staging`. Peer review is mandatory for every Pull Request (see `docs/lab-01/reviewer.md`).
+Feature branches enter their matching lab integration branch through reviewed Pull Requests; Lab 4 features target `lab4-staging`. Integration branches are promoted to `main` after review. Peer review is mandatory for every Pull Request (see the corresponding `reviewer.md`, including `docs/lab-04/reviewer.md` for Lab 4).
 
 ## Lab 2 — Requester Ticket Flow
 
@@ -370,8 +371,9 @@ npm run test:e2e:regression # Lab 2 and Lab 3 browser regression
 npm run test:e2e:lab4       # Lab 4 dashboards, Actions Taken and workflow
 ```
 
-The Issue #61 branch verification record, including the 2026-10-15 real-DB,
-browser, build and regression results, is in `docs/lab-04/tests.md`. These are
-feature-branch results, not final `main` results. The nine-part final report,
-manual accessibility sign-off, peer review and integrated-main verification
-remain pending.
+The Issue #61 branch verification record is in `docs/lab-04/tests.md`. It
+records the 2026-10-29 server/client, Lab 2/3 regression, and Lab 4 E2E results,
+plus the 2026-10-15 real-database concurrency run and build/lint evidence.
+These are feature-branch results, not final `main` results. The nine-part final
+report, manual accessibility sign-off, peer review and integrated-main
+verification remain pending.

@@ -27,6 +27,8 @@ shared database.
 - `e2e/lab-04/actions-taken-flow.spec.ts`: Staff validation, assignment,
   editing, completion/cancellation, Admin performer creation, Requester
   read-only history and inactive-assignee rejection.
+- `e2e/lab-04/concurrent-edit.spec.ts`: two-Staff stale-write recovery and
+  lost-response replay, including the one-Action/one-event persistence check.
 - `e2e/lab-04/ticket-resolution.spec.ts`: resolution gating, action completion,
   public-comment/private-note visibility, requester advisory and reopen.
 
@@ -35,6 +37,10 @@ Lab 4 screenshots and JSON evidence records are written under
 Each sidecar records the role, route, viewport, test and expected result. The
 browser suite has desktop, tablet and mobile captures; responsive assertions
 also check horizontal overflow.
+
+The latest isolated browser results recorded on 2026-10-29 are 13/13 Lab 2/3
+regression journeys and 20/20 Lab 4 journeys. See `docs/lab-04/tests.md` for
+the complete verification record and remaining release gates.
 
 ## Lab 2 requester regression
 
