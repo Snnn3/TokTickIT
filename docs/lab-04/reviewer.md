@@ -16,6 +16,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
 | https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
 | https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
+| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Open - awaiting peer review |
 
 ### Reviewer comments I received and how I responded
 
@@ -56,9 +57,12 @@
 - **My comment:** Thanked the reviewer and acknowledged the C4-02 count discrepancy; the comment is recorded in the PR conversation. The test-plan correction is recorded in `tests.md`.
 - **Merge:** Merged into `lab4-staging` at `2026-10-13 08:08 UTC`, merge commit `1f558d05a898dd66952bffb652cb829d52b6b6fe`.
 
+**PR #70 - feature/lab4-8-e2e-visual** (OPEN)
+- **Opened (2026-10-29):** Targets `lab4-staging` for Issue #61. Peer review, approval and merge are pending; no human approval is inferred.
+
 Dates below use UTC. Review bodies and replies are summarized unless quotation marks indicate a short verbatim reply. Test counts describe what the reviewer or author reported at that PR head; current verification belongs in [tests.md](tests.md).
 
-Issue #61 is still on `feature/lab4-8-e2e-visual` without an associated PR or human peer approval in the fetched records. Its local reviews and branch checks do not constitute partner approval. Final report preparation, manual accessibility acceptance and integrated-main verification remain pending.
+Issue #61 has open PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`, but no human peer approval is recorded. Local reviews and branch checks do not constitute partner approval. Final report preparation, manual accessibility acceptance and integrated-main verification remain pending.
 
 ---
 
