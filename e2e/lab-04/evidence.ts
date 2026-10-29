@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Role } from "../../client/src/types/auth";
 import {
   expect,
   type Locator,
@@ -7,12 +8,15 @@ import {
   type TestInfo,
 } from "@playwright/test";
 
+type EvidenceTestId = "E4-01" | "E4-02" | "E4-03" | "E4-04";
+
 export async function captureEvidence(
   page: Page,
   testInfo: TestInfo,
   folder: "actions-taken" | "ticket-workflow",
   name: string,
-  role: string,
+  testId: EvidenceTestId,
+  role: Role,
   expectedResult: string,
   scrollTarget?: Locator
 ) {
@@ -29,11 +33,7 @@ export async function captureEvidence(
     join(directory, `${name}.json`),
     `${JSON.stringify(
       {
-        testId: testInfo.title.includes("E4-04")
-          ? "E4-04"
-          : testInfo.title.includes("E4-02")
-            ? "E4-02"
-            : "E4-01",
+        testId,
         test: testInfo.title,
         screenshot: `${name}.png`,
         role,

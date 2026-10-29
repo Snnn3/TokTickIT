@@ -64,6 +64,7 @@ test("E4-01 IT Staff validates, assigns, edits, completes and cancels two Action
     testInfo,
     "actions-taken",
     "validation-desktop",
+    "E4-01",
     "IT_STAFF",
     "A required follow-up note is explained beside the invalid Action Taken form and no request is submitted.",
     editor
@@ -171,6 +172,47 @@ test("E4-01 IT Staff validates, assigns, edits, completes and cancels two Action
       firstAction.getByText(DASHBOARD_ACCOUNTS.staff.name, { exact: true }),
     ];
     await firstAction.scrollIntoViewIfNeeded();
+    if (viewport.name === "populated-mobile") {
+      const scrollUp = await page.evaluate(() => {
+        const navbar = document.querySelector<HTMLElement>(".zg-header");
+        const heading = document.querySelector<HTMLElement>(
+          "#actions-taken-heading"
+        );
+        const addActionButton = document.querySelector<HTMLElement>(
+          '[data-testid="action-add-btn"]'
+        );
+        if (!navbar || !heading || !addActionButton) return 0;
+        return Math.max(
+          0,
+          navbar.getBoundingClientRect().bottom +
+            32 -
+            Math.min(
+              heading.getBoundingClientRect().top,
+              addActionButton.getBoundingClientRect().top
+            )
+        );
+      });
+      await page.evaluate((pixels) => window.scrollBy(0, -pixels), scrollUp);
+      const navbarBounds = await page.locator(".zg-header").boundingBox();
+      const headingBounds = await page
+        .locator("#actions-taken-heading")
+        .boundingBox();
+      const addActionBounds = await page
+        .getByTestId("action-add-btn")
+        .boundingBox();
+      if (!navbarBounds || !headingBounds || !addActionBounds) {
+        throw new Error("Mobile Actions Taken evidence is not fully rendered");
+      }
+      expect(headingBounds.y).toBeGreaterThanOrEqual(
+        navbarBounds.y + navbarBounds.height
+      );
+      expect(addActionBounds.y).toBeGreaterThanOrEqual(
+        navbarBounds.y + navbarBounds.height
+      );
+      expect(addActionBounds.y + addActionBounds.height).toBeLessThanOrEqual(
+        viewport.height
+      );
+    }
     for (const detail of visibleDetails) {
       await expect(detail).toBeVisible();
       const bounds = await detail.evaluate((element) => {
@@ -185,9 +227,9 @@ test("E4-01 IT Staff validates, assigns, edits, completes and cancels two Action
       testInfo,
       "actions-taken",
       viewport.name,
+      "E4-01",
       "IT_STAFF",
-      "The captured viewport shows the completed Action title, result, and performer; the journey also verifies a cancelled Action and no horizontal overflow.",
-      firstAction
+      "The captured viewport shows the completed Action title, result, and performer; the journey also verifies a cancelled Action and no horizontal overflow."
     );
   }
 });
@@ -244,6 +286,7 @@ test("E4-01 Administrator can create an action and Requester history remains rea
       testInfo,
       "actions-taken",
       "requester-read-only-desktop",
+      "E4-01",
       "REQUESTER",
       "The ticket owner can read the Administrator's Action Taken and history but has no create or edit controls.",
       requesterAction
@@ -289,6 +332,7 @@ test("E4-01 rejects an assignee deactivated after the picker loaded and preserve
       testInfo,
       "actions-taken",
       "inactive-assignee-error-desktop",
+      "E4-01",
       "IT_STAFF",
       "A stale selection of a newly inactive assignee is rejected safely while the user's draft remains visible.",
       page.getByTestId("action-editor")

@@ -85,6 +85,7 @@ test("E4-04 two Staff sessions preserve a stale resolution draft for explicit re
       testInfo,
       "ticket-workflow",
       "concurrent-edit-conflict-desktop",
+      "E4-04",
       "IT_STAFF",
       "A second Staff session receives STALE_WRITE, sees the latest priority, and retains its unsaved resolution summary for review.",
       secondPage.getByTestId("status-error")
@@ -175,6 +176,7 @@ test("E4-04 retries a committed Action create with its original idempotency key"
     testInfo,
     "actions-taken",
     "lost-response-replay-desktop",
+    "E4-04",
     "IT_STAFF",
     "The first committed create response is lost; retry with the identical key confirms one Action, one event, one request, and a single Ticket-version increment.",
     action

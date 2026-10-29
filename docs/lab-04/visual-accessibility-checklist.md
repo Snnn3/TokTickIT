@@ -37,8 +37,9 @@ screen-reader, contrast or cross-screen review on the integrated `main` build.
   relevant panel into view, avoiding a fixed header stamped into the middle of
   a stitched full-page image.
 - [x] Requester populated tablet evidence uses the required 768x1024 viewport.
-  The mobile Actions Taken capture asserts the completed card's title, result
-  and performer are inside the viewport.
+  The mobile Actions Taken capture at the required 375x812 viewport asserts the
+  heading, Add Action control and completed card details remain clear of the
+  sticky navbar and inside the viewport.
 - [x] E4-04 captures the stale-write state with the preserved summary draft and
   the lost-response state after an identical-key retry; both have viewport
   metadata sidecars.
