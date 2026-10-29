@@ -797,7 +797,7 @@ export function UserManagement() {
                       }))
                     }
                     type="password"
-                    ref={initialFocusRef}
+                    ref={dialog === "reset" ? initialFocusRef : undefined}
                     required
                     value={form.password}
                   />

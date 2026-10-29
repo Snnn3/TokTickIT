@@ -8,12 +8,12 @@ import {
   type TestInfo,
 } from "@playwright/test";
 
-type EvidenceTestId = "E4-01" | "E4-02" | "E4-03" | "E4-04";
+type EvidenceTestId = "E4-01" | "E4-02" | "E4-03" | "E4-04" | "E4-05";
 
 export async function captureEvidence(
   page: Page,
   testInfo: TestInfo,
-  folder: "actions-taken" | "ticket-workflow",
+  folder: "actions-taken" | "ticket-workflow" | "user-management",
   name: string,
   testId: EvidenceTestId,
   role: Role,
