@@ -1,0 +1,14 @@
+{
+  "testId": "E4-05",
+  "test": "E4-05 Admin User Management shows enabled Create user and supports keyboard use",
+  "screenshot": "admin-create-user-enabled-desktop.png",
+  "role": "ADMINISTRATOR",
+  "route": "/admin/users",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-30T15:13:35.843Z",
+  "expectedResult": "The clean seeded Admin User Management view shows the enabled Create user button. Tab and Enter open the dialog, focus stays trapped at both ends, and Escape closes it."
+}

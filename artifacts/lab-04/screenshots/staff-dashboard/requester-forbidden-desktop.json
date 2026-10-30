@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "anonymous and Requester cannot retrieve Staff data or navigate its dashboard",
+  "screenshot": "requester-forbidden-desktop.png",
+  "role": "REQUESTER",
+  "route": "/dashboard/staff",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-08T14:13:22.943Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

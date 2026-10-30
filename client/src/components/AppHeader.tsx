@@ -23,8 +23,10 @@ const STAFF_ROLES: Role[] = ["IT_STAFF", "ADMINISTRATOR"];
 
 /** Every role files its own tickets (FR-27), so the first two are unrestricted. */
 const DESTINATIONS: NavDestination[] = [
+  { to: "/dashboard/requester", label: "My Dashboard", roles: ALL_ROLES },
   { to: "/tickets", label: "My Tickets", roles: ALL_ROLES },
   { to: "/tickets/new", label: "Create Ticket", roles: ALL_ROLES },
+  { to: "/dashboard/staff", label: "Staff Dashboard", roles: STAFF_ROLES },
   { to: "/staff/queue", label: "Ticket Queue", roles: STAFF_ROLES },
   { to: "/admin/users", label: "Users", roles: ["ADMINISTRATOR"] },
 ];
@@ -73,7 +75,7 @@ export function AppHeader() {
   };
 
   return (
-    <nav className="navbar navbar-expand-md zg-header sticky-top py-2 px-3 shadow-sm">
+    <nav className="navbar navbar-expand-lg zg-header sticky-top py-2 px-3 shadow-sm">
       <div className="container-fluid">
         <span className="navbar-brand fw-bold text-white mb-0">TokTickIT</span>
 

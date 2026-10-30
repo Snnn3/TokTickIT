@@ -81,7 +81,7 @@ describe("C-01 Login screen", () => {
     fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
 
     await waitFor(() => {
-      expect(onSignedIn).toHaveBeenCalledWith("/staff/queue");
+      expect(onSignedIn).toHaveBeenCalledWith("/dashboard/staff");
     });
   });
 

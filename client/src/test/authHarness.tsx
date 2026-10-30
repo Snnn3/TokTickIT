@@ -40,6 +40,7 @@ export type AuthHarness = {
   loading?: boolean;
   signIn?: AuthContextType["signIn"];
   signOut?: AuthContextType["signOut"];
+  expireSession?: AuthContextType["expireSession"];
   applyUser?: AuthContextType["applyUser"];
 };
 
@@ -55,6 +56,7 @@ export function AuthHarnessProvider({
     loading: harness.loading ?? false,
     signIn: harness.signIn ?? vi.fn(),
     signOut: harness.signOut ?? (async () => ({ ok: true as const })),
+    expireSession: harness.expireSession ?? vi.fn(),
     applyUser: harness.applyUser ?? vi.fn(),
   };
 

@@ -4,6 +4,7 @@ import {
   assertNoHorizontalOverflow,
   captureScreenshot,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   requestJson,
   resetSeed,
   signInAndChangePassword,
@@ -89,7 +90,7 @@ test.describe("E-03 user administration journey", () => {
     );
 
     const resetContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const resetPage = await resetContext.newPage();
     await resetPage.goto("/login");
@@ -100,7 +101,7 @@ test.describe("E-03 user administration journey", () => {
     await resetContext.close();
 
     const staffContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const staffPage = await staffContext.newPage();
     await signInAndChangePassword(staffPage, ACCOUNTS.staff, "E2E.Staff!2026");
@@ -143,7 +144,7 @@ test.describe("E-03 user administration journey", () => {
     expect(queueAfterCascade.body.tickets[0]?.owner).toBeNull();
 
     const requesterContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const requesterPage = await requesterContext.newPage();
     await signInAndChangePassword(

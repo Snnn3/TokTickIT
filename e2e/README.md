@@ -1,73 +1,82 @@
 # End-to-end specs
 
-Playwright specs live here, one directory per lab. `playwright.config.ts` points
-at this directory and starts both dev servers itself.
+## Isolated browser regression runners
+
+Use the disposable-database runners for test work. Each creates a fresh
+PostgreSQL 17 container on a random loopback port, applies migrations, runs the
+suite against isolated API/Vite servers, and removes the container afterward.
+They never seed or reset the local demo database. When the disposable database
+marker is present, Playwright also refuses to reuse existing local servers.
+
+```bash
+npm run test:e2e:regression # Lab 2 + Lab 3 browser regression
+npm run test:e2e:lab4       # Lab 4 dashboards, Actions Taken and workflow
+npm run test:e2e:staff-dashboard # focused Staff/Admin dashboard suite
+```
+
+`playwright.dashboard.config.ts` refuses direct use without the runner's
+disposable-database marker. `playwright.config.ts` is used by the Lab 2/3
+runner and still excludes Lab 4 specs so they cannot accidentally run against a
+shared database.
+
+## Lab 4 browser coverage (Issue #61)
+
+- `e2e/lab-04/dashboards.spec.ts`: Staff/Admin and Requester authorization,
+  dashboard metrics and latest-five lists, drill-downs, ownership, state
+  persistence, stale responses, responsive layout, focus and touch targets.
+- `e2e/lab-04/actions-taken-flow.spec.ts`: Staff validation, assignment,
+  editing, completion/cancellation, Admin performer creation, Requester
+  read-only history and inactive-assignee rejection.
+- `e2e/lab-04/concurrent-edit.spec.ts`: two-Staff stale-write recovery and
+  lost-response replay, including the one-Action/one-event persistence check.
+- `e2e/lab-04/ticket-resolution.spec.ts`: resolution gating, action completion,
+  public-comment/private-note visibility, requester advisory and reopen.
+
+Lab 4 screenshots and JSON evidence records are written under
+`artifacts/lab-04/screenshots/{staff-dashboard,requester-dashboard,actions-taken,ticket-workflow}/`.
+Each sidecar records the role, route, viewport, test and expected result. The
+browser suite has desktop, tablet and mobile captures; responsive assertions
+also check horizontal overflow.
+
+The latest isolated browser results recorded on 2026-10-29 are 13/13 Lab 2/3
+regression journeys and 20/20 Lab 4 journeys. See `docs/lab-04/tests.md` for
+the complete verification record and remaining release gates.
 
 ## Lab 2 requester regression
 
-`e2e/lab-02/requester-ticket-flow.spec.ts` is restored as a session-adapted
-regression. It keeps the Lab 2 requester ticket, ownership isolation,
-attachment lifecycle and responsive coverage while using the Lab 3 session
-cookie instead of the retired requester selector and `X-Requester-Id` header.
-
-Run it with:
-
-```bash
-npx playwright test e2e/lab-02
-```
-
-Its current screenshots are written under
-`artifacts/lab-03/screenshots/requester-regression/`; the original Lab 2
-pre-auth figures remain under `artifacts/lab-02/`.
+`e2e/lab-02/requester-ticket-flow.spec.ts` keeps the requester ticket,
+ownership, attachment lifecycle and responsive coverage while using the Lab 3
+session cookie. Requesters now land on `/dashboard/requester`; My Tickets
+remains at `/tickets`. The retired selector-driven evidence specs remain
+retired. Lab 2 captures are under `artifacts/lab-02/` and the session-adapted
+regression also refreshes `artifacts/lab-03/screenshots/requester-regression/`.
 
 ## Lab 3 browser regression (#42)
 
-`e2e/lab-03/` carries the authenticated browser regression and responsive
-evidence. It contains four specs plus a shared seeded-stack helper:
+`e2e/lab-03/` covers authentication, the Staff ticket workflow, Admin user
+management, and release evidence. The disposable runner resets only its own
+seed before each journey. Responsive capture viewports are 1366x768, 768x1024
+and 375x667; overflow checks use those actual viewport widths.
 
-| Spec | Covers |
-|---|---|
-| `authentication.spec.ts` | E-01: sign in, the first-login gate, logout and cookie replay |
-| `staff-ticket-flow.spec.ts` | E-02: queue, claim, prioritise, advance, resolve, comment, note, reopen |
-| `user-administration.spec.ts` | E-03: admin search, create, edit, reset, guards, deactivation cascade |
-| `zz-release-evidence.spec.ts` | Release visual states: auth failures/busy/logout, queue states and clipping, staff validation/feedback, admin dialogs/guards, and clean seeded users |
+The role seed has grown with Lab 4 dashboard fixtures. Its clean baseline is
+17 users: 8 Requesters, 6 IT Staff and 3 Administrators. The release-evidence
+journey checks that count and separately rejects leftover `e2e.` users.
 
-The specs clean only their scoped E2E fixtures and reset the documented local
-seed before each journey, use real session cookies, and write the required
-screenshots and authorization evidence under `artifacts/lab-03/`. The visual
-run covers 1366x768, 768x1024 and 375x667 and asserts that the document has no
-horizontal overflow.
+## Other commands
 
-Run the complete browser suite after starting and seeding PostgreSQL:
+`npm run test:e2e` runs the default Playwright config against its configured
+development database and starts/reuses the ordinary local servers. Use it only
+when that database is intentionally selected. For isolated runs, use the
+disposable runners above.
 
-```bash
-npx playwright test e2e/lab-03
-```
-
-Run all Lab 2 and Lab 3 browser suites through the root script:
+The server/client unit and API regressions remain:
 
 ```bash
-npm run test:e2e
+npm run test:isolated --prefix server
+npm test --prefix client -- --maxWorkers=1
 ```
 
-Server and client suites remain useful regression checks:
-
-```bash
-npm test --prefix server   # API, authorization and migration behaviour
-npm test --prefix client   # screens, guards and shell navigation
-```
-
-Evidence written by the suite:
-
-- `artifacts/lab-03/screenshots/authentication/{desktop,tablet,mobile}.png` plus
-  the corresponding change-password captures
-- `artifacts/lab-03/screenshots/staff-queue/{desktop,tablet,mobile}.png`
-- `artifacts/lab-03/screenshots/staff-ticket-detail/{desktop,tablet,mobile}.png`
-- `artifacts/lab-03/screenshots/user-management/{desktop,tablet,mobile}.png`
-- `artifacts/lab-03/screenshots/release-evidence/` for invalid, inactive,
-  busy-login, logout, queue loading/empty/error/feedback, Updated-column
-  clipping, staff post-action/validation, admin create/edit/reset/guard, and
-  clean User Management captures
-- `artifacts/lab-03/authorization.json`
-- `artifacts/lab-03/visual-state-evidence.json` and
-  `artifacts/lab-03/clean-user-management.json`
+Staff dashboard performance measurements use a separate disposable database:
+`npm run test:dashboard-performance --prefix server`. Results are recorded in
+`artifacts/lab-04/staff-dashboard-performance.json` and
+`artifacts/lab-04/requester-dashboard-performance.json`.

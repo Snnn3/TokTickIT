@@ -118,8 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(next);
   }, []);
 
+  const expireSession = useCallback(() => {
+    setUser(null);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, applyUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, signIn, signOut, expireSession, applyUser }}
+    >
       {children}
     </AuthContext.Provider>
   );
