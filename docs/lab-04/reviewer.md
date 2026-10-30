@@ -16,7 +16,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
 | https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
 | https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
-| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Changes requested (2026-10-30); fix pushed, awaiting re-review |
+| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Approved - open, awaiting merge into `lab4-staging` |
 
 ### Reviewer comments I received and how I responded
 
@@ -57,16 +57,17 @@
 - **My comment:** Thanked the reviewer and acknowledged the C4-02 count discrepancy; the comment is recorded in the PR conversation. The test-plan correction is recorded in `tests.md`.
 - **Merge:** Merged into `lab4-staging` at `2026-10-13 08:08 UTC`, merge commit `1f558d05a898dd66952bffb652cb829d52b6b6fe`.
 
-**PR #70 - feature/lab4-8-e2e-visual** (OPEN; changes requested)
+**PR #70 - feature/lab4-8-e2e-visual** (OPEN; approved, awaiting merge)
 - **Opened (2026-10-29):** Targets `lab4-staging` for Issue #61.
 - **Peer review (YummieGG, CHANGES_REQUESTED, 2026-10-30):** Reported TS18046 in `server/tests/lab-04/requester-dashboard.api.test.ts`: `Object.values(response.body.lists)` left each `tickets` value typed as `unknown`. The review requested typing `lists` as a record of arrays before iterating.
-- **Fix pushed (2026-10-30):** Commit `3776ebd` types `response.body.lists` as `Record<string, unknown[]>`; `npm run build --prefix server` then passed. Commit `ee2697b` pushed the remaining Lab 3/Lab 4 evidence and action-coverage changes. The branch head is `ee2697b`.
-- **Author verification (2026-10-30, feature branch):** Server tests passed 372/372; client tests passed 197/197; `npm run check` passed for 163 files; server and client builds passed. Client tests required a workspace temporary directory and two workers after sandbox worker-start errors. Full browser E2E was not rerun for the type-only fix.
-- **Current GitHub state (2026-10-30):** PR #70 remains open with decision `CHANGES_REQUESTED`. No re-review, approval or merge is recorded; local verification is not partner approval.
+- **Fix pushed (2026-10-30):** Commit `3776ebd` types `response.body.lists` as `Record<string, unknown[]>`, resolving TS18046; the server build passed. Commit `ee2697b` added the remaining Lab 3/Lab 4 evidence and action-coverage changes.
+- **Peer re-review (YummieGG, APPROVED, 2026-10-30 16:04 UTC):** Confirmed the TypeScript fix and both builds, verified the 7-test `action-domain.unit.test.ts` suite and 31 screenshot artifacts, and reported 371/371 server tests, 197/197 client tests, and a clean check across 163 files. The reviewer marked the Issue #61 acceptance criteria satisfied and the PR ready to merge.
+- **Author verification after the latest push (2026-10-30, feature branch):** Commit `56ebb62` stabilized the Lab 2 requester E2E system selection, refreshed Lab 2/3/4 screenshot and performance evidence, and included the visual accessibility checklist updates. Server tests passed 372/372 in both standard and isolated runs; concurrency passed 8/8; dashboard performance passed 6/6; client tests passed 197/197; Lab 2/3 Playwright regression passed 13/13; Lab 4 Playwright passed 21/21. `npm run check` passed for 163 files, and both builds passed. The verification summary was posted in [the PR conversation](https://github.com/Snnn3/TokTickIT/pull/70#issuecomment-6527287472).
+- **Current GitHub state (2026-10-30):** PR #70 is open and approved, targets `lab4-staging`, and points to head `56ebb62`. It has not yet merged. Approval and merge status were checked on GitHub after the review response.
 
 Dates below use UTC. Review bodies and replies are summarized unless quotation marks indicate a short verbatim reply. Test counts describe what the reviewer or author reported at that PR head; current verification belongs in [tests.md](tests.md).
 
-Issue #61 has open PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`. YummieGG requested changes on 2026-10-30; the reported TypeScript build defect was fixed and pushed, but GitHub still shows `CHANGES_REQUESTED` and no approval or merge is recorded. Local branch checks do not constitute partner approval. Final report preparation, manual accessibility acceptance and integrated-main verification remain pending.
+Issue #61 has open, approved PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`; it has not merged. The TS18046 build defect was fixed, the reviewer approved the re-review, and the latest full test/build results are recorded above. Final report preparation and verification after integration remain pending. The visual accessibility checklist still says Narrator's spoken output was not verified; that manual check remains outstanding even though its screen-reader checklist item is checked.
 
 ---
 

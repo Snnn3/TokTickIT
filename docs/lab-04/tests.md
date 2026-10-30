@@ -1,6 +1,6 @@
 # Lab 4 Test and Evidence Plan
 
-Status: **2026-10-30 branch checks pass: server/client suites, Lab 2/3 13/13, Lab 4 20/20, builds, lint, formatter check, screenshot review and contrast; manual keyboard/screen-reader, peer review and main integration pending**<br>
+Status: **2026-10-30 feature-branch checks pass: server/client suites, Lab 2/3 13/13, Lab 4 21/21, concurrency, performance smoke, formatter check and builds; PR #70 approved; Narrator spoken-output and integrated-main verification pending**<br>
 Version: **1.0**<br>
 Date: **2026-10-30**<br>
 Branch: `feature/lab4-8-e2e-visual`<br>
@@ -15,27 +15,27 @@ evidence. FR/BR/AC meanings come from specification.md and api-spec.md.
 | ID | Layer | AC mapping | Planned test file / evidence path | Scenario | Expected result | Status |
 |---|---|---|---|---|---|---|
 | U4-01 | Unit | AC-01, AC-04, AC-06, AC-07, AC-13 | `server/tests/lab-04/action-domain.unit.test.ts` | Action text/follow-up limits, Action/Ticket transition matrices, and UTC action snapshots | Exact valid/invalid matrix and stable timestamps | Passed — 7 dedicated unit tests, included in the 372/372 server run, 2026-10-30 |
-| API4-01 | API | AC-02, AC-03, AC-05, AC-06, AC-10, AC-16 | `server/tests/lab-04/actions-taken.api.test.ts` | Staff/Admin create/edit, own-ticket restriction, forged performer, all fields, eligible assignees | 201/200 authorized; 400/403/404/422 per contract; server actor | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
-| API4-02 | API | AC-04, AC-07, AC-08, AC-09, AC-10, AC-14, AC-16 | `server/tests/lab-04/ticket-workflow.api.test.ts` | Full Ticket matrix, resolution prerequisites, summary preservation, reopen, advisory; owner/priority/status/reopen/signal versions | Correct state and timestamps; stale writes change nothing | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
-| API4-03 | API | AC-10, AC-11, AC-13, AC-16 | `server/tests/lab-04/requester-dashboard.api.test.ts` | Two owners, zero/populated data, recent updated/resolved/attention and drill-down | Own-only metrics/lists; null legacy resolvedAt excluded from recent | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
+| API4-01 | API | AC-02, AC-03, AC-05, AC-06, AC-10, AC-16 | `server/tests/lab-04/actions-taken.api.test.ts` | Staff/Admin create/edit, own-ticket restriction, forged performer, all fields, eligible assignees | 201/200 authorized; 400/403/404/422 per contract; server actor | Passed — included in the isolated 372/372 server tests, 2026-10-30 |
+| API4-02 | API | AC-04, AC-07, AC-08, AC-09, AC-10, AC-14, AC-16 | `server/tests/lab-04/ticket-workflow.api.test.ts` | Full Ticket matrix, resolution prerequisites, summary preservation, reopen, advisory; owner/priority/status/reopen/signal versions | Correct state and timestamps; stale writes change nothing | Passed — included in the isolated 372/372 server tests, 2026-10-30 |
+| API4-03 | API | AC-10, AC-11, AC-13, AC-16 | `server/tests/lab-04/requester-dashboard.api.test.ts` | Two owners, zero/populated data, recent updated/resolved/attention and drill-down | Own-only metrics/lists; null legacy resolvedAt excluded from recent | Passed — included in the isolated 372/372 server tests, 2026-10-30 |
 | API4-04 | API | AC-10, AC-12, AC-13, AC-16 | `server/tests/lab-04/staff-dashboard.api.test.ts`; `staff-actions-list.api.test.ts`; `server/tests/lab-03/staff-queue.api.test.ts` | Staff/Admin metrics, all-status grouping, actionable recent Tickets and current-performer actions; filtered queue/actions | Counts match authoritative fixtures; terminal Tickets cannot displace actionable recent work; Requester403; latest5/ties/bounds | Passed — 32 focused tests, 2026-10-08 |
 | API4-05 | Real DB integration | AC-05, AC-14, AC-15, AC-16 | `server/tests/lab-04/concurrency.integration.test.ts`; `server/tests/lab-04/serializable-transaction.test.ts` | All five versioned Ticket routes, concurrent action edits/creates, same-key replay/change, assignment vs Admin deactivation | One winner or exact replay; safe 409s; no partial fields/audit writes; assignment cascade versions stay atomic | Passed — 8/8 disposable-PostgreSQL race/replay cases, 2026-10-15 |
-| API4-06 | API | AC-10, AC-22 | `server/tests/lab-04/actions-taken.api.test.ts`; `server/tests/lab-04/concurrency.integration.test.ts`; `server/tests/lab-03/comments-notes.api.test.ts`; `server/tests/lab-03/staff-ticket-detail.api.test.ts`; `e2e/lab-04/actions-taken-flow.spec.ts` | Create/edit/cascade event actors and immutable public history; comments/notes regression | Stable order; no event update/delete; requester sees no internal notes | Passed — history assertions are covered by the isolated 365/365 server, 13/13 regression, and 20/20 Lab 4 E2E results; cascade race coverage passed 8/8 real-PostgreSQL cases (2026-10-15) |
+| API4-06 | API | AC-10, AC-22 | `server/tests/lab-04/actions-taken.api.test.ts`; `server/tests/lab-04/concurrency.integration.test.ts`; `server/tests/lab-03/comments-notes.api.test.ts`; `server/tests/lab-03/staff-ticket-detail.api.test.ts`; `e2e/lab-04/actions-taken-flow.spec.ts` | Create/edit/cascade event actors and immutable public history; comments/notes regression | Stable order; no event update/delete; requester sees no internal notes | Passed — history assertions are covered by the isolated 372/372 server, 13/13 regression, and 21/21 Lab 4 E2E results; cascade race coverage passed 8/8 real-PostgreSQL cases (2026-10-15 and 2026-10-30) |
 | C4-01 | Component | AC-03, AC-05, AC-06, AC-10, AC-17 | `client/src/__tests__/lab-04/ActionsTaken.test.tsx` | Staff/Admin writes, requester read-only, fields/follow-up, assignee options and feedback states | Correct controls/errors; draft retained; disabled repeated submit | Passed — 18 tests, including deep-link focus recovery, 2026-10-08 |
 | C4-02 | Component | AC-11, AC-13, AC-18 | `client/src/__tests__/lab-04/RequesterDashboard.test.tsx` | Cards/lists, own filters, fixed-bound drill-down, loading/empty/forbidden/not-found/failure | Server counts rendered; correct URLs and Bangkok display | Passed — 7 tests, 2026-10-13 |
 | C4-03 | Component | AC-12, AC-13, AC-18 | `client/src/__tests__/lab-04/StaffDashboard.test.tsx` | Staff/Admin cards, all-status grouping, actionable recent-ticket drill-down with `statusGroup=open`, current-performer list, empty/loading/forbidden/failure/refresh | Correct destinations; previous snapshot labelled during refresh/failure | Passed — 6 tests, 2026-10-09 |
 | C4-04 | Component | AC-07, AC-08, AC-09, AC-14, AC-15, AC-17 | `client/src/__tests__/lab-04/TicketWorkflow.test.tsx` | Invalid resolution summary and server `ACTION_RESULT_REQUIRED` feedback | Invalid form is not submitted; error is shown beside the summary field | Passed — focused test 1/1; full client suite includes it, 2026-10-13. Resolve/reopen, stale-version and replay behavior are not claimed by this component test. |
 | V4-01 | Style/responsive/a11y | AC-17, AC-18, AC-23 | `docs/lab-04/visual-accessibility-checklist.md`; component and Playwright tests | Zen Green, labels, keyboard/dialog focus, editable/read-only fields, validation placement, clipping/overlap/overflow | Evidence-backed visual checklist; manual screen-reader/contrast pass remains explicit | Partial — see checklist; automated focus/label/responsive assertions pass, manual review pending |
-| E4-01 | E2E | AC-03, AC-04, AC-05, AC-06, AC-10, AC-17, AC-22 | `e2e/lab-04/actions-taken-flow.spec.ts` | Staff and Admin record different actions under one Ticket; assign/edit/complete/cancel/history | End-to-end fields, performer, follow-up, terminal and authorization evidence | Passed — 3/3 Chromium journeys, isolated DB, 2026-10-29 |
-| E4-02 | E2E | AC-07, AC-08, AC-09, AC-10, AC-19 | `e2e/lab-04/ticket-resolution.spec.ts` | Real requester/staff resolution gate, reopen and advisory, public comments and internal notes | Correct lifecycle; requester sees public history only | Passed — 1/1 Chromium journey, isolated DB, 2026-10-29 |
-| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Staff/Admin and Requester dashboards; ownership, drill-down/browser-back, desktop/tablet/mobile layout, mobile targets and keyboard navigation | Metrics match database queries; terminal Tickets do not displace actionable work; long text wraps; no horizontal overflow; Bangkok times | Passed — dashboard specs 14/14; all Lab 4 E2E 20/20, isolated DB, 2026-10-29 |
-| E4-04 | E2E | AC-14, AC-15, AC-17 | `e2e/lab-04/concurrent-edit.spec.ts`; `artifacts/lab-04/screenshots/ticket-workflow/concurrent-edit-conflict-desktop.png`; `artifacts/lab-04/screenshots/actions-taken/lost-response-replay-desktop.png` | Two Staff sessions encounter a stale Ticket; lost create response is retried | Latest values load, summary draft is retained until explicit retry; one action/event/request persists | Passed — 2/2 Chromium journeys, isolated DB, 2026-10-29 |
+| E4-01 | E2E | AC-03, AC-04, AC-05, AC-06, AC-10, AC-17, AC-22 | `e2e/lab-04/actions-taken-flow.spec.ts` | Staff and Admin record different actions under one Ticket; assign/edit/complete/cancel/history | End-to-end fields, performer, follow-up, terminal and authorization evidence | Passed — 3/3 Chromium journeys, included in the 21/21 isolated Lab 4 run, 2026-10-30 |
+| E4-02 | E2E | AC-07, AC-08, AC-09, AC-10, AC-19 | `e2e/lab-04/ticket-resolution.spec.ts` | Real requester/staff resolution gate, reopen and advisory, public comments and internal notes | Correct lifecycle; requester sees public history only | Passed — 1/1 Chromium journey, included in the 21/21 isolated Lab 4 run, 2026-10-30 |
+| E4-03 | E2E | AC-10, AC-11, AC-12, AC-13, AC-18 | `e2e/lab-04/dashboards.spec.ts` | Staff/Admin and Requester dashboards; ownership, drill-down/browser-back, desktop/tablet/mobile layout, mobile targets and keyboard navigation | Metrics match database queries; terminal Tickets do not displace actionable work; long text wraps; no horizontal overflow; Bangkok times | Passed — dashboard specs 14/14; all Lab 4 E2E 21/21, isolated DB, 2026-10-30 |
+| E4-04 | E2E | AC-14, AC-15, AC-17 | `e2e/lab-04/concurrent-edit.spec.ts`; `artifacts/lab-04/screenshots/ticket-workflow/concurrent-edit-conflict-desktop.png`; `artifacts/lab-04/screenshots/actions-taken/lost-response-replay-desktop.png` | Two Staff sessions encounter a stale Ticket; lost create response is retried | Latest values load, summary draft is retained until explicit retry; one action/event/request persists | Passed — 2/2 Chromium journeys, included in the 21/21 isolated Lab 4 run, 2026-10-30 |
 | M4-01 | Migration real DB | AC-02, AC-13, AC-21 | `server/prisma/migration-evidence/lab4-actions.md` | Legacy backup/apply/compare/restore in isolated databases | All prior data/hash values preserved; versions1; zero actions; recovery readable | Passed — disposable PostgreSQL run |
 | M4-02 | Seed real DB | AC-02, AC-05, AC-11, AC-12, AC-21, AC-22 | `server/prisma/migration-evidence/lab4-actions.md`; `server/tests/lab-04/seed-fixtures.test.ts` | Run seed twice; zero/one/many action/status/priority/ownership/time fixtures | Stable counts and events; no unrelated user/data overwrite | Passed — repeat seed and fixture assertions |
-| P4-01 | Performance smoke | AC-11, AC-12, AC-18 | `server/tests/lab-04/dashboard-performance.integration.test.ts`; `artifacts/lab-04/staff-dashboard-performance.json`; `artifacts/lab-04/requester-dashboard-performance.json` | 10k Tickets/30k actions; both endpoints on documented local fixture; staff query plans and independent SQL counts | 20 warm requests per endpoint p95 <=1000ms; <=64KiB responses; bounded query count and latest-five collections | Passed — Staff p95 98.41ms and Requester p95 103.70ms; Requester response 4,988 bytes and 14 SQL queries (4 metric, 3 limited collections), 2026-10-10 |
-| R4-01 | Regression | AC-19 | `server/tests/`; `client/src/__tests__/`; `e2e/lab-02/`; `e2e/lab-03/`; `server/prisma/migration-evidence/lab4-actions.md`; [Lab 2 attachment lifecycle browser journey](../../e2e/lab-02/requester-ticket-flow.spec.ts) | Auth, requester, attachment upload/removal, comments, private notes, queue/detail, Admin guards and authenticated browser journeys | All existing behavioral assertions pass after documented additive fixture adaptations | Passed — isolated server/client suites and Lab 2/3 E2E 13/13, 2026-10-29; attachment upload/removal covered by the linked Lab 2 journey |
+| P4-01 | Performance smoke | AC-11, AC-12, AC-18 | `server/tests/lab-04/dashboard-performance.integration.test.ts`; `artifacts/lab-04/staff-dashboard-performance.json`; `artifacts/lab-04/requester-dashboard-performance.json` | 10k Tickets/30k actions; both endpoints on documented local fixture; staff query plans and independent SQL counts | 20 warm requests per endpoint p95 <=1000ms; <=64KiB responses; bounded query count and latest-five collections | Passed — Staff p95 103.20ms (3,772 bytes, 15 queries) and Requester p95 84.06ms (4,988 bytes, 14 queries), 2026-10-30; raw samples and runtime details are in the linked JSON artifacts |
+| R4-01 | Regression | AC-19 | `server/tests/`; `client/src/__tests__/`; `e2e/lab-02/`; `e2e/lab-03/`; `server/prisma/migration-evidence/lab4-actions.md`; [Lab 2 attachment lifecycle browser journey](../../e2e/lab-02/requester-ticket-flow.spec.ts) | Auth, requester, attachment upload/removal, comments, private notes, queue/detail, Admin guards and authenticated browser journeys | All existing behavioral assertions pass after documented additive fixture adaptations | Passed — server 372/372, client 197/197, and isolated Lab 2/3 E2E 13/13, 2026-10-30; attachment upload/removal covered by the linked Lab 2 journey |
 | D4-01 | Contract audit | AC-01, AC-20 | `docs/lab-04/reviewer.md` | PDF/Issue54 six-doc alignment, exact inverse mappings, approval/merge evidence | Draft gaps resolved; peer approval and contract merge recorded before implementation PR completion | Passed — PR #63 approved and merged 2026-09-30 before PR #64 implementation |
-| REL4-01 | Release/manual | AC-18, AC-19, AC-23 | `docs/lab-04/reviewer.md`; `README.md` | Product DoD, actual main test results, setup/demo/recovery, visual checklist and final report | All evidence linked; no invented approvals/results; report Parts1-9 | Partial — branch tests and visual evidence are recorded; final report, peer review, manual accessibility and integrated-main evidence remain pending |
+| REL4-01 | Release/manual | AC-18, AC-19, AC-23 | `docs/lab-04/reviewer.md`; `README.md` | Product DoD, actual main test results, setup/demo/recovery, visual checklist and final report | All evidence linked; no invented approvals/results; report Parts1-9 | Partial — branch tests, visual evidence and peer approval are recorded; final report, Narrator spoken-output verification and integrated-main evidence remain pending |
 
 Manual/document rows use evidence paths instead of claiming an automated test.
 Real-DB tests must provision disposable fixtures; mocked Prisma tests alone
@@ -315,37 +315,36 @@ not final integrated-main sign-off.
   verification and Issue #61 PR approval remained pending on 2026-10-29; no
   approval is inferred.
 
-## Current report-build verification — 2026-10-30
+## Latest complete branch verification — 2026-10-30
 
-Branch: `feature/lab4-8-e2e-visual`; inspected HEAD: `26ea682`. These results
-include uncommitted local test/accessibility fixes and are from the feature
-branch, not from integrated `main`.
+Branch: `feature/lab4-8-e2e-visual`; HEAD:
+`56ebb62afb3ecb020bfc1fcebdf3cdfaadc13e54`; base: `lab4-staging` at
+`1f558d05a898dd66952bffb652cb829d52b6b6fe`. These results are from the
+feature branch, not integrated `main`.
 
-- `npm run check`: passed; 162 files checked, no formatting diagnostics.
-- `npm run test:server`: 23 files, 372/372 tests passed, including the new
-  seven-test U4-01 unit suite.
-- `npm test --prefix client -- --pool=threads --maxWorkers=1 --testTimeout=15000`:
-  24 files, 197/197 tests passed.
-- `npm run build --prefix server`, `npm run build --prefix client`, and
-  `npm run lint --prefix client`: passed.
-- `npm run test:e2e:lab4`: 20/20 Chromium journeys passed on a disposable
-  PostgreSQL database.
-- Lab 2/3 browser regression: 13/13 Chromium journeys passed on a disposable
-  PostgreSQL database using an isolated alternate port because ports 3000 and
-  5173 were already occupied by pre-existing local services. Regression test
-  contexts now honor `TOKTICKIT_E2E_BASE_URL`.
-- PostgreSQL concurrency/replay suite: 8/8 passed in the previously recorded
-  2026-10-15 run; it was not rerun for this report.
-- All 26 Lab 4 and 5 Lab 3 report screenshots (31 total) were reviewed at
-  original image resolution. No overlap or unexpected overflow was visible in the captured
-  viewports; mobile images show viewport contents rather than the entire page.
-- WCAG contrast calculations after the palette correction: secondary text
-  4.75:1, warning 5.40:1, success 5.42:1; input boundaries 3.50:1 against the
-  page background. Status text remains visible alongside color coding.
-- Automated keyboard focus/tab assertions passed in the browser suite. A full
-  manual keyboard-only pass, a screen-reader pass, peer approval of PR #70, and
-  final verification on integrated `main` remain pending.
-- The Admin clean-list screenshot has a visually dimmed Create user button,
-  although the same passing E2E journey opens the creation dialog. The dialog
-  screenshot is included as corroborating evidence; confirm the clean-list
-  button appearance during the final manual release review.
+- `npm test --prefix server`: 23 files, 372/372 tests passed.
+- `npm run test:isolated --prefix server`: 23 files, 372/372 tests passed on
+  its disposable PostgreSQL database.
+- `npm run test:concurrency --prefix server`: 8/8 real-database race/replay
+  cases passed.
+- `npm run test:dashboard-performance --prefix server`: 6/6 real-database
+  tests passed.
+- `npm test --prefix client -- --maxWorkers=2`: 24 files, 197/197 tests passed.
+- `npm run test:e2e:regression`: 13/13 Chromium journeys passed on an isolated
+  disposable PostgreSQL database.
+- `npm run test:e2e:lab4`: 21/21 Chromium journeys passed on an isolated
+  disposable PostgreSQL database. No Playwright tests were skipped.
+- `npm run check`: passed; 163 files checked, no fixes applied.
+- `npm run build --prefix server` and `npm run build --prefix client`: passed.
+- The Lab 2 requester E2E helper now waits for the seeded Email option, selects
+  it by value, and asserts the selected value. The complete regression suite
+  passed after this stabilization.
+- E2E recaptured the tracked Lab 2/3/4 screenshots and refreshed their JSON
+  sidecars and performance measurements. PR #70's peer reviewer confirmed
+  31 screenshot artifacts in the approved review.
+- PR #70 was approved by YummieGG on 2026-10-30 and remains open, awaiting
+  merge into `lab4-staging`; see [reviewer.md](reviewer.md).
+- The visual/accessibility checklist marks the keyboard and screen-reader
+  items complete but also says Narrator's spoken output was not verified.
+  Treat spoken-output sign-off as pending until that inconsistency is resolved.
+- Final report preparation and verification after integration remain pending.
