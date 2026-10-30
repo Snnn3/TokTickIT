@@ -16,7 +16,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
 | https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
 | https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
-| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Open - awaiting peer review |
+| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Changes requested (2026-10-30); fix pushed, awaiting re-review |
 
 ### Reviewer comments I received and how I responded
 
@@ -57,12 +57,16 @@
 - **My comment:** Thanked the reviewer and acknowledged the C4-02 count discrepancy; the comment is recorded in the PR conversation. The test-plan correction is recorded in `tests.md`.
 - **Merge:** Merged into `lab4-staging` at `2026-10-13 08:08 UTC`, merge commit `1f558d05a898dd66952bffb652cb829d52b6b6fe`.
 
-**PR #70 - feature/lab4-8-e2e-visual** (OPEN)
-- **Opened (2026-10-29):** Targets `lab4-staging` for Issue #61. Peer review, approval and merge are pending; no human approval is inferred.
+**PR #70 - feature/lab4-8-e2e-visual** (OPEN; changes requested)
+- **Opened (2026-10-29):** Targets `lab4-staging` for Issue #61.
+- **Peer review (YummieGG, CHANGES_REQUESTED, 2026-10-30):** Reported TS18046 in `server/tests/lab-04/requester-dashboard.api.test.ts`: `Object.values(response.body.lists)` left each `tickets` value typed as `unknown`. The review requested typing `lists` as a record of arrays before iterating.
+- **Fix pushed (2026-10-30):** Commit `3776ebd` types `response.body.lists` as `Record<string, unknown[]>`; `npm run build --prefix server` then passed. Commit `ee2697b` pushed the remaining Lab 3/Lab 4 evidence and action-coverage changes. The branch head is `ee2697b`.
+- **Author verification (2026-10-30, feature branch):** Server tests passed 372/372; client tests passed 197/197; `npm run check` passed for 163 files; server and client builds passed. Client tests required a workspace temporary directory and two workers after sandbox worker-start errors. Full browser E2E was not rerun for the type-only fix.
+- **Current GitHub state (2026-10-30):** PR #70 remains open with decision `CHANGES_REQUESTED`. No re-review, approval or merge is recorded; local verification is not partner approval.
 
 Dates below use UTC. Review bodies and replies are summarized unless quotation marks indicate a short verbatim reply. Test counts describe what the reviewer or author reported at that PR head; current verification belongs in [tests.md](tests.md).
 
-Issue #61 has open PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`, but no human peer approval is recorded. Local reviews and branch checks do not constitute partner approval. Final report preparation, manual accessibility acceptance and integrated-main verification remain pending.
+Issue #61 has open PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`. YummieGG requested changes on 2026-10-30; the reported TypeScript build defect was fixed and pushed, but GitHub still shows `CHANGES_REQUESTED` and no approval or merge is recorded. Local branch checks do not constitute partner approval. Final report preparation, manual accessibility acceptance and integrated-main verification remain pending.
 
 ---
 
