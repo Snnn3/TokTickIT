@@ -1,8 +1,8 @@
 # Lab 4 Test and Evidence Plan
 
-Status: **Branch E2E passes: Lab 2/3 13/13, Lab 4 20/20; repository-wide check still fails; manual accessibility, peer review and integration pending**<br>
+Status: **2026-10-30 branch checks pass: server/client suites, Lab 2/3 13/13, Lab 4 20/20, builds, lint, formatter check, screenshot review and contrast; manual keyboard/screen-reader, peer review and main integration pending**<br>
 Version: **1.0**<br>
-Date: **2026-10-13**<br>
+Date: **2026-10-30**<br>
 Branch: `feature/lab4-8-e2e-visual`<br>
 Issue: [#61](https://github.com/Snnn3/TokTickIT/issues/61)
 
@@ -14,7 +14,7 @@ evidence. FR/BR/AC meanings come from specification.md and api-spec.md.
 
 | ID | Layer | AC mapping | Planned test file / evidence path | Scenario | Expected result | Status |
 |---|---|---|---|---|---|---|
-| U4-01 | Unit | AC-01, AC-04, AC-06, AC-07, AC-13 | No dedicated unit file; related API coverage: `server/tests/lab-04/actions-taken.api.test.ts`; `server/tests/lab-04/ticket-workflow.api.test.ts` | All action/Ticket edges, text/follow-up limits and fixed-clock boundaries | Exact valid/invalid matrix; blank completion ACTION_RESULT_REQUIRED | Partial — no standalone unit suite was added; related API suites are included in the recorded 365/365 server run |
+| U4-01 | Unit | AC-01, AC-04, AC-06, AC-07, AC-13 | `server/tests/lab-04/action-domain.unit.test.ts` | Action text/follow-up limits, Action/Ticket transition matrices, and UTC action snapshots | Exact valid/invalid matrix and stable timestamps | Passed — 7 dedicated unit tests, included in the 372/372 server run, 2026-10-30 |
 | API4-01 | API | AC-02, AC-03, AC-05, AC-06, AC-10, AC-16 | `server/tests/lab-04/actions-taken.api.test.ts` | Staff/Admin create/edit, own-ticket restriction, forged performer, all fields, eligible assignees | 201/200 authorized; 400/403/404/422 per contract; server actor | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
 | API4-02 | API | AC-04, AC-07, AC-08, AC-09, AC-10, AC-14, AC-16 | `server/tests/lab-04/ticket-workflow.api.test.ts` | Full Ticket matrix, resolution prerequisites, summary preservation, reopen, advisory; owner/priority/status/reopen/signal versions | Correct state and timestamps; stale writes change nothing | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
 | API4-03 | API | AC-10, AC-11, AC-13, AC-16 | `server/tests/lab-04/requester-dashboard.api.test.ts` | Two owners, zero/populated data, recent updated/resolved/attention and drill-down | Own-only metrics/lists; null legacy resolvedAt excluded from recent | Passed — included in the isolated 365/365 server tests, 2026-10-29 |
@@ -303,15 +303,49 @@ not final integrated-main sign-off.
 - Server/client production builds and client source lint passed. The focused
   formatter check passed for the nine changed TypeScript files and
   `server/package.json`.
-- `npm run check` remains failed with 54 repository-wide formatter diagnostics
-  across 161 files, primarily line-ending normalization; no broad rewrite was
-  applied. The one diagnostic introduced by the new test script ordering was
-  corrected.
+- At the time of this 2026-10-29 record, `npm run check` failed with 54
+  repository-wide formatter diagnostics across 161 files. This historical
+  result is superseded by the clean 2026-10-30 run below.
 - The earlier 10/13 Lab 2/3 run is superseded by the complete 13/13 run above.
 - The requester tablet capture is 768x1024. The final populated mobile Actions
   Taken screenshot and viewport metadata are at
   `artifacts/lab-04/screenshots/actions-taken/populated-mobile.png` and its
   JSON sidecar.
-- Peer review, manual contrast/screen-reader acceptance, integrated-main
-  verification and Issue #61 PR approval remain pending; no approval is
-  inferred.
+- Peer review, manual keyboard/screen-reader acceptance, integrated-main
+  verification and Issue #61 PR approval remained pending on 2026-10-29; no
+  approval is inferred.
+
+## Current report-build verification — 2026-10-30
+
+Branch: `feature/lab4-8-e2e-visual`; inspected HEAD: `26ea682`. These results
+include uncommitted local test/accessibility fixes and are from the feature
+branch, not from integrated `main`.
+
+- `npm run check`: passed; 162 files checked, no formatting diagnostics.
+- `npm run test:server`: 23 files, 372/372 tests passed, including the new
+  seven-test U4-01 unit suite.
+- `npm test --prefix client -- --pool=threads --maxWorkers=1 --testTimeout=15000`:
+  24 files, 197/197 tests passed.
+- `npm run build --prefix server`, `npm run build --prefix client`, and
+  `npm run lint --prefix client`: passed.
+- `npm run test:e2e:lab4`: 20/20 Chromium journeys passed on a disposable
+  PostgreSQL database.
+- Lab 2/3 browser regression: 13/13 Chromium journeys passed on a disposable
+  PostgreSQL database using an isolated alternate port because ports 3000 and
+  5173 were already occupied by pre-existing local services. Regression test
+  contexts now honor `TOKTICKIT_E2E_BASE_URL`.
+- PostgreSQL concurrency/replay suite: 8/8 passed in the previously recorded
+  2026-10-15 run; it was not rerun for this report.
+- All 26 Lab 4 and 5 Lab 3 report screenshots (31 total) were reviewed at
+  original image resolution. No overlap or unexpected overflow was visible in the captured
+  viewports; mobile images show viewport contents rather than the entire page.
+- WCAG contrast calculations after the palette correction: secondary text
+  4.75:1, warning 5.40:1, success 5.42:1; input boundaries 3.50:1 against the
+  page background. Status text remains visible alongside color coding.
+- Automated keyboard focus/tab assertions passed in the browser suite. A full
+  manual keyboard-only pass, a screen-reader pass, peer approval of PR #70, and
+  final verification on integrated `main` remain pending.
+- The Admin clean-list screenshot has a visually dimmed Create user button,
+  although the same passing E2E journey opens the creation dialog. The dialog
+  screenshot is included as corroborating evidence; confirm the clean-list
+  button appearance during the final manual release review.

@@ -39,6 +39,13 @@ const ACTION_TRANSITIONS: Record<ActionStatus, readonly ActionStatus[]> = {
   [ActionStatus.CANCELLED]: [],
 };
 
+export function isActionTransitionAllowed(
+  from: ActionStatus,
+  to: ActionStatus
+): boolean {
+  return ACTION_TRANSITIONS[from].includes(to);
+}
+
 const ACTION_INCLUDE = {
   performedBy: { select: USER_REF_SELECT },
   assignee: { select: USER_REF_SELECT },
@@ -254,7 +261,7 @@ type EditPayload = {
   status?: ActionStatus;
 };
 
-function parseCreatePayload(body: unknown): CreatePayload {
+export function parseCreatePayload(body: unknown): CreatePayload {
   const record = validateRecord(body, [
     "title",
     "details",
@@ -290,7 +297,7 @@ function parseCreatePayload(body: unknown): CreatePayload {
   return payload;
 }
 
-function parseEditPayload(body: unknown): EditPayload {
+export function parseEditPayload(body: unknown): EditPayload {
   const record = validateRecord(body, [
     "expectedVersion",
     "expectedTicketVersion",
@@ -829,7 +836,7 @@ async function editAction(
     const nextStatus = payload.status ?? current.status;
     if (
       nextStatus !== current.status &&
-      !ACTION_TRANSITIONS[current.status].includes(nextStatus)
+      !isActionTransitionAllowed(current.status, nextStatus)
     ) {
       throw new ActionApiError(
         422,

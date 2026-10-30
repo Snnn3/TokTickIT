@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   ACCOUNTS,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   resetSeed,
   signInAndChangePassword,
 } from "../lab-03/support";
@@ -144,7 +145,7 @@ test.describe("Lab 2 requester regression under session authentication", () => {
     );
 
     const secondContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const secondPage = await secondContext.newPage();
 

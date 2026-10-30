@@ -4,6 +4,7 @@ import {
   assertNoHorizontalOverflow,
   captureScreenshot,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   resetSeed,
   signInAndChangePassword,
   VIEWPORTS,
@@ -36,7 +37,7 @@ test.describe("E-01 authentication journey", () => {
     await expect(page.getByTestId("login-card")).toBeVisible();
 
     const replayContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     await replayContext.addCookies(sessionBeforeLogout);
     const replayPage = await replayContext.newPage();
@@ -63,7 +64,7 @@ test.describe("E-01 authentication journey", () => {
       (entry, index) => [entry, accounts[index]] as const
     )) {
       const context = await browser.newContext({
-        baseURL: "http://localhost:5173",
+        baseURL: E2E_BASE_URL,
         viewport,
       });
       const page = await context.newPage();

@@ -12,6 +12,9 @@ export const VIEWPORTS = {
   mobile: { width: 375, height: 667 },
 } as const;
 
+export const E2E_BASE_URL =
+  process.env.TOKTICKIT_E2E_BASE_URL ?? "http://localhost:5173";
+
 export const ACCOUNTS = {
   requester: {
     name: "Anucha Wongchai",

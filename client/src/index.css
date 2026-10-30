@@ -1,6 +1,6 @@
 :root {
   --zg-primary: #006b3c;
-  --zg-secondary: #0b7a46;
+  --zg-secondary: #087044;
   --zg-pale: #eaf6ef;
   --zg-page-bg: #f5f7f6;
   --zg-surface: #ffffff;
@@ -9,10 +9,10 @@
   --zg-editable-field: #ffffff;
   --zg-readonly-field: #eef3ef;
   --zg-error: #b3261e;
-  --zg-warning: #b7791f;
-  --zg-success: #1f7a45;
+  --zg-warning: #8a5700;
+  --zg-success: #176b3f;
   --zg-border: #e2e8e4;
-  --zg-input-border: #c9d2cc;
+  --zg-input-border: #79877e;
 }
 
 body {
@@ -130,10 +130,15 @@ body {
 }
 
 /* Form Controls & Focus Rings */
+.form-control,
+.form-select {
+  border-color: var(--zg-input-border);
+}
+
 .form-control:focus,
 .form-select:focus {
   border-color: var(--zg-secondary);
-  box-shadow: 0 0 0 2px rgba(11, 122, 70, 0.25);
+  box-shadow: 0 0 0 2px rgba(8, 112, 68, 0.25);
   outline: 2px solid var(--zg-secondary);
   outline-offset: 1px;
 }
