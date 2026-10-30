@@ -4,11 +4,16 @@ import { prisma } from "../prisma";
 const MAX_SERIALIZATION_RETRIES = 3;
 
 export function isSerializationConflict(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return false;
+  }
+  const prismaError = error as {
+    code?: unknown;
+    meta?: { code?: unknown };
+  };
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "P2034"
+    prismaError.code === "P2034" ||
+    (prismaError.code === "P2010" && prismaError.meta?.code === "40001")
   );
 }
 

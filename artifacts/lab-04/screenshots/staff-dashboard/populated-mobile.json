@@ -8,7 +8,7 @@
     "width": 375,
     "height": 812
   },
-  "fullPage": true,
-  "capturedAt": "2026-10-08T14:12:37.329Z",
+  "fullPage": false,
+  "capturedAt": "2026-10-30T15:14:08.592Z",
   "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
 }

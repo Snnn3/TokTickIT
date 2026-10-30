@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   ACCOUNTS,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   resetSeed,
   signInAndChangePassword,
 } from "../lab-03/support";
@@ -39,7 +40,14 @@ async function createTicket(
   await page
     .locator("#category-select")
     .selectOption({ label: "Account and Access" });
-  await page.locator("#system-select").selectOption({ label: "Email" });
+  const systemSelect = page.locator("#system-select");
+  await expect(systemSelect).toBeEnabled();
+  const emailOption = systemSelect.locator("option", { hasText: /^Email$/ });
+  await expect(emailOption).toHaveCount(1);
+  const emailSystemId = await emailOption.getAttribute("value");
+  if (!emailSystemId) throw new Error("Seeded Email option has no system ID");
+  await systemSelect.selectOption(emailSystemId);
+  await expect(systemSelect).toHaveValue(emailSystemId);
   await page.locator("#priority-select").selectOption("MEDIUM");
   await page.locator("#summary-input").fill(summary);
   await page.locator("#description-input").fill(description);
@@ -144,7 +152,7 @@ test.describe("Lab 2 requester regression under session authentication", () => {
     );
 
     const secondContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const secondPage = await secondContext.newPage();
 
@@ -154,6 +162,7 @@ test.describe("Lab 2 requester regression under session authentication", () => {
         ACCOUNTS.secondRequester,
         E2E_PASSWORD
       );
+      await secondPage.goto("/tickets");
       await secondPage.locator("#ticket-search").fill(ticketNumber);
       await expect(secondPage.getByTestId("no-results-state")).toBeVisible();
       await expect(secondPage.getByText(ticketNumber)).toHaveCount(0);

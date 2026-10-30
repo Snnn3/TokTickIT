@@ -8,10 +8,7 @@ import {
   TicketStatus,
 } from "@prisma/client";
 import { hashPassword } from "../src/utils/password";
-import {
-  SEED_ACTIONS,
-  SEED_FIXTURE_CLOCK,
-} from "./action-seed-fixtures";
+import { SEED_ACTIONS, SEED_FIXTURE_CLOCK } from "./action-seed-fixtures";
 
 const prisma = new PrismaClient();
 
@@ -344,9 +341,7 @@ function actionSnapshot(action: ActionSnapshotSource): Prisma.InputJsonObject {
   };
 }
 
-function createdActionEventData(
-  action: ActionSnapshotSource & { id: number }
-) {
+function createdActionEventData(action: ActionSnapshotSource & { id: number }) {
   return {
     actionId: action.id,
     actorId: action.performedById,
@@ -487,7 +482,11 @@ async function main() {
       const assigneeId = action.assigneeEmail
         ? (userIdByEmail.get(action.assigneeEmail) ?? null)
         : null;
-      if (!ticketId || !performedById || (action.assigneeEmail && !assigneeId)) {
+      if (
+        !ticketId ||
+        !performedById ||
+        (action.assigneeEmail && !assigneeId)
+      ) {
         throw new Error(
           `Seed action ${action.title} references a missing ticket or user`
         );
@@ -507,9 +506,7 @@ async function main() {
         attachmentNotes: action.attachmentNotes ?? null,
         createdAt: new Date(action.createdAt),
         updatedAt: new Date(action.updatedAt),
-        completedAt: action.completedAt
-          ? new Date(action.completedAt)
-          : null,
+        completedAt: action.completedAt ? new Date(action.completedAt) : null,
       };
       const existing = await tx.actionTaken.findUnique({
         where: { seedKey: action.seedKey },
@@ -630,7 +627,9 @@ async function main() {
     }),
     prisma.actionEvent.count({
       where: {
-        action: { ticket: { number: { in: SEED_TICKETS.map((t) => t.number) } } },
+        action: {
+          ticket: { number: { in: SEED_TICKETS.map((t) => t.number) } },
+        },
       },
     }),
     prisma.publicComment.count({

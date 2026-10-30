@@ -4,6 +4,7 @@ import {
   assertNoHorizontalOverflow,
   captureScreenshot,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   resetSeed,
   signInAndChangePassword,
   VIEWPORTS,
@@ -28,7 +29,7 @@ test.describe("E-01 authentication journey", () => {
     );
 
     await signInAndChangePassword(page, ACCOUNTS.requester, changedPassword);
-    await expect(page).toHaveURL(/\/tickets$/);
+    await expect(page).toHaveURL(/\/dashboard\/requester$/);
 
     const sessionBeforeLogout = await page.context().cookies();
     await page.getByTestId("logout-btn").click();
@@ -36,7 +37,7 @@ test.describe("E-01 authentication journey", () => {
     await expect(page.getByTestId("login-card")).toBeVisible();
 
     const replayContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     await replayContext.addCookies(sessionBeforeLogout);
     const replayPage = await replayContext.newPage();
@@ -63,7 +64,7 @@ test.describe("E-01 authentication journey", () => {
       (entry, index) => [entry, accounts[index]] as const
     )) {
       const context = await browser.newContext({
-        baseURL: "http://localhost:5173",
+        baseURL: E2E_BASE_URL,
         viewport,
       });
       const page = await context.newPage();
@@ -86,7 +87,7 @@ test.describe("E-01 authentication journey", () => {
       await page.locator("#new-password").fill(`E2E.${viewportName}!2026`);
       await page.locator("#confirm-password").fill(`E2E.${viewportName}!2026`);
       await page.getByRole("button", { name: "Save new password" }).click();
-      await expect(page).toHaveURL(/\/tickets$/);
+      await expect(page).toHaveURL(/\/dashboard\/requester$/);
       await context.close();
     }
   });

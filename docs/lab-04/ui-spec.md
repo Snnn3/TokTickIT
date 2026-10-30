@@ -1,6 +1,6 @@
 # Lab 4 UI Specification
 
-Status: **Draft contract for peer review**<br>
+Status: **Approved contract (PR #63 merged 2026-09-30); product completion in progress**<br>
 Version: **1.0**<br>
 Date: **2026-09-22**<br>
 Branch: `feature/lab4-1-contract`<br>

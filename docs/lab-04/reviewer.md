@@ -1,4 +1,4 @@
-# Lab 4 - Peer Review Record
+# Lab 4 — Peer Review Record
 
 | Role | Name | Student ID | GitHub |
 |------|------|------------|--------|
@@ -14,6 +14,9 @@
 | https://github.com/Snnn3/TokTickIT/pull/65 | feature/lab4-3-actions-api | Changes requested, then approved - merged into `lab4-staging` on 2026-10-05 |
 | https://github.com/Snnn3/TokTickIT/pull/66 | feature/lab4-4-ticket-workflow | Approved - merged into `lab4-staging` on 2026-10-07 |
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
+| https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
+| https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
+| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Approved - author plans to merge into `lab4-staging`; PR remains open |
 
 ### Reviewer comments I received and how I responded
 
@@ -24,11 +27,13 @@
 
 **PR #64 - feature/lab4-2-actions-foundation** (MERGED)
 - **Reviewer review (YummieGG, APPROVED, 2026-10-01):** Approved the schema constraints, legacy-data preservation, idempotent seed fixtures, migration evidence, and regression suite for Issue #55. The review verified 190 server tests, 135 client tests, and 13 Playwright tests at that time.
+- **My comment (2026-10-03):** Thanked the reviewer for the thorough review and test-assertion feedback. [Response](https://github.com/Snnn3/TokTickIT/pull/64#issuecomment-5969422155).
 - **Merge:** Merged into `lab4-staging` at `2026-10-01 16:16 UTC`.
 
 **PR #65 - feature/lab4-3-actions-api** (MERGED)
 - **Reviewer review (YummieGG, CHANGES_REQUESTED, 2026-10-04):** Accepted the Actions Taken API design, authorization/body precedence, optimistic concurrency, and audit logging. Requested a missing `prisma.actionTaken.findMany` mock in the Lab 3 admin deactivation/demotion regression fixture, which otherwise tried to reach PostgreSQL in isolated tests, plus documentation updates.
 - **Response (2026-10-05):** Added the Action query stub to the existing regression test and recorded the review response here. The targeted deactivation/demotion cases passed (2/2) without a database connection. The PR comment at the time reported 244/245 server tests passing; the remaining Lab 1 seeded-category test required PostgreSQL.
+- **My comments (2026-10-05):** Posted the [fix and verification response](https://github.com/Snnn3/TokTickIT/pull/65#issuecomment-5989933680), then [thanked the reviewer](https://github.com/Snnn3/TokTickIT/pull/65#issuecomment-5992683451) for the feedback.
 - **Final GitHub state:** PR #65 is approved and merged into `lab4-staging` at `2026-10-05 09:11 UTC`. Its final approval review text refers to PR #64 and Issue #55, so that text is not treated here as additional PR #65-specific review evidence.
 
 **PR #66 - feature/lab4-4-ticket-workflow** (MERGED)
@@ -40,214 +45,91 @@
 - **Implementation:** Adds the Issue #58 Actions Taken panel to requester and staff Ticket details, with read-only requester history, role-aware writes, validation, and conflict recovery. No server or schema changes.
 - **Peer review (YummieGG, APPROVED, 2026-10-08):** Accepted action cardinality, transitions, immutable performer identity, follow-up validation, requester read-only behavior, conflict recovery and idempotency. The peer verified 17 Actions Taken component tests and 158 client tests at that implementation head, and requested the C4-01 test-plan status update.
 - **Merge:** Merged into `lab4-staging` at `2026-10-08 04:10 UTC`.
-- **Verification:** Results for the implementation head are recorded below. The PR description also discloses the repository-wide `npm run check` failure.
+- **My comment (2026-10-08):** Thanked the reviewer for the acceptance-criteria, conflict-recovery and test-coverage checks, including the C4-01 reminder. [Response](https://github.com/Snnn3/TokTickIT/pull/67#issuecomment-6053412961).
 
-## Verification for Issue #58
+**PR #68 - feature/lab4-6-staff-dashboard** (MERGED)
+- **Peer review (YummieGG, APPROVED, 2026-10-10):** Verified AC-1 through AC-10, authoritative dashboard metrics and status groups, bounded recent lists, Bangkok time, session identity, drill-downs, and stale-response protection. The reviewer reported 17/17 focused client tests, 15/15 dashboard API tests, and passing server/client builds plus the scoped formatting check. A non-blocking recommendation was to wrap one retry-count assertion in `waitFor` to reduce CI timing sensitivity.
+- **My comment:** Thanked the reviewer for the detailed review and for merging PR #68; the response is recorded in the PR conversation.
+- **Merge:** Merged into `lab4-staging` at `2026-10-10 05:26 UTC`, merge commit `5409b44b366a9cf3ebfb01929d05697abca9c5a7`.
 
-The following results were run on implementation head `fea80f0` on 2026-10-08, before this reviewer-record update:
+**PR #69 - feature/lab4-7-requester-dashboard** (MERGED)
+- **Peer review (YummieGG, APPROVED, 2026-10-13):** Verified AC-1 through AC-9, requester ownership, rejection of query/body identity overrides, UTC window/Bangkok display, stable latest-five lists, and persistence across refresh/Back. The reviewer reported 7/7 Requester Dashboard component tests, 196/196 client tests, 23/23 focused server API tests, and passing production builds/scoped formatting. The review flagged C4-02's documented count of 6 as stale; it should be 7.
+- **My comment:** Thanked the reviewer and acknowledged the C4-02 count discrepancy; the comment is recorded in the PR conversation. The test-plan correction is recorded in `tests.md`.
+- **Merge:** Merged into `lab4-staging` at `2026-10-13 08:08 UTC`, merge commit `1f558d05a898dd66952bffb652cb829d52b6b6fe`.
 
-- Server: `npm test --prefix server` - 18 files, 332 tests passed.
-- Client: `npm test --prefix client -- --maxWorkers=1` - 19 files, 158 tests passed.
-- Playwright: `npm run test:e2e` - 13 tests passed.
-- Client lint, server build, client build, and Prisma Client generation passed.
-- `npm run check` failed with 74 repository-wide formatter diagnostics across 121 checked files. The output includes line-ending normalization differences; the check did not modify files, and this repo-wide formatting issue is not resolved by the Issue #58 change.
+**PR #70 - feature/lab4-8-e2e-visual** (OPEN; approved, awaiting merge)
+- **Opened (2026-10-29):** Targets `lab4-staging` for Issue #61.
+- **Peer review (YummieGG, CHANGES_REQUESTED, 2026-10-30):** Reported TS18046 in `server/tests/lab-04/requester-dashboard.api.test.ts`: `Object.values(response.body.lists)` left each `tickets` value typed as `unknown`. The review requested typing `lists` as a record of arrays before iterating.
+- **Fix pushed (2026-10-30):** Commit `3776ebd` types `response.body.lists` as `Record<string, unknown[]>`, resolving TS18046; the server build passed. Commit `ee2697b` added the remaining Lab 3/Lab 4 evidence and action-coverage changes.
+- **Peer re-review (YummieGG, APPROVED, 2026-10-30 16:04 UTC):** Confirmed the TypeScript fix and both builds, verified the 7-test `action-domain.unit.test.ts` suite and 31 screenshot artifacts, and reported 371/371 server tests, 197/197 client tests, and a clean check across 163 files. The reviewer marked the Issue #61 acceptance criteria satisfied and the PR ready to merge.
+- **Author verification after the latest push (2026-10-30, feature branch):** Commit `56ebb62` stabilized the Lab 2 requester E2E system selection, refreshed Lab 2/3/4 screenshot and performance evidence, and included the visual accessibility checklist updates. Server tests passed 372/372 in both standard and isolated runs; concurrency passed 8/8; dashboard performance passed 6/6; client tests passed 197/197; Lab 2/3 Playwright regression passed 13/13; Lab 4 Playwright passed 21/21. `npm run check` passed for 163 files, and both builds passed. The verification summary was posted in [the PR conversation](https://github.com/Snnn3/TokTickIT/pull/70#issuecomment-6527287472).
+- **Current GitHub state (2026-10-30):** PR #70 is open and approved, targets `lab4-staging`, and points to head `1dbcdef`. The author plans to merge it; GitHub does not yet show it as merged. This update is on the feature branch, not `lab4-staging`.
 
----
+Dates below use UTC. Review bodies and replies are summarized unless quotation marks indicate a short verbatim reply. Test counts describe what the reviewer or author reported at that PR head; current verification belongs in [tests.md](tests.md).
 
-## Verification for Issue #59 review fixes
-
-On 2026-10-08, the Staff Dashboard branch addressed the local review
-`review-feature-lab4-6-staff-dashboard.md`:
-
-- Added authoritative all-Ticket status grouping in the dashboard snapshot,
-  zero-filled all eight statuses, rendered status links to the filtered queue,
-  and aligned the API/UI specification and focused tests.
-- Added eight isolated browser journeys for Staff/Admin authorization,
-  Requester denial, populated/empty states, performer isolation, drill-downs,
-  reload/browser-back, detail/action focus, loading/stale/retry, Bangkok time
-  and desktop/tablet/mobile evidence.
-- Added the real PostgreSQL 10,000-Ticket/30,000-action performance smoke,
-  independent SQL count comparisons, constant query-count/response-size checks,
-  and recorded EXPLAIN plans. The measured Staff p95 was 90.48 ms,
-  with 15 queries at both fixture sizes and 3,840-byte responses.
-- Added fixed-clock real-database coverage of both inclusive seven-day
-  boundaries, one-millisecond exclusions and matching drill-down totals.
-- Extracted the four reported duplications: open-status predicates, public
-  user projection, paired UTC date-range validation, and recent-link bounds.
-- Self-review found and fixed four further acceptance gaps: deep-link focus
-  stealing editor focus on reload, incomplete queue URL persistence, undersized
-  mobile controls, and missing exact-window real-database coverage. Focused
-  regressions were reproduced before the fixes. A follow-up Standards/Spec
-  review found no remaining actionable findings in this scope. Shared action
-  summary selection/serialization and active-action predicates were also
-  extracted following the Standards suggestions.
-- A final URL-state review identified a response-order race after clearing
-  search on a later page. Request-generation guards now ignore stale success,
-  forbidden, failure and loading updates; four reproduced regressions pass.
-  The follow-up Standards check confirmed the race fix.
-
-Verification: server 348/348, client 174/174, dashboard Playwright 8/8,
-real-database integration 2/2 (boundary and performance); both builds and client lint passed. Test commands
-and limitations are recorded in `tests.md`; measured SQL/runtime evidence is
-in `artifacts/lab-04/staff-dashboard-performance.json`.
-
-Changed-branch formatting and whitespace checks pass. Repository-wide
-`npm run check` still reports 60 existing formatter diagnostics outside the
-changed files. Existing Lab 2/3 browser tests were retained but not rerun as
-part of this dashboard-specific verification.
-
-No Issue #59 PR or peer approval is claimed. Requester dashboard tests remain
-Issue #60 work; the combined E4-03/P4-01 rows stay partially complete.
-
-### Subsequent Issue #59 review — 2026-10-09
-
-A later Spec pass reported five remaining P2 gaps after the earlier follow-up
-verification. The branch now invalidates local auth on `AUTH_REQUIRED` and
-returns through login to the full requested URL; ignores obsolete action-list
-success/error/loading responses; explains and locks date-filtered queue ordering;
-wraps long unbroken action titles; and provides 44px mobile targets on the action
-list. Tests cover each behavior, including a real-browser 120-character title at
-375px and an expired-session destination with query and fragment.
-
-The independent Standards review found no actionable issues. The Spec re-review
-confirmed the five P2 fixes and identified one P3 test gap around fragment
-preservation; that case was added and verified. My final diff review checked the
-auth continuation, request-generation guards across all response branches,
-date-sort request parameters and mobile sizing rules. No remaining actionable
-finding was identified in this scope.
-
-Final verification after the test-harness typing fix:
-
-- Client: 22 files, 182/182 tests passed.
-- Staff/Admin dashboard Playwright: 9/9 passed; the E2E TypeScript check passed.
-- Client production build passed.
-- `npm run lint --prefix client -- src` passed, as did changed-path formatting
-  and `git diff --check`.
-- The unscoped `npm run lint --prefix client` exited nonzero after reporting
-  third-party diagnostics from `client/node_modules`; source-scoped lint is
-  clean. No dependency or lint-configuration changes were made.
-
-No server code changed, and no Issue #59 PR, peer approval or merge is claimed.
-Requester Dashboard coverage remains Issue #60 work.
-
-### Subsequent Issue #59 review — actionable recent Tickets (2026-10-09)
-
-The remaining P2 Spec finding is fixed: the dashboard's recent-ticket query now
-uses the same actionable/open Ticket statuses as the queue's `statusGroup=open`
-filter. The recent-list "View all" link carries that status group together with
-the original updated-date snapshot bounds. The Staff/Admin dashboard API test
-asserts the status predicate, and the component test verifies the matching
-drill-down URL. A disposable-PostgreSQL regression test also creates older
-actionable Tickets behind five newer terminal Tickets and compares the dashboard
-list with its queue drill-down.
-
-Verification on this working tree:
-
-- Staff dashboard API tests: 7/7 passed; dashboard component tests: 6/6 passed.
-- Client suite: 22 files, 182/182 passed; server and client builds passed.
-- The full server Vitest run completed 19/20 files and 347/348 tests. Its only
-  failure was the existing Lab 1 categories test, which returned 500 because
-  the local database was not provisioned with the seeded categories.
-- Client source lint and changed-path formatting/whitespace checks passed.
-- Docker Desktop's engine did not respond (`docker info` could not connect to
-  `dockerDesktopLinuxEngine`). Therefore the disposable-PostgreSQL regression,
-  isolated server suite, and updated dashboard Playwright suite were not run;
-  the database/E2E verification remains pending.
-
-The Standards review still has no actionable findings. This resolves the
-actionable-recent-Ticket Spec finding; Requester Dashboard work remains Issue
-#60 scope. No PR, peer approval, or merge is claimed.
-
-### Subsequent Issue #59 review — mobile long-text overflow (2026-10-09)
-
-The new P2 finding reproduced at a 375px viewport: a 150-character unbroken
-Ticket summary expanded the document to 1,344px, and a 120-character performer
-name expanded the action list to 995px. A shared scoped `zg-breakable-text`
-rule now wraps the recent Ticket link and action-list performer/assignee names;
-existing action-title wrapping is unchanged. The browser regression verifies
-the summary and each attribution name independently, including displayed text
-and document width. Before the CSS fix, the new tests failed on the corresponding
-overflow measurements.
-
-Verification on this working tree:
-
-- Staff/Admin dashboard Playwright suite: 11/11 passed with the disposable
-  PostgreSQL database, including both new mobile long-text regressions.
-- Isolated server suite: 20 files, 348/348 passed; dashboard performance and
-  real-database integration suite: 3/3 passed.
-- Client suite: 22 files, 182/182 passed; client production build passed.
-- Client source lint, changed-path formatting and `git diff --check` passed.
-- E2E/performance runs regenerated tracked baseline screenshots/metadata and
-  benchmark JSON; those test-output-only changes were restored. No screenshot
-  evidence was added.
-
-At that point, the two P3 Standards suggestions in the review remained optional
-shared-helper refactors and were not part of the mobile-overflow fix. They are
-addressed in the follow-up recorded below. Requester Dashboard work remains
-Issue #60 scope; no PR, peer approval or merge is claimed.
-
-### Subsequent Issue #59 review — shared-helper follow-up (2026-10-09)
-
-Following the approved review at `99d6c0e`, both optional P3 duplication
-observations were addressed without changing endpoint or UI behavior:
-
-- Dashboard and Actions routes now share `hasRequestBody` for detecting
-  request bodies on read endpoints, while retaining their existing validation
-  order and route-specific error responses.
-- The Staff Actions list and Staff Ticket queue now share the
-  `useRequestGeneration` hook for rejecting stale responses and invalidating
-  in-flight requests on effect cleanup/unmount.
-
-Verification on this working tree:
-
-- Focused dashboard/Actions API tests: 60/60; focused Staff Actions/queue
-  component tests: 26/26.
-- Isolated server regression suite: 20 files, 348/348 tests passed.
-- Client suite: 22 files, 182/182 tests passed.
-- Server and client production builds, client source lint, changed-file
-  formatting, and `git diff --check` passed.
-- Playwright was not rerun because this follow-up only extracts existing
-  request-validation and stale-response guards; no browser flow or UI behavior
-  was changed.
-
-The P3 duplication observations are now addressed. Requester Dashboard work
-remains Issue #60 scope; no PR, peer approval or merge is claimed.
-
-### Subsequent Issue #59 review — stale authentication-body parsing (2026-10-09)
-
-The updated review superseded the prior approval with one reproduced P2 race.
-When a current 401 response's cloned body is still being parsed, browser Back
-can start and complete a newer request. If parsing the old body then fails,
-`isAuthRequired` returns false; without a post-await generation check, that
-obsolete response could clear the newer results and show a failure alert.
-
-`StaffActionsList` now stores the authentication-probe result and immediately
-checks whether its request is still current before processing authentication,
-forbidden, failure or success states. A component regression uses a real
-`Response` backed by a controlled `ReadableStream`: it holds the 401 body parse,
-restores the prior page size through browser Back, renders the newer success,
-then errors the obsolete body. The test failed before the guard and passes with
-it; the current result remains visible without a stale alert.
-
-Verification on this working tree:
-
-- `StaffActionsList.test.tsx`: 9/9 passed; complete client suite: 22 files,
-  183/183 passed.
-- Client production build and source lint passed; changed-file formatting and
-  `git diff --check` passed.
-- Focused Chromium navigation/drill-down journeys: 2/2 passed against the
-  disposable PostgreSQL test database.
-
-The remaining P2 race is fixed. Server code and screenshot evidence were not
-changed. Requester Dashboard work remains Issue #60 scope; no PR, peer approval
-or merge is claimed.
+Issue #61 has open, approved PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`. The author plans to merge it; GitHub does not yet show a merge. The TS18046 build defect was fixed, the reviewer approved the re-review, and the latest full test/build results are recorded above. Final report preparation and verification after integration remain pending. The visual accessibility checklist still says Narrator's spoken output was not verified; that manual check remains outstanding even though its screen-reader checklist item is checked.
 
 ---
 
 ## Pull Requests I reviewed for my partner
 
-No Lab 4 partner PRs have been recorded yet.
+| PR | Branch | My verdict |
+|----|--------|------------|
+| https://github.com/YummieGG/toktickit/pull/65 | lab4-1-engineering-contract | Approved — MERGED 2026-10-10 |
+| https://github.com/YummieGG/toktickit/pull/66 | lab4-2-actions-foundation | Changes requested → Approved — MERGED 2026-10-13 |
+| https://github.com/YummieGG/toktickit/pull/67 | lab4-3-actions-ui | Initial empty approval → Changes requested → Approved — MERGED 2026-10-14 |
+| https://github.com/YummieGG/toktickit/pull/68 | lab4-4-ticket-workflow | Changes requested (2 rounds) → Approved — MERGED 2026-10-17 |
+| https://github.com/YummieGG/toktickit/pull/69 | lab4-5-role-dashboards | Changes requested → Approved — MERGED 2026-10-19 |
+| https://github.com/YummieGG/toktickit/pull/70 | lab4-6-verification-qa | Changes requested → Approved — MERGED 2026-10-19 |
+| https://github.com/YummieGG/toktickit/pull/71 | lab4-7-staged-integration | Approved — MERGED 2026-10-20 |
 
 ### My comments and partner's responses
 
-No Lab 4 partner review comments or responses have been recorded yet.
+**PR #65 — lab4-1-engineering-contract** (MERGED)
+- **My review (Snnn3, APPROVED, 2026-10-10):** Accepted the engineering contract against the partner's Issue #56 and handout: Action Taken/event models, role matrices, resolution and child cancellation, version/idempotency rules, dashboards, seven-day Bangkok window and AC traceability. The review covered the four core documents and supporting logs/checklist.
+- **Partner's comment (2026-10-13):** "thank you :)" [Response](https://github.com/YummieGG/toktickit/pull/65#issuecomment-6141192305).
+- **Merge:** Merged into `lab4-staging` on 2026-10-10.
+
+**PR #66 — lab4-2-actions-foundation** (MERGED, both rounds kept)
+- **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-10-13):** Requested handling of Prisma `P2002` on concurrent action creation, positive-safe-integer validation of `assigneeId` before database lookup, and health/unexpected-500 error-envelope coverage. These were boundary and concurrency gaps despite passing existing suites.
+- **Partner's response (2026-10-13):** Reported the `b7ef1c7` fixes: changed-payload races return `409 IDEMPOTENCY_CONFLICT`, malformed assignees return `400 ASSIGNEE_INELIGIBLE`, and health/500 regression tests were added. [Fix response](https://github.com/YummieGG/toktickit/pull/66#issuecomment-6147860865).
+- **My review Round 2 (Snnn3, APPROVED, 2026-10-13):** Re-reviewed `ec62eb7` and `b7ef1c7`; accepted identical-payload replay, payload-conflict handling, assignee validation and API-00 coverage. Reported 326 server and 99 client tests passing.
+- **Partner's comment (2026-10-13):** "thanks" [Response](https://github.com/YummieGG/toktickit/pull/66#issuecomment-6154839576).
+- **Merge:** Merged into `lab4-staging` on 2026-10-13.
+
+**PR #67 — lab4-3-actions-ui** (MERGED, review sequence retained)
+- **Initial review (Snnn3, APPROVED, 2026-10-14 15:36:15 UTC):** Empty review body; recorded as a GitHub event without inferring verification from it.
+- **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-10-14 15:36:48 UTC):** Requested focus on server-invalid controls, readable role labels in the edit header, contextual accessible names on mobile buttons, and refetch/page navigation after creation to preserve pagination boundaries.
+- **Partner's response (2026-10-14):** Reported all four corrections in `747413e`, with focus assertions, role-label mapping, mobile `aria-label` values and bounded action-list pagination. Reported 128 client, 326 server and 4 Playwright tests passing. [Fix response](https://github.com/YummieGG/toktickit/pull/67#issuecomment-6172569080).
+- **My review Round 2 (Snnn3, APPROVED, 2026-10-14):** Re-reviewed `747413e`; confirmed the four findings were resolved, with passing tests, lint and client build.
+- **Partner's comment (2026-10-14):** "thanks for approve" [Response](https://github.com/YummieGG/toktickit/pull/67#issuecomment-6173276141).
+- **Merge:** Merged into `lab4-staging` on 2026-10-14.
+
+**PR #68 — lab4-4-ticket-workflow** (MERGED, all rounds kept)
+- **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-10-17):** Found that 409 recovery unmounted the form and conflict banner, explicit reconcile controls were missing, field errors suppressed the resolution-gate banner, and the live E2E test omitted the actual browser resolution workflow.
+- **Partner's response (2026-10-17):** Reported in-place reload/reconcile, preserved drafts and error banners, accessible inline gate errors, expanded browser-to-database workflow coverage and server test-port isolation. [First fix response](https://github.com/YummieGG/toktickit/pull/68#issuecomment-6232306580).
+- **My review Round 2 (Snnn3, CHANGES_REQUESTED, 2026-10-17):** Requested accessible in-DOM confirmation modals with transition explanations, `VALIDATION_ERROR` for malformed versions, and resolution-gate feedback prioritizing active-action blockers.
+- **Partner's response (2026-10-17):** Reported extracting `ConfirmationModal` with focus-trap tests, aligning the modal color token, using a status-control ref and associating gate feedback with the control. [Follow-up response](https://github.com/YummieGG/toktickit/pull/68#issuecomment-6235065944).
+- **My review Round 3 (Snnn3, APPROVED, 2026-10-17):** Accepted the modal, conflict recovery, validation, gate feedback, atomic child cancellation and timestamp lifecycle. Reported 143 client and 397 server tests passing, plus live E2E/concurrency coverage.
+- **Partner's comment (2026-10-17):** "ty" [Response](https://github.com/YummieGG/toktickit/pull/68#issuecomment-6236700681).
+- **Merge:** Merged into `lab4-staging` on 2026-10-17.
+
+**PR #69 — lab4-5-role-dashboards** (MERGED, both rounds kept)
+- **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-10-19):** Requested mobile stacked cards, action-context anchors, matching requester seven-day preview bounds, captured Staff drill-down timestamps, urgent-priority sorting parity, preserved multiline text and canonical design tokens.
+- **Partner's response (2026-10-19):** Reported all six fixes plus Bangkok rendering, deterministic queue ordering, date badges, removal of live-E2E skips and traceability updates. [Fix response](https://github.com/YummieGG/toktickit/pull/69#issuecomment-6269544520).
+- **My review Round 2 (Snnn3, APPROVED, 2026-10-19):** Accepted requester ownership/window metrics, Staff/Admin status and priority groups, responsive action drill-downs, URL synchronization and filter/sort extensions. Reported 159 client and 430 server tests passing.
+- **Partner's comment (2026-10-19):** "thanks youu" [Response](https://github.com/YummieGG/toktickit/pull/69#issuecomment-6270848533).
+- **Merge:** Merged into `lab4-staging` on 2026-10-19.
+
+**PR #70 — lab4-6-verification-qa** (MERGED, both relevant rounds kept)
+- **My review Round 1 (Snnn3, CHANGES_REQUESTED, 2026-10-19):** Found broken live-E2E selectors and silent conditional skips, missing action reassignment coverage, omitted Login/Change Password/My Tickets screenshots and an incorrect screenshot count.
+- **Partner's response (2026-10-19):** Reported corrected selectors, strict mandatory assertions, reassignment coverage, the missing regression captures, 31-artifact checklist alignment, administrator navbar wrapping and exact idempotency status assertions. Reported 159 client, 430 server and 13 Lab 4 Playwright tests passing. [Fix response](https://github.com/YummieGG/toktickit/pull/70#issuecomment-6274212111).
+- **My review Round 2 (Snnn3, APPROVED, 2026-10-19):** Accepted corrected browser-to-PostgreSQL action/workflow coverage, responsive and accessibility checks, screenshots and inherited regression integrity.
+- **Partner's comment (2026-10-19):** "thanks you very muchh" [Response](https://github.com/YummieGG/toktickit/pull/70#issuecomment-6276489861).
+- **Additional GitHub event (2026-10-20):** A later approval posted on PR #70 describes PR #71 staged integration. Its text is not counted as another PR #70-specific verification; PR #71 has its own approval below.
+- **Merge:** Merged into `lab4-staging` on 2026-10-19.
+
+**PR #71 — lab4-7-staged-integration** (MERGED)
+- **My review (Snnn3, APPROVED, 2026-10-20):** Reviewed staged integration at `dd41704`: merge order for PRs #65–#70, transaction-mock isolation, documentation/traceability and 31 screenshot artifacts. Reported 159 client and 430 server tests passing with clean client build/lint.
+- **Partner's response:** No issue comment was present in the fetched PR conversation; no reply is inferred.
+- **Merge:** Merged into `lab4-staging` on 2026-10-20. This partner-repository integration does not establish final verification of `Snnn3/TokTickIT`.

@@ -5,6 +5,7 @@ import {
   assertNoHorizontalOverflow,
   captureScreenshot,
   cleanupE2EFixtures,
+  E2E_BASE_URL,
   getQueue,
   requestJson,
   resetSeed,
@@ -30,7 +31,7 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
     page: staffPage,
   }) => {
     const requesterContext = await browser.newContext({
-      baseURL: "http://localhost:5173",
+      baseURL: E2E_BASE_URL,
     });
     const requesterPage = await requesterContext.newPage();
     await signInAndChangePassword(
@@ -63,6 +64,7 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
 
     await signInAndChangePassword(staffPage, ACCOUNTS.staff, "E2E.Staff!2026");
 
+    await staffPage.goto("/staff/queue");
     await expect(staffPage.getByTestId("staff-queue-view")).toBeVisible();
     await staffPage.locator("#queue-search").fill(workflowTicketNumber);
     const workflowRow = staffPage
@@ -324,7 +326,7 @@ test.describe("E-02 staff ticket flow and authorization evidence", () => {
       (entry, index) => [entry, accounts[index]] as const
     )) {
       const context = await browser.newContext({
-        baseURL: "http://localhost:5173",
+        baseURL: E2E_BASE_URL,
         viewport,
       });
       const page = await context.newPage();

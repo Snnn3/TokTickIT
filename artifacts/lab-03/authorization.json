@@ -1,10 +1,10 @@
 {
-  "capturedAt": "2026-10-01T14:37:53.406Z",
+  "capturedAt": "2026-10-30T15:09:49.980Z",
   "cases": [
     {
       "case": "requester-refused-internal-notes",
       "method": "GET",
-      "path": "/api/staff/tickets/1/notes",
+      "path": "/api/staff/tickets/52/notes",
       "status": 403,
       "expectedStatus": 403,
       "body": {
@@ -30,20 +30,20 @@
     {
       "case": "staff-self-filed-owner-operation-refused",
       "method": "PATCH",
-      "path": "/api/staff/tickets/946/owner",
+      "path": "/api/staff/tickets/53/owner",
       "status": 403,
       "expectedStatus": 403,
       "body": {
         "error": {
           "code": "SELF_SERVICE_FORBIDDEN",
-          "message": "You filed this ticket, so it must be handled by another staff member"
+          "message": "Staff workflow changes are not allowed on your own Ticket"
         }
       }
     },
     {
       "case": "staff-self-filed-internal-note-refused",
       "method": "POST",
-      "path": "/api/staff/tickets/946/notes",
+      "path": "/api/staff/tickets/53/notes",
       "status": 403,
       "expectedStatus": 403,
       "body": {

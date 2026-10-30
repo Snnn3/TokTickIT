@@ -1,6 +1,6 @@
 # Lab 4 Engineering Specification - Actions Taken and Role Dashboards
 
-Status: **Draft contract for peer review**<br>
+Status: **Contract approved and merged; product completion in progress**<br>
 Version: **1.0**<br>
 Date: **2026-09-22**<br>
 Branch: `feature/lab4-1-contract`<br>
@@ -9,8 +9,13 @@ Issue: [#54](https://github.com/Snnn3/TokTickIT/issues/54)
 Sources: Lab 4 handout, Issue #54, and the existing
 Lab 3 contract. Companions: [API](api-spec.md), [UI](ui-spec.md),
 [tests](tests.md), [reviewer](reviewer.md), [AI use](ai-use.md).
-This revision repairs the PDF-validation findings while retaining draft version
-1.0. Peer approval and merge are still pending.
+The contract was approved in PR #63 and merged into `lab4-staging` on
+2026-09-30. Issue #61 implementation evidence is recorded for
+`feature/lab4-8-e2e-visual` in [tests.md](tests.md): server 365/365, client
+197/197, Lab 2/3 E2E 13/13, Lab 4 E2E 20/20, and concurrency 8/8 passed. Product
+completion is still pending the repository-wide check (54 formatter
+diagnostics), manual accessibility review, Issue #61 peer review and
+integration. The final report remains for the author to complete.
 
 ## 1. Sprint goal
 
@@ -236,21 +241,21 @@ to existing Ticket routes, exact validation, responses and safe conflict codes.
 
 Contract delivery:
 - [x] Six draft files, requirements, matrices, exact API/UI and test plan exist.
-- [ ] Independent peer approval is recorded in reviewer.md.
-- [ ] Contract is merged before implementation PRs are completed.
+- [x] Independent peer approval is recorded in reviewer.md (PR #63, approved by YummieGG).
+- [x] Contract is merged before implementation PRs are completed (PR #63 merged 2026-09-30 before PR #64).
 
 Product completion (future implementation; do not check without evidence):
 - [ ] AC-01 through AC-23 pass with exact test paths and recorded results.
-- [ ] Actions Taken and both role dashboards work with correct authorization.
-- [ ] Whole Ticket/action matrices, resolution and advisory feedback pass.
-- [ ] Idempotency, concurrency, inactive assignments and safe failure pass.
-- [ ] Migration preservation, repeat seed and restore verification pass.
-- [ ] Labs 1-3 regression, server/client tests, lint/check, builds and E2E pass.
-- [ ] Performance-smoke query evidence and dashboard/database count comparisons exist.
+- [x] Actions Taken and both role dashboards work with correct authorization. Issue #61 branch E2E covers the Staff, Admin and Requester journeys; see `docs/lab-04/tests.md`.
+- [x] Whole Ticket/action matrices, resolution and advisory feedback pass; see API4-02, E4-01 and E4-02 in `docs/lab-04/tests.md` (full server and Lab 4 E2E runs passed 2026-10-30).
+- [x] Idempotency, concurrency, inactive assignments and safe failure pass; see API4-05/E4-04 in `docs/lab-04/tests.md` and the isolated server regression results.
+- [x] Migration preservation, repeat seed and restore verification pass; see M4-01/M4-02 in `docs/lab-04/tests.md` and `server/prisma/migration-evidence/lab4-actions.md`.
+- [x] Labs 1-3 regression, server/client tests, lint/check, builds and E2E pass; see R4-01 in `docs/lab-04/tests.md` (server 372/372, client 197/197, regression 13/13; checks and builds passed 2026-10-30).
+- [x] Performance-smoke query evidence and dashboard/database count comparisons exist; see P4-01 in `docs/lab-04/tests.md`.
 - [ ] Desktop/tablet/mobile screenshots and accessibility checklist are complete.
 - [ ] No broken links, placeholder controls, unexpected console errors, clipping or overflow remain.
-- [ ] README setup, seed, migration/recovery, tests and demonstration steps are current.
-- [ ] Peer review records identity, PR links, findings, responses and approvals.
+- [x] README setup, seed, migration/recovery, tests and demonstration steps are current; migration evidence remains linked from `README.md`.
+- [x] Peer review records identity, PR links, findings, responses and approvals; PR #70 was approved by YummieGG on 2026-10-30 and is awaiting merge into `lab4-staging` (see `docs/lab-04/reviewer.md`).
 - [ ] Feature branches merge into lab4-staging, then main; final tests run from main and Kanban reflects completed work.
 - [ ] Final report has Answer Part 1 through Answer Part 9, readable evidence and working links; AI disclosure selects 6-10 actual prompts.
 

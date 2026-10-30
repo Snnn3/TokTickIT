@@ -1,8 +1,8 @@
 {
   "testId": "P4-01",
   "scope": "Requester Dashboard endpoint at 10k owned Tickets",
-  "measuredAt": "2026-10-10T14:18:03.501Z",
-  "commit": "9388984cb9058fe0fb0d06257d7c921d03831bf5",
+  "measuredAt": "2026-10-30T14:56:07.178Z",
+  "commit": "d7790e4cddb96342e6fd21848580c41d3749b8f0",
   "workingTreeChanges": true,
   "runtime": {
     "node": "v24.14.1",
@@ -23,7 +23,7 @@
   "concurrency": 1,
   "warmupRequests": 3,
   "measuredRequests": 20,
-  "p95Milliseconds": 103.70479999999952,
+  "p95Milliseconds": 84.06049999999959,
   "budgets": {
     "p95Milliseconds": 1000,
     "responseBytes": 65536,
@@ -37,7 +37,7 @@
   },
   "samples": [
     {
-      "milliseconds": 94.27369999999792,
+      "milliseconds": 73.6198000000004,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -45,7 +45,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 88.96369999999297,
+      "milliseconds": 68.53480000000127,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -53,7 +53,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 88.55419999999867,
+      "milliseconds": 70.37260000000242,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -61,7 +61,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 97.21799999999348,
+      "milliseconds": 67.28880000000208,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -69,7 +69,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 87.09259999999631,
+      "milliseconds": 66.07229999999981,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -77,7 +77,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 92.63220000000001,
+      "milliseconds": 66.62720000000263,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -85,7 +85,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 90.85060000000522,
+      "milliseconds": 70.49499999999898,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -93,7 +93,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 103.70479999999952,
+      "milliseconds": 66.35529999999926,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -101,7 +101,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 89.64899999999761,
+      "milliseconds": 66.98019999999815,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -109,7 +109,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 83.82150000000547,
+      "milliseconds": 73.58690000000206,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -117,7 +117,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 87.49229999999807,
+      "milliseconds": 84.06049999999959,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -125,7 +125,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 87.42779999999766,
+      "milliseconds": 86.33789999999863,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -133,7 +133,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 80.9227000000028,
+      "milliseconds": 76.91580000000249,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -141,7 +141,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 88.08429999999498,
+      "milliseconds": 69.88929999999891,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -149,7 +149,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 92.55550000000221,
+      "milliseconds": 70.77419999999984,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -157,7 +157,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 98.03080000000045,
+      "milliseconds": 66.69040000000314,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -165,7 +165,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 91.53459999999905,
+      "milliseconds": 66.12019999999757,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -173,7 +173,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 108.76109999999608,
+      "milliseconds": 73.78240000000005,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -181,7 +181,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 91.26950000000215,
+      "milliseconds": 66.60359999999855,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,
@@ -189,7 +189,7 @@
       "standaloneRelationQueries": 4
     },
     {
-      "milliseconds": 100.46910000000207,
+      "milliseconds": 64.33549999999741,
       "bytes": 4988,
       "queryCount": 14,
       "metricQueries": 4,

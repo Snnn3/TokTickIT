@@ -1,0 +1,14 @@
+{
+  "testId": "E4-01",
+  "test": "E4-01 rejects an assignee deactivated after the picker loaded and preserves the draft",
+  "screenshot": "inactive-assignee-error-desktop.png",
+  "role": "IT_STAFF",
+  "route": "/staff/tickets/3",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-30T15:13:17.349Z",
+  "expectedResult": "A stale selection of a newly inactive assignee is rejected safely while the user's draft remains visible."
+}

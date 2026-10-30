@@ -4,7 +4,7 @@ import { requireDisposableDatabase } from "./server/tests/helpers/disposable-dat
 const databaseUrl = requireDisposableDatabase();
 export default defineConfig({
   testDir: "./e2e/lab-04",
-  testMatch: "dashboards.spec.ts",
+  testMatch: "**/*.spec.ts",
   workers: 1,
   fullyParallel: false,
   forbidOnly: true,
