@@ -138,7 +138,8 @@ describe("GET /api/dashboard/requester (API4-03, AC-11, AC-13, AC-16)", () => {
       );
       expect(ticket.findMany).toHaveBeenCalledTimes(3);
       expect(response.body).not.toHaveProperty("requesterId");
-      for (const tickets of Object.values(response.body.lists)) {
+      const lists = response.body.lists as Record<string, unknown[]>;
+      for (const tickets of Object.values(lists)) {
         for (const ticket of tickets) {
           expect(ticket).not.toHaveProperty("requesterId");
         }
