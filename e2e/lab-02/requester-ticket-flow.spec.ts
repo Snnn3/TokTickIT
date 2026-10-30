@@ -40,7 +40,14 @@ async function createTicket(
   await page
     .locator("#category-select")
     .selectOption({ label: "Account and Access" });
-  await page.locator("#system-select").selectOption({ label: "Email" });
+  const systemSelect = page.locator("#system-select");
+  await expect(systemSelect).toBeEnabled();
+  const emailOption = systemSelect.locator("option", { hasText: /^Email$/ });
+  await expect(emailOption).toHaveCount(1);
+  const emailSystemId = await emailOption.getAttribute("value");
+  if (!emailSystemId) throw new Error("Seeded Email option has no system ID");
+  await systemSelect.selectOption(emailSystemId);
+  await expect(systemSelect).toHaveValue(emailSystemId);
   await page.locator("#priority-select").selectOption("MEDIUM");
   await page.locator("#summary-input").fill(summary);
   await page.locator("#description-input").fill(description);

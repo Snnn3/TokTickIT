@@ -3,12 +3,12 @@
   "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
   "screenshot": "resolved-staff-mobile.png",
   "role": "IT_STAFF",
-  "route": "/staff/tickets/115",
+  "route": "/staff/tickets/123",
   "viewport": {
     "width": 375,
     "height": 812
   },
   "fullPage": false,
-  "capturedAt": "2026-10-29T17:54:37.043Z",
+  "capturedAt": "2026-10-30T15:15:14.965Z",
   "expectedResult": "Staff Ticket detail remains readable at mobile width without horizontal overflow."
 }

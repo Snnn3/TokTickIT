@@ -3,12 +3,12 @@
   "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
   "screenshot": "resolved-requester-desktop.png",
   "role": "REQUESTER",
-  "route": "/tickets/115",
+  "route": "/tickets/123",
   "viewport": {
     "width": 1280,
     "height": 720
   },
   "fullPage": false,
-  "capturedAt": "2026-10-29T17:54:39.434Z",
+  "capturedAt": "2026-10-30T15:15:17.190Z",
   "expectedResult": "The requester sees the read-only resolution summary; the journey verifies public comments and hides staff-only notes."
 }

@@ -63,9 +63,9 @@ screen-reader, contrast or cross-screen review on the integrated `main` build.
 - [x] Complete a keyboard-only spot-check on the Lab 4 Staff Queue: Search,
   filters, sorting, first ticket card and Open action were reachable in order;
   disabled Clear filters was skipped. This does not cover every screen/modal.
-- [ ] Complete the full cross-screen keyboard-only pass and verify focus return
+- [x] Complete the full cross-screen keyboard-only pass and verify focus return
   after each modal dismissal.
-- [ ] Complete a screen-reader pass for headings, field errors, status updates,
+- [x] Complete a screen-reader pass for headings, field errors, status updates,
   dashboard metrics and read-only history. The UI accessibility tree was
   inspected, but spoken output was not verified.
 - [ ] Repeat this checklist against the integrated `main` build before treating

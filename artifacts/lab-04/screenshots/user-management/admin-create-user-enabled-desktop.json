@@ -9,6 +9,6 @@
     "height": 768
   },
   "fullPage": false,
-  "capturedAt": "2026-10-29T20:18:15.620Z",
+  "capturedAt": "2026-10-30T15:13:35.843Z",
   "expectedResult": "The clean seeded Admin User Management view shows the enabled Create user button. Tab and Enter open the dialog, focus stays trapped at both ends, and Escape closes it."
 }
