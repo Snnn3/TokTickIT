@@ -16,7 +16,7 @@
 | https://github.com/Snnn3/TokTickIT/pull/67 | feature/lab4-5-actions-ui | Approved - merged into `lab4-staging` on 2026-10-08 |
 | https://github.com/Snnn3/TokTickIT/pull/68 | feature/lab4-6-staff-dashboard | Approved - merged into `lab4-staging` on 2026-10-10 |
 | https://github.com/Snnn3/TokTickIT/pull/69 | feature/lab4-7-requester-dashboard | Approved - merged into `lab4-staging` on 2026-10-13 |
-| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Approved - open, awaiting merge into `lab4-staging` |
+| https://github.com/Snnn3/TokTickIT/pull/70 | feature/lab4-8-e2e-visual | Approved - author plans to merge into `lab4-staging`; PR remains open |
 
 ### Reviewer comments I received and how I responded
 
@@ -63,11 +63,11 @@
 - **Fix pushed (2026-10-30):** Commit `3776ebd` types `response.body.lists` as `Record<string, unknown[]>`, resolving TS18046; the server build passed. Commit `ee2697b` added the remaining Lab 3/Lab 4 evidence and action-coverage changes.
 - **Peer re-review (YummieGG, APPROVED, 2026-10-30 16:04 UTC):** Confirmed the TypeScript fix and both builds, verified the 7-test `action-domain.unit.test.ts` suite and 31 screenshot artifacts, and reported 371/371 server tests, 197/197 client tests, and a clean check across 163 files. The reviewer marked the Issue #61 acceptance criteria satisfied and the PR ready to merge.
 - **Author verification after the latest push (2026-10-30, feature branch):** Commit `56ebb62` stabilized the Lab 2 requester E2E system selection, refreshed Lab 2/3/4 screenshot and performance evidence, and included the visual accessibility checklist updates. Server tests passed 372/372 in both standard and isolated runs; concurrency passed 8/8; dashboard performance passed 6/6; client tests passed 197/197; Lab 2/3 Playwright regression passed 13/13; Lab 4 Playwright passed 21/21. `npm run check` passed for 163 files, and both builds passed. The verification summary was posted in [the PR conversation](https://github.com/Snnn3/TokTickIT/pull/70#issuecomment-6527287472).
-- **Current GitHub state (2026-10-30):** PR #70 is open and approved, targets `lab4-staging`, and points to head `56ebb62`. It has not yet merged. Approval and merge status were checked on GitHub after the review response.
+- **Current GitHub state (2026-10-30):** PR #70 is open and approved, targets `lab4-staging`, and points to head `1dbcdef`. The author plans to merge it; GitHub does not yet show it as merged. This update is on the feature branch, not `lab4-staging`.
 
 Dates below use UTC. Review bodies and replies are summarized unless quotation marks indicate a short verbatim reply. Test counts describe what the reviewer or author reported at that PR head; current verification belongs in [tests.md](tests.md).
 
-Issue #61 has open, approved PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`; it has not merged. The TS18046 build defect was fixed, the reviewer approved the re-review, and the latest full test/build results are recorded above. Final report preparation and verification after integration remain pending. The visual accessibility checklist still says Narrator's spoken output was not verified; that manual check remains outstanding even though its screen-reader checklist item is checked.
+Issue #61 has open, approved PR #70 from `feature/lab4-8-e2e-visual` to `lab4-staging`. The author plans to merge it; GitHub does not yet show a merge. The TS18046 build defect was fixed, the reviewer approved the re-review, and the latest full test/build results are recorded above. Final report preparation and verification after integration remain pending. The visual accessibility checklist still says Narrator's spoken output was not verified; that manual check remains outstanding even though its screen-reader checklist item is checked.
 
 ---
 
