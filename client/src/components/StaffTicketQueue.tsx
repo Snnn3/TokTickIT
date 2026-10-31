@@ -1,16 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import type {
   StaffQueueTicket,
   TicketPriority,
   TicketStatus,
 } from "../types/ticket";
 import { useCategories } from "../hooks/useReferenceData";
+import { useRequestGeneration } from "../hooks/useRequestGeneration";
 import {
   ZenItPriorityBadge,
   ZenPriorityBadge,
   ZenStatusBadge,
 } from "./ZenBadge";
-import { formatDateOnly, formatDateTime } from "../utils/format";
+import {
+  formatBangkokDateTime,
+  formatDateOnly,
+  formatDateTime,
+} from "../utils/format";
 
 interface StaffTicketQueueProps {
   onSelectTicket?: (ticketId: number) => void;
@@ -19,6 +25,10 @@ interface StaffTicketQueueProps {
 interface QueueQueryState {
   search: string;
   status: TicketStatus | "";
+  statusGroup: "" | "open" | "resolved";
+  dateField: "" | "updatedAt" | "resolvedAt";
+  from: string;
+  to: string;
   categoryId: string;
   requestedPriority: TicketPriority | "";
   itPriority: TicketPriority | "";
@@ -32,6 +42,10 @@ interface QueueQueryState {
 const initialQueryState: QueueQueryState = {
   search: "",
   status: "",
+  statusGroup: "",
+  dateField: "",
+  from: "",
+  to: "",
   categoryId: "",
   requestedPriority: "",
   itPriority: "",
@@ -41,6 +55,41 @@ const initialQueryState: QueueQueryState = {
   page: 1,
   pageSize: 10,
 };
+
+function readQueueQuery(params: URLSearchParams): QueueQueryState {
+  return {
+    ...initialQueryState,
+    search: params.get("search") ?? "",
+    status: (params.get("status") as QueueQueryState["status"] | null) ?? "",
+    statusGroup:
+      (params.get("statusGroup") as QueueQueryState["statusGroup"] | null) ??
+      "",
+    dateField:
+      (params.get("dateField") as QueueQueryState["dateField"] | null) ?? "",
+    from: params.get("from") ?? "",
+    to: params.get("to") ?? "",
+    owner: (params.get("owner") as QueueQueryState["owner"] | null) ?? "",
+    categoryId: params.get("categoryId") ?? "",
+    requestedPriority:
+      (params.get("requestedPriority") as TicketPriority | null) ?? "",
+    itPriority: (params.get("itPriority") as TicketPriority | null) ?? "",
+    sort: (params.get("sort") as QueueQueryState["sort"] | null) ?? "updatedAt",
+    order: (params.get("order") as QueueQueryState["order"] | null) ?? "desc",
+    page: Number(params.get("page") ?? 1),
+    pageSize: Number(params.get("pageSize") ?? 10),
+  };
+}
+
+function queueQueryParams(query: QueueQueryState): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of Object.keys(
+    initialQueryState
+  ) as (keyof QueueQueryState)[]) {
+    if (query[key] !== initialQueryState[key])
+      params.set(key, String(query[key]));
+  }
+  return params;
+}
 
 /**
  * Staff Ticket Queue [FR-22, ui-spec section 6].
@@ -53,15 +102,20 @@ const initialQueryState: QueueQueryState = {
  * tappable cards. Any row opens for action through onSelectTicket.
  */
 export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tickets, setTickets] = useState<StaffQueueTicket[]>([]);
   const { categories } = useCategories();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const { beginRequest, invalidateRequests } = useRequestGeneration();
 
-  const [queryState, setQueryState] =
-    useState<QueueQueryState>(initialQueryState);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // The URL is the single query state, so reload and detail/back restore every choice.
+  const queryState = readQueueQuery(searchParams);
+  const setQueryState = (
+    update: (previous: QueueQueryState) => QueueQueryState
+  ) => setSearchParams(queueQueryParams(update(queryState)), { replace: true });
+  const [debouncedSearch, setDebouncedSearch] = useState(queryState.search);
 
   // Debounce search input by 300ms, matching the requester list convention.
   useEffect(() => {
@@ -79,6 +133,8 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   const hasActiveFilters = Boolean(
     queryState.search.trim() ||
       queryState.status ||
+      queryState.statusGroup ||
+      queryState.dateField ||
       queryState.categoryId ||
       queryState.requestedPriority ||
       queryState.itPriority ||
@@ -88,6 +144,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
   // The queue is scoped by the session cookie, so there is no identity to
   // wait for before fetching and nothing for this component to carry.
   const fetchQueue = useCallback(async () => {
+    const isCurrentRequest = beginRequest();
     setLoading(true);
     setError(null);
     setForbidden(false);
@@ -95,18 +152,28 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
     const params = new URLSearchParams();
     if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
     if (queryState.status) params.set("status", queryState.status);
+    if (queryState.statusGroup)
+      params.set("statusGroup", queryState.statusGroup);
+    if (queryState.dateField) {
+      params.set("dateField", queryState.dateField);
+      params.set("from", queryState.from);
+      params.set("to", queryState.to);
+    }
     if (queryState.categoryId) params.set("categoryId", queryState.categoryId);
     if (queryState.requestedPriority)
       params.set("requestedPriority", queryState.requestedPriority);
     if (queryState.itPriority) params.set("itPriority", queryState.itPriority);
     if (queryState.owner) params.set("owner", queryState.owner);
-    if (queryState.sort) params.set("sort", queryState.sort);
-    if (queryState.order) params.set("order", queryState.order);
+    if (!queryState.dateField) {
+      if (queryState.sort) params.set("sort", queryState.sort);
+      if (queryState.order) params.set("order", queryState.order);
+    }
     params.set("page", String(queryState.page));
     params.set("pageSize", String(queryState.pageSize));
 
     try {
       const res = await fetch(`/api/staff/tickets?${params.toString()}`);
+      if (!isCurrentRequest()) return;
 
       if (res.status === 403) {
         setTickets([]);
@@ -118,6 +185,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (!isCurrentRequest()) return;
         setError(data?.error?.message || "Failed to load the ticket queue.");
         setTickets([]);
         setTotal(0);
@@ -126,20 +194,27 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
       }
 
       const data = await res.json();
+      if (!isCurrentRequest()) return;
       setTickets(data.tickets || []);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 0);
     } catch {
+      if (!isCurrentRequest()) return;
       setError("Network error. Unable to connect to the server.");
       setTickets([]);
       setTotal(0);
       setTotalPages(0);
     } finally {
-      setLoading(false);
+      if (isCurrentRequest()) setLoading(false);
     }
   }, [
+    beginRequest,
     debouncedSearch,
     queryState.status,
+    queryState.statusGroup,
+    queryState.dateField,
+    queryState.from,
+    queryState.to,
     queryState.categoryId,
     queryState.requestedPriority,
     queryState.itPriority,
@@ -152,13 +227,18 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
 
   useEffect(() => {
     fetchQueue();
-  }, [fetchQueue]);
+    return invalidateRequests;
+  }, [fetchQueue, invalidateRequests]);
 
   const handleResetFilters = () => {
     setQueryState((prev) => ({
       ...prev,
       search: "",
       status: "",
+      statusGroup: "",
+      dateField: "",
+      from: "",
+      to: "",
       categoryId: "",
       requestedPriority: "",
       itPriority: "",
@@ -221,6 +301,7 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
                   setQueryState((prev) => ({
                     ...prev,
                     status: e.target.value as TicketStatus | "",
+                    statusGroup: "",
                     page: 1,
                   }));
                 }}
@@ -354,53 +435,104 @@ export function StaffTicketQueue({ onSelectTicket }: StaffTicketQueueProps) {
             </div>
           </div>
 
-          {/* Sort Options Strip */}
-          <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
-            <div className="col-12 d-flex align-items-center gap-2">
-              <label htmlFor="queue-sort-select" className="mb-0">
-                Sort by:
-              </label>
-              <select
-                id="queue-sort-select"
-                className="form-select form-select-sm"
-                style={{ width: "auto" }}
-                value={queryState.sort}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    sort: e.target.value as
-                      | "updatedAt"
-                      | "createdAt"
-                      | "number",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="updatedAt">Last Updated</option>
-                <option value="createdAt">Created</option>
-                <option value="number">Number</option>
-              </select>
-              <label htmlFor="queue-order-select" className="visually-hidden">
-                Sort order
-              </label>
-              <select
-                id="queue-order-select"
-                className="form-select form-select-sm"
-                style={{ width: "auto" }}
-                value={queryState.order}
-                onChange={(e) => {
-                  setQueryState((prev) => ({
-                    ...prev,
-                    order: e.target.value as "asc" | "desc",
-                    page: 1,
-                  }));
-                }}
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
+          {(queryState.statusGroup ||
+            queryState.dateField ||
+            queryState.owner ||
+            queryState.status) && (
+            <div
+              className="small text-muted mt-3"
+              data-testid="queue-dashboard-filters"
+              aria-live="polite"
+            >
+              Dashboard filters:{" "}
+              {queryState.statusGroup && (
+                <span className="badge bg-light text-dark border me-2">
+                  {queryState.statusGroup === "open"
+                    ? "Open tickets"
+                    : "Resolved tickets"}
+                </span>
+              )}
+              {queryState.status && (
+                <span className="badge bg-light text-dark border me-2">
+                  Status: {queryState.status.replaceAll("_", " ")}
+                </span>
+              )}
+              {queryState.owner && (
+                <span className="badge bg-light text-dark border me-2">
+                  Owner: {queryState.owner === "mine" ? "Me" : queryState.owner}
+                </span>
+              )}
+              {queryState.dateField && (
+                <span className="badge bg-light text-dark border">
+                  {queryState.dateField === "updatedAt"
+                    ? "Updated"
+                    : "Resolved"}
+                  : {formatBangkokDateTime(queryState.from)} –{" "}
+                  {formatBangkokDateTime(queryState.to)} (Bangkok)
+                </span>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Sort Options Strip */}
+          {queryState.dateField ? (
+            <p
+              className="small text-muted mt-2 pt-2 border-top mb-0"
+              data-testid="queue-date-sort-note"
+            >
+              Recent{" "}
+              {queryState.dateField === "updatedAt" ? "updated" : "resolved"}{" "}
+              tickets are always sorted newest first. Clear date filters to
+              choose another sort order.
+            </p>
+          ) : (
+            <div className="row g-2 mt-2 pt-2 border-top align-items-center small text-muted">
+              <div className="col-12 d-flex align-items-center gap-2">
+                <label htmlFor="queue-sort-select" className="mb-0">
+                  Sort by:
+                </label>
+                <select
+                  id="queue-sort-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.sort}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      sort: e.target.value as
+                        | "updatedAt"
+                        | "createdAt"
+                        | "number",
+                      page: 1,
+                    }));
+                  }}
+                >
+                  <option value="updatedAt">Last Updated</option>
+                  <option value="createdAt">Created</option>
+                  <option value="number">Number</option>
+                </select>
+                <label htmlFor="queue-order-select" className="visually-hidden">
+                  Sort order
+                </label>
+                <select
+                  id="queue-order-select"
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={queryState.order}
+                  onChange={(e) => {
+                    setQueryState((prev) => ({
+                      ...prev,
+                      order: e.target.value as "asc" | "desc",
+                      page: 1,
+                    }));
+                  }}
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Forbidden State: a Requester-role caller refused without content */}

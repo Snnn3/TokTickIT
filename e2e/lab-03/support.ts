@@ -12,42 +12,45 @@ export const VIEWPORTS = {
   mobile: { width: 375, height: 667 },
 } as const;
 
+export const E2E_BASE_URL =
+  process.env.TOKTICKIT_E2E_BASE_URL ?? "http://localhost:5173";
+
 export const ACCOUNTS = {
   requester: {
     name: "Anucha Wongchai",
     email: "anucha.wongchai@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+    landing: "/dashboard/requester",
   },
   secondRequester: {
     name: "Busaba Srisawat",
     email: "busaba.srisawat@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+    landing: "/dashboard/requester",
   },
   thirdRequester: {
     name: "Chatchai Promma",
     email: "chatchai.promma@example.com",
     role: "REQUESTER",
-    landing: "/tickets",
+    landing: "/dashboard/requester",
   },
   staff: {
     name: "Kittipong Saelim",
     email: "kittipong.saelim@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   secondStaff: {
     name: "Manasporn Thongdee",
     email: "manasporn.thongdee@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   thirdStaff: {
     name: "Pornchai Rakdee",
     email: "pornchai.rakdee@example.com",
     role: "IT_STAFF",
-    landing: "/staff/queue",
+    landing: "/dashboard/staff",
   },
   admin: {
     name: "Apinya Ratchada",
@@ -69,6 +72,7 @@ export type QueueTicket = {
   number: string;
   summary: string;
   status: string;
+  version: number;
   requester: { id: number; name: string };
   owner: { id: number; name: string } | null;
 };
@@ -152,22 +156,36 @@ export async function signInWithPassword(
 export async function requestJson<T>(
   page: Page,
   url: string,
-  options: { method?: string; body?: unknown } = {}
+  options: {
+    method?: string;
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {}
 ): Promise<ApiResponse<T>> {
   const response = await page.evaluate(
-    async ({ body, method, url: requestUrl }) => {
+    async ({ body, headers, method, url: requestUrl }) => {
       const result = await fetch(requestUrl, {
         body: body === undefined ? undefined : JSON.stringify(body),
         headers:
-          body === undefined
+          body === undefined && Object.keys(headers).length === 0
             ? undefined
-            : { "Content-Type": "application/json" },
+            : {
+                ...(body === undefined
+                  ? {}
+                  : { "Content-Type": "application/json" }),
+                ...headers,
+              },
         method,
       });
       const responseBody = await result.json().catch(() => null);
       return { body: responseBody, status: result.status };
     },
-    { body: options.body, method: options.method ?? "GET", url }
+    {
+      body: options.body,
+      headers: options.headers ?? {},
+      method: options.method ?? "GET",
+      url,
+    }
   );
 
   return response as ApiResponse<T>;
@@ -212,7 +230,7 @@ export async function captureScreenshot(
     filename
   );
   mkdirSync(dirname(destination), { recursive: true });
-  await page.screenshot({ fullPage: true, path: destination });
+  writeFileSync(destination, await page.screenshot({ fullPage: true }));
 }
 
 export function writeEvidence(relativePath: string, value: unknown): void {

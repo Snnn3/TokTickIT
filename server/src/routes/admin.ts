@@ -1,4 +1,4 @@
-import { Prisma, Role, TicketStatus } from "@prisma/client";
+import { ActionStatus, Prisma, Role, TicketStatus } from "@prisma/client";
 import { Router, type Response } from "express";
 import {
   AuthenticatedRequest,
@@ -7,6 +7,9 @@ import {
 } from "../middleware/auth";
 import { hashPassword, validatePassword } from "../utils/password";
 import { parsePositiveIntParam } from "../utils/attachment";
+import { actionSnapshot } from "../utils/action-snapshot";
+import { lockActionAssignmentRows } from "../utils/action-assignment-lock";
+import { runSerializableTransaction } from "../utils/serializable-transaction";
 import { prisma } from "../prisma";
 
 /** Administrator user management [FR-26, BR-09, BR-15, BR-24]. */
@@ -14,6 +17,10 @@ export const adminRouter = Router();
 
 const ADMIN_ROLE = Role.ADMINISTRATOR;
 const TERMINAL_STATUSES = [TicketStatus.CLOSED, TicketStatus.CANCELLED];
+const TERMINAL_ACTION_STATUSES = [
+  ActionStatus.COMPLETED,
+  ActionStatus.CANCELLED,
+];
 const ROLES = Object.values(Role);
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -269,35 +276,6 @@ const USER_MUTATION_SELECT = {
   mustChangePassword: true,
 } as const;
 
-const MAX_SERIALIZATION_RETRIES = 3;
-
-/**
- * Last-administrator changes must be serialized. PostgreSQL's serializable
- * isolation rejects the losing concurrent write with P2034; retrying that
- * transaction makes the second attempt observe the committed administrator
- * count and return LAST_ADMIN instead of allowing zero active administrators.
- */
-async function runSerializableTransaction<T>(
-  callback: (tx: Prisma.TransactionClient) => Promise<T>
-): Promise<T> {
-  for (let attempt = 0; attempt < MAX_SERIALIZATION_RETRIES; attempt += 1) {
-    try {
-      return await prisma.$transaction(callback, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      });
-    } catch (error) {
-      if (
-        !isPrismaError(error, "P2034") ||
-        attempt === MAX_SERIALIZATION_RETRIES - 1
-      ) {
-        throw error;
-      }
-    }
-  }
-
-  throw new Error("Serializable transaction retry loop exhausted");
-}
-
 // GET /api/admin/users [FR-26, AC-13]
 adminRouter.get(
   "/users",
@@ -469,6 +447,7 @@ adminRouter.patch(
 
     try {
       const result = await runSerializableTransaction(async (tx) => {
+        await lockActionAssignmentRows(tx, [id], []);
         const current = await tx.user.findUnique({
           where: { id },
           select: {
@@ -533,6 +512,36 @@ adminRouter.patch(
         const deactivated = current.isActive && !nextIsActive;
         const demoted = wasStaff && nextRole === Role.REQUESTER;
         const shouldCascade = deactivated || demoted;
+        const releasesActions =
+          current.role === Role.IT_STAFF &&
+          (!nextIsActive || nextRole !== Role.IT_STAFF);
+
+        const ownedTickets = shouldCascade
+          ? await tx.ticket.findMany({
+              where: {
+                ownerId: id,
+                status: { notIn: TERMINAL_STATUSES },
+              },
+              select: { id: true },
+            })
+          : [];
+        const actionsToRelease = releasesActions
+          ? await tx.actionTaken.findMany({
+              where: {
+                assigneeId: id,
+                status: { notIn: TERMINAL_ACTION_STATUSES },
+              },
+              orderBy: [{ ticketId: "asc" }, { id: "asc" }],
+            })
+          : [];
+        const affectedTicketIds = [
+          ...new Set([
+            ...ownedTickets.map((ticket) => ticket.id),
+            ...actionsToRelease.map((action) => action.ticketId),
+          ]),
+        ];
+        await lockActionAssignmentRows(tx, [], affectedTicketIds);
+        const now = new Date();
 
         const data: Prisma.UserUpdateInput = {};
         if (name.value !== undefined) data.name = name.value;
@@ -553,23 +562,86 @@ adminRouter.patch(
 
         let unassignedTicketCount: number | undefined;
         if (shouldCascade) {
-          const released = await tx.ticket.updateMany({
-            where: {
-              ownerId: id,
-              status: { notIn: TERMINAL_STATUSES },
-            },
-            data: { ownerId: null },
-          });
-          unassignedTicketCount = released.count;
+          const ownerTicketIds = ownedTickets.map((ticket) => ticket.id);
+          if (ownerTicketIds.length === 0) {
+            unassignedTicketCount = 0;
+          } else {
+            const released = await tx.ticket.updateMany({
+              where: {
+                id: { in: ownerTicketIds },
+                ownerId: id,
+                status: { notIn: TERMINAL_STATUSES },
+              },
+              data: { ownerId: null },
+            });
+            if (released.count !== ownerTicketIds.length) {
+              throw new Error("Ticket ownership changed during user update");
+            }
+            unassignedTicketCount = released.count;
+          }
         }
 
-        return { updated, unassignedTicketCount };
+        let unassignedActionCount: number | undefined;
+        if (releasesActions) {
+          unassignedActionCount = actionsToRelease.length;
+          for (const action of actionsToRelease) {
+            const previousVersion = action.version;
+            const before = actionSnapshot(action);
+            const released = await tx.actionTaken.updateMany({
+              where: {
+                id: action.id,
+                assigneeId: id,
+                version: previousVersion,
+                status: { notIn: TERMINAL_ACTION_STATUSES },
+              },
+              data: {
+                assigneeId: null,
+                version: { increment: 1 },
+                updatedAt: now,
+              },
+            });
+            if (released.count !== 1) {
+              throw new Error("Action assignment changed during user update");
+            }
+            await tx.actionEvent.create({
+              data: {
+                actionId: action.id,
+                actorId: actor.id,
+                type: "ASSIGNEE_RELEASED",
+                previousVersion,
+                newVersion: previousVersion + 1,
+                before,
+                after: actionSnapshot({
+                  ...action,
+                  assigneeId: null,
+                  version: previousVersion + 1,
+                  updatedAt: now,
+                }),
+              },
+            });
+          }
+        }
+
+        if (affectedTicketIds.length > 0) {
+          const updatedTickets = await tx.ticket.updateMany({
+            where: { id: { in: affectedTicketIds } },
+            data: { version: { increment: 1 }, updatedAt: now },
+          });
+          if (updatedTickets.count !== affectedTicketIds.length) {
+            throw new Error("Ticket changed during user update");
+          }
+        }
+
+        return { updated, unassignedTicketCount, unassignedActionCount };
       });
 
       return res.status(200).json({
         user: serializeUser(result.updated),
         ...(result.unassignedTicketCount !== undefined
           ? { unassignedTicketCount: result.unassignedTicketCount }
+          : {}),
+        ...(result.unassignedActionCount !== undefined
+          ? { unassignedActionCount: result.unassignedActionCount }
           : {}),
       });
     } catch (error) {

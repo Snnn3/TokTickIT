@@ -65,6 +65,8 @@ export interface TicketSummaryItem {
   categoryName: string;
   requestedPriority: TicketPriority;
   status: TicketStatus;
+  version: number;
+  resolvedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,6 +76,8 @@ export interface TicketDetail {
   number: string;
   ticketDate: string;
   status: TicketStatus;
+  version: number;
+  resolvedAt: string | null;
   requestedPriority: TicketPriority;
   summary: string;
   description: string;
@@ -155,6 +159,8 @@ export interface StaffTicketDetail {
   number: string;
   ticketDate: string;
   status: TicketStatus;
+  version: number;
+  resolvedAt: string | null;
   requestedPriority: TicketPriority;
   itPriority: TicketPriority;
   summary: string;
@@ -200,6 +206,8 @@ export interface StaffQueueTicket {
   requestedPriority: TicketPriority;
   itPriority: TicketPriority;
   status: TicketStatus;
+  version: number;
+  resolvedAt: string | null;
   requester: {
     id: number;
     name: string;

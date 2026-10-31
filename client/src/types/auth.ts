@@ -26,6 +26,8 @@ export interface AuthContextType {
    * signed out and strand the retry. Callers stay put on `{ok:false}`.
    */
   signOut: () => Promise<SignOutResult>;
+  /** Clears local identity after the server rejects an expired session. */
+  expireSession: () => void;
   /** Applied after a successful password change, which clears the gate. */
   applyUser: (user: AuthUser) => void;
 }
@@ -59,7 +61,7 @@ export const ROLE_LABELS: Record<Role, string> = {
  * permissions are shared, because an Administrator is a superset of IT Staff.
  */
 export const ROLE_LANDING: Record<Role, string> = {
-  REQUESTER: "/tickets",
-  IT_STAFF: "/staff/queue",
+  REQUESTER: "/dashboard/requester",
+  IT_STAFF: "/dashboard/staff",
   ADMINISTRATOR: "/admin/users",
 };

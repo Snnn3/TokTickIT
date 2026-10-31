@@ -89,6 +89,13 @@ A functional unique index on `lower("email")` was rejected as the alternative: P
 represent one in `schema.prisma`, so it would be invisible to the schema diff and dropped by
 the next generated migration — silently undoing the fix in a later slice.
 
+## Lab 4 Actions Taken foundation
+
+The additive Actions Taken migration, fresh-seed expectations and recovery
+procedure are recorded in [lab4-actions.md](lab4-actions.md). It preserves the
+Lab 3 inventory, creates no historical Actions Taken, and verifies idempotent
+seeded actions and append-only creation events.
+
 ## Why ownership is preserved by construction
 
 The migration reuses each `RequesterUser` primary key as the new `User` primary

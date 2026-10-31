@@ -22,6 +22,20 @@ export function formatDateOnly(date: string | Date | number): string {
   return d.toLocaleDateString();
 }
 
+export function formatBangkokDateTime(date: string | Date | number): string {
+  if (!date) return "";
+  const parsed =
+    typeof date === "string" || typeof date === "number"
+      ? new Date(date)
+      : date;
+  if (Number.isNaN(parsed.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(parsed);
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;

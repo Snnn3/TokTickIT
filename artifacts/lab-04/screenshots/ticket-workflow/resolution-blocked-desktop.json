@@ -1,0 +1,14 @@
+{
+  "testId": "E4-02",
+  "test": "E4-02 resolution requires completed work; requester sees public evidence, reopens and signals advisory state",
+  "screenshot": "resolution-blocked-desktop.png",
+  "role": "IT_STAFF",
+  "route": "/staff/tickets/123",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "fullPage": false,
+  "capturedAt": "2026-10-30T15:15:07.773Z",
+  "expectedResult": "The server refuses resolution before completed work exists and leaves the Ticket open with a safe explanation."
+}

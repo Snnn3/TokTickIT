@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Lab 4 browser tests require their disposable-database runner/config.
+  testIgnore: "**/lab-04/**/*.spec.ts",
   timeout: 60000,
   expect: {
     timeout: 10000,
@@ -25,13 +27,15 @@ export default defineConfig({
     {
       command: "npm run dev --prefix server",
       url: "http://localhost:3000/api/health",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer:
+        !process.env.CI && !process.env.TOKTICKIT_DISPOSABLE_DATABASE_URL,
       timeout: 30000,
     },
     {
       command: "npm run dev --prefix client",
       url: "http://localhost:5173",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer:
+        !process.env.CI && !process.env.TOKTICKIT_DISPOSABLE_DATABASE_URL,
       timeout: 30000,
     },
   ],

@@ -1,0 +1,14 @@
+{
+  "testId": "E4-03",
+  "test": "Requester dashboard isolates ownership, shows authoritative metrics and drills into Tickets",
+  "screenshot": "requester-populated-desktop.png",
+  "role": "REQUESTER",
+  "route": "/dashboard/requester",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "fullPage": true,
+  "capturedAt": "2026-10-30T15:14:45.164Z",
+  "expectedResult": "Dashboard state and role/flow assertions in the named E4-03 journey pass; no clipping or horizontal overflow in populated views"
+}

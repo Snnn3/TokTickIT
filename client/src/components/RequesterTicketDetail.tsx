@@ -10,10 +10,13 @@ import { AttachmentSection } from "./AttachmentSection";
 import type { AttachmentRemovalUpdate } from "./AttachmentSection";
 import { useReferenceData } from "../hooks/useReferenceData";
 import { useConfirmDialogFocus } from "../hooks/useConfirmDialogFocus";
+import { refetchAfterStaleWrite } from "../utils/staleWrite";
+import { ActionsTakenPanel } from "./ActionsTakenPanel";
 
 interface RequesterTicketDetailProps {
   ticketId: number;
   onBack: () => void;
+  backLabel?: string;
 }
 
 const COMMENT_MAX_LENGTH = 2000;
@@ -21,6 +24,7 @@ const COMMENT_MAX_LENGTH = 2000;
 export function RequesterTicketDetail({
   ticketId,
   onBack,
+  backLabel = "Back to My Tickets",
 }: RequesterTicketDetailProps) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +127,14 @@ export function RequesterTicketDetail({
     fetchTicketDetail();
   }, [fetchTicketDetail]);
 
+  const handleActionTicketVersionChange = useCallback((version: number) => {
+    setTicket((previous) =>
+      previous && version > previous.version
+        ? { ...previous, version }
+        : previous
+    );
+  }, []);
+
   const handleAttachmentAdded = (newAttachment: AttachmentMetadata) => {
     setTicket((prev) => {
       if (!prev) return prev;
@@ -193,10 +205,19 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/appears-resolved`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setSignalError,
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          )
+        )
+          return;
         setSignalError(
           data?.error?.message || "Failed to mark as appears resolved."
         );
@@ -204,6 +225,15 @@ export function RequesterTicketDetail({
       }
       const data = await res.json();
       setAppearsResolvedAt(data.appearsResolvedAt);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              appearsResolvedAt: data.appearsResolvedAt,
+              version: data.version,
+            }
+          : prev
+      );
       setSignalConfirm(false);
       setSignalSuccess(true);
     } catch {
@@ -220,13 +250,23 @@ export function RequesterTicketDetail({
       const res = await fetch(`/api/tickets/${ticketId}/reopen`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ expectedVersion: ticket?.version }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (
+          await refetchAfterStaleWrite(
+            data?.error?.code,
+            fetchTicketDetail,
+            setReopenError,
+            "This ticket changed. The latest ticket has been loaded; review it before trying again."
+          )
+        )
+          return;
         setReopenError(data?.error?.message || "Failed to reopen the ticket.");
         return;
       }
+      const data = await res.json();
       // Reopening clears the signal and the summary server-side [BR-26];
       // mirror that locally so the actions and panels follow at once.
       setTicket((prev) =>
@@ -234,6 +274,8 @@ export function RequesterTicketDetail({
           ? {
               ...prev,
               status: "REOPENED",
+              version: data.version,
+              resolvedAt: null,
               appearsResolvedAt: null,
               resolutionSummary: null,
             }
@@ -323,7 +365,7 @@ export function RequesterTicketDetail({
             onClick={onBack}
             data-testid="back-to-tickets-error-btn"
           >
-            ← Back to My Tickets
+            ← {backLabel}
           </button>
         </div>
       </div>
@@ -358,11 +400,11 @@ export function RequesterTicketDetail({
               type="button"
               className="btn btn-zen-secondary btn-sm d-flex align-items-center gap-1"
               onClick={onBack}
-              aria-label="Back to My Tickets"
+              aria-label={backLabel}
               data-testid="back-to-tickets-btn"
             >
               <span>←</span>
-              <span>Back to My Tickets</span>
+              <span>{backLabel}</span>
             </button>
             <h1
               className="h4 fw-bold mb-0 text-zen-primary"
@@ -666,6 +708,14 @@ export function RequesterTicketDetail({
           <span>Last Updated: {formatDateTime(ticket.updatedAt)}</span>
         </div>
       </div>
+
+      <ActionsTakenPanel
+        ticketId={ticket.id}
+        ticketVersion={ticket.version}
+        ticketStatus={ticket.status}
+        canManage={false}
+        onTicketVersionChange={handleActionTicketVersionChange}
+      />
 
       {/* Public Comments [FR-25, ui-spec section 5]. Rendered safely: React
           escapes the body and whitespace is preserved, never raw HTML
